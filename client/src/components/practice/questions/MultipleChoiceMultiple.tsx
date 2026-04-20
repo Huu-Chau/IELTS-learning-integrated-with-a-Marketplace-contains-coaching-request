@@ -2,8 +2,8 @@
  * MultipleChoiceMultiple.tsx
  *
  * Checkbox-based component for "Choose TWO/THREE letters" questions.
- * The question_text and options live at the sub_section level,
- * individual questions just carry question_number + answer.
+ * Options and stem can live at either sub_section level OR question level —
+ * we fall back to the first question's fields when sub_section level is empty.
  */
 import { useState, useEffect } from 'react';
 import type { QuestionComponentProps } from '@/types/questionTypes';
@@ -11,9 +11,22 @@ import type { QuestionComponentProps } from '@/types/questionTypes';
 export default function MultipleChoiceMultiple({ subSection, answers, onAnswer }: QuestionComponentProps) {
     console.log('[MultipleChoiceMultiple] render called', { qCount: subSection.questions.length });
 
-    const opts = subSection.options ?? {};
-    const stem = subSection.question_text ?? subSection.question_stem ?? '';
-    const questionNumbers = subSection.questions.map(q => q.question_number);
+    // Options / stem may live at sub_section level OR at question level (e.g. multiple_choice_multiple_answers)
+    const firstQ = subSection.questions[0];
+    const opts = subSection.options ?? firstQ?.options ?? {};
+    const stem = subSection.question_text ?? subSection.question_stem ?? firstQ?.question_text ?? '';
+    
+    // Expand hyphenated question numbers (e.g., "23-24" -> [23, 24])
+    const questionNumbers: number[] = [];
+    subSection.questions.forEach(q => {
+        const qStr = String(q.question_number);
+        if (qStr.includes('-')) {
+            const [start, end] = qStr.split('-').map(Number);
+            for (let i = start; i <= end; i++) questionNumbers.push(i);
+        } else {
+            questionNumbers.push(Number(q.question_number));
+        }
+    });
 
     // Track which option letters are currently selected
     const [selected, setSelected] = useState<string[]>([]);

@@ -129,7 +129,7 @@ export default function MockTestListeningSession() {
         `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
     // ── Answer handler ────────────────────────────────────────────────────────
-    const handleAnswer = (questionNumber: number, value: string) => {
+    const handleAnswer = (questionNumber: number | string, value: string) => {
         console.log('[MockTestListeningSession] handleAnswer', { questionNumber, value });
         setAnswers(prev => ({ ...prev, [String(questionNumber)]: value }));
     };

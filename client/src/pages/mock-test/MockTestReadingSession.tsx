@@ -34,34 +34,46 @@ function formatSetName(setId: string): string {
         .replace(/\b\w/g, c => c.toUpperCase());
 }
 
+function expandQuestionNumbers(qn: number | string | undefined): number[] {
+    if (!qn) return [];
+    if (typeof qn === 'string' && qn.includes('-')) {
+        const [start, end] = qn.split('-').map(Number);
+        if (isNaN(start) || isNaN(end)) return [];
+        const expanded: number[] = [];
+        for (let i = start; i <= end; i++) expanded.push(i);
+        return expanded;
+    }
+    const num = Number(qn);
+    return isNaN(num) ? [] : [num];
+}
+
 /** Derive the question range for a passage by scanning sub_sections + questions. */
 function derivePassageRange(passage: ReadingPassage): string {
     const allNums: number[] = [];
     (passage.sub_sections ?? []).forEach(sec => {
         if (sec.questions_range) {
-            const parts = sec.questions_range.split('-').map(Number);
-            if (!isNaN(parts[0])) allNums.push(parts[0]);
-            if (!isNaN(parts[1])) allNums.push(parts[1]);
+            allNums.push(...expandQuestionNumbers(sec.questions_range));
         }
         (sec.questions ?? []).forEach(q => {
-            if (q.question_number) allNums.push(q.question_number);
+            allNums.push(...expandQuestionNumbers(q.question_number));
         });
     });
-    if (allNums.length === 0) return '?–?';
-    return `${Math.min(...allNums)}–${Math.max(...allNums)}`;
+    const validNums = allNums.filter(n => !isNaN(n) && n > 0);
+    if (validNums.length === 0) return '?–?';
+    return `${Math.min(...validNums)}–${Math.max(...validNums)}`;
 }
 
 /**
- * Normalise passage_text: JSON may store it as either a string or string[].
- * - string  → split by double-newlines into paragraph array
+ * Normalise passage text: JSON may store it as either a string or string[].
+ * - string  → split by newlines into paragraph array
  * - string[] → pass through unchanged
  */
 function normalizePassageText(raw: string | string[] | undefined): string[] {
     if (!raw) return [];
     if (Array.isArray(raw)) return raw;
-    // Split on two or more newlines to get individual paragraphs
+    // Split on one or more newlines to get individual paragraphs
     return raw
-        .split(/\n{2,}/)
+        .split(/\n+/)
         .map(p => p.trim())
         .filter(p => p.length > 0);
 }
@@ -129,7 +141,7 @@ export default function MockTestReadingSession() {
         `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
     // ── Answer handler ────────────────────────────────────────────────────────
-    const handleAnswer = (questionNumber: number, value: string) => {
+    const handleAnswer = (questionNumber: number | string, value: string) => {
         console.log('[MockTestReadingSession] handleAnswer', { questionNumber, value });
         setAnswers(prev => ({ ...prev, [String(questionNumber)]: value }));
     };
@@ -193,7 +205,10 @@ export default function MockTestReadingSession() {
         let count = 0;
         (passage.sub_sections ?? []).forEach(sec =>
             (sec.questions ?? []).forEach(q => {
-                if (answers[String(q.question_number)]) count++;
+                const nums = expandQuestionNumbers(q.question_number);
+                nums.forEach(n => {
+                    if (answers[String(n)]) count++;
+                });
             })
         );
         return count;
@@ -202,7 +217,9 @@ export default function MockTestReadingSession() {
     const getTotalQuestions = (passage: ReadingPassage): number => {
         let total = 0;
         (passage.sub_sections ?? []).forEach(sec => {
-            total += (sec.questions ?? []).length;
+            (sec.questions ?? []).forEach(q => {
+                total += expandQuestionNumbers(q.question_number).length;
+            });
         });
         return total;
     };
@@ -210,7 +227,9 @@ export default function MockTestReadingSession() {
     const getAllQuestionNumbers = (passage: ReadingPassage): number[] => {
         const nums: number[] = [];
         (passage.sub_sections ?? []).forEach(sec =>
-            (sec.questions ?? []).forEach(q => nums.push(q.question_number))
+            (sec.questions ?? []).forEach(q => {
+                nums.push(...expandQuestionNumbers(q.question_number));
+            })
         );
         return nums.sort((a, b) => a - b);
     };
@@ -329,7 +348,7 @@ export default function MockTestReadingSession() {
                                         {/* Paragraphs */}
                                         {(() => {
                                             const paragraphs = normalizePassageText(
-                                                currentPassage.passage_text as string | string[] | undefined
+                                                currentPassage.text as string | string[] | undefined
                                             );
                                             return paragraphs.length > 0 ? (
                                                 <div className="space-y-4">

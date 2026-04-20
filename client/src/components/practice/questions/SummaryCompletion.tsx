@@ -53,7 +53,7 @@ export default function SummaryCompletion({ subSection, answers, onAnswer }: Que
             if (part.match(/_{2,}/)) {
                 // Extract question number if prefixed (e.g. "32 ________")
                 const numMatch = part.match(/^(\d+)\s+_/);
-                let qn: number;
+                let qn: number | string;
                 if (numMatch) {
                     qn = parseInt(numMatch[1], 10);
                 } else {

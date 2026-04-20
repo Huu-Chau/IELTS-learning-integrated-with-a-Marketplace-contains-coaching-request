@@ -23,7 +23,7 @@ export default function SummaryCompletionOptions({ subSection, answers, onAnswer
         return parts.map((part, i) => {
             if (part.match(/_{2,}/)) {
                 const numMatch = part.match(/^(\d+)\s+_/);
-                let qn: number;
+                let qn: number | string;
                 if (numMatch) {
                     qn = parseInt(numMatch[1], 10);
                 } else {

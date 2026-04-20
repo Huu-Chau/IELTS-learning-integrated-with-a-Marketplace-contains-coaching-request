@@ -44,7 +44,7 @@ import SummaryCompletionOptions from './SummaryCompletionOptions';
 interface QuestionSectionCardProps {
     subSection: SubSection;
     answers: AnswerMap;
-    onAnswer: (questionNumber: number, value: string) => void;
+    onAnswer: (questionNumber: number | string, value: string) => void;
 }
 
 /**
@@ -91,6 +91,7 @@ export default function QuestionSectionCard({ subSection, answers, onAnswer }: Q
             case 'multiple_choice':
                 return <MultipleChoice {...props} />;
             case 'multiple_choice_multiple':
+            case 'multiple_choice_multiple_answers':
                 return <MultipleChoiceMultiple {...props} />;
             case 'note_completion':
                 return <NoteCompletion {...props} />;

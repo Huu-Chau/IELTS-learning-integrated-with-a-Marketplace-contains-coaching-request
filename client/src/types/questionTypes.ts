@@ -10,7 +10,7 @@ export type AnswerMap = Record<string, string>;
 
 // ── Individual question ──────────────────────────────────────────────────────
 export interface Question {
-    question_number: number;
+    question_number: number | string;
     question_text?: string;
     answer_type?: string;
     answer_format?: string;
@@ -61,8 +61,8 @@ export interface ReadingPassage {
     subtitle?: string;
     questions_range?: string;
     time_suggested?: string;
-    /** Array of paragraph strings rendered in the left passage pane */
-    passage_text?: string[];
+    /** Passage text — stored as a raw string in DB (split by double newlines into paragraphs) */
+    text?: string | string[];
     sub_sections: SubSection[];
 }
 
@@ -83,5 +83,5 @@ export interface ReadingBook {
 export interface QuestionComponentProps {
     subSection: SubSection;
     answers: AnswerMap;
-    onAnswer: (questionNumber: number, value: string) => void;
+    onAnswer: (questionNumber: number | string, value: string) => void;
 }

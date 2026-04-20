@@ -1,0 +1,158 @@
+{
+    "book": "Cambridge 20",
+    "skill": "SPEAKING",
+    "tests": [
+        {
+            "test_number": 1,
+            "parts": [
+                {
+                    "part_number": 1,
+                    "topic": "Walking",
+                    "questions": [
+                        "How much walking do you do in your daily life?",
+                        "Did you walk more when you were at school than now?",
+                        "What places are there to go for a walk near where you live?",
+                        "Would you ever like to go on a walking holiday?"
+                    ]
+                },
+                {
+                    "part_number": 2,
+                    "topic": "A play or a film",
+                    "instructions": "Describe a play or a film you have seen that you would like to see again with friends. You should say:",
+                    "bullet_points": [
+                        "what play or film you'd like to go to see again",
+                        "who you would go with",
+                        "what other people have said about this play or film",
+                        "and explain why you would like to see this play or film again with friends."
+                    ]
+                },
+                {
+                    "part_number": 3,
+                    "topic": "Theatres and acting",
+                    "questions": [
+                        "What are the most popular kinds of plays or shows at theatres in your country?",
+                        "How easy is it to get tickets to the theatre?",
+                        "Do you think theatres need to do more to attract younger audiences?",
+                        "What do you think attracts people to working as an actor?",
+                        "What are some of the qualities that a person needs to have if they want to become an actor?",
+                        "Can you think of any disadvantages of working as an actor?"
+                    ]
+                }
+            ]
+        },
+        {
+            "test_number": 2,
+            "parts": [
+                {
+                    "part_number": 1,
+                    "topic": "Fruit",
+                    "questions": [
+                        "What's your favourite fruit?",
+                        "Are there any kinds of fruit that you don't like eating?",
+                        "Do you like eating cooked food that has fruit in it?",
+                        "Where's the best place to buy fruit where you live?"
+                    ]
+                },
+                {
+                    "part_number": 2,
+                    "topic": "Changing a plan",
+                    "instructions": "Describe a time when you changed a plan you had made. You should say:",
+                    "bullet_points": [
+                        "what your original plan was",
+                        "why you changed it",
+                        "what new plan you made",
+                        "and explain how you felt about changing your plan."
+                    ]
+                },
+                {
+                    "part_number": 3,
+                    "topic": "Making plans and career choices",
+                    "questions": [
+                        "What kinds of plans do friends make together?",
+                        "Do you think it's better to discuss future plans with friends or with family?",
+                        "When making plans for the future, is it important not to copy friends?",
+                        "When people are choosing what to study, how important is it that their course should lead directly to a career?",
+                        "Why is it a good idea to get some work experience before deciding on a future career?",
+                        "How easy do you think it is for people to change from one career to another?"
+                    ]
+                }
+            ]
+        },
+        {
+            "test_number": 3,
+            "parts": [
+                {
+                    "part_number": 1,
+                    "topic": "Museums",
+                    "questions": [
+                        "Did you enjoy going to museums when you were a child?",
+                        "Are there any interesting museums near where you live now?",
+                        "Do you think it is best to go to museums by yourself or with friends?",
+                        "When you visit another city or country, do you think it's important to go to a museum there?"
+                    ]
+                },
+                {
+                    "part_number": 2,
+                    "topic": "Satisfying work",
+                    "instructions": "Describe a piece of work you did for your job or your studies that you felt very satisfied with. You should say:",
+                    "bullet_points": [
+                        "what this piece of work was",
+                        "why you did this piece of work",
+                        "who or what helped you to do this work",
+                        "and explain why you felt so satisfied with this piece of work."
+                    ]
+                },
+                {
+                    "part_number": 3,
+                    "topic": "Satisfaction and ambition",
+                    "questions": [
+                        "What are some aspects of people's lives that they can often be dissatisfied with?",
+                        "Would you say that having ambitions in life is always a positive thing?",
+                        "What do you believe the most important components are of a satisfying life?",
+                        "What makes a job more satisfying: a high salary or having good colleagues?",
+                        "Do you think people need to change jobs regularly if they want to stay satisfied at work?",
+                        "Is it possible to find job satisfaction in all types of work?"
+                    ]
+                }
+            ]
+        },
+        {
+            "test_number": 4,
+            "parts": [
+                {
+                    "part_number": 1,
+                    "topic": "Personal qualities",
+                    "questions": [
+                        "What do you think your best personal qualities are? [Why?]",
+                        "Do you have the same personal qualities as your parents? [Why/Why not?]",
+                        "What personal qualities are important to you in a friend? [Why?]",
+                        "Do you think you have the personal qualities to be a good/successful leader? Why/Why not?]"
+                    ]
+                },
+                {
+                    "part_number": 2,
+                    "topic": "A discussion about a news story",
+                    "instructions": "Describe a time when you had a long but interesting discussion with friends about a news story. You should say:",
+                    "bullet_points": [
+                        "What the news story was about",
+                        "Who you discussed this news story with",
+                        "What people's opinions were",
+                        "And explain why you had such a long discussion about this news story."
+                    ]
+                },
+                {
+                    "part_number": 3,
+                    "topic": "News reception",
+                    "questions": [
+                        "How do most people find out about the news ni your country?",
+                        "Are people more interested in local news than national news?",
+                        "How important is it to know about international news?",
+                        "Why are discussion programmes involving members of the public popular on [TV and radio]?",
+                        "What kinds of people want to take part ni discussion programmes?",
+                        "Do discussion programmes influence people ni a good or bad way?"
+                    ]
+                }
+            ]
+        }
+    ]
+}

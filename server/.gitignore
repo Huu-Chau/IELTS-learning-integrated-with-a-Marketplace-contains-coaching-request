@@ -1,0 +1,9 @@
+node_modules/
+.env
+dist/
+build/
+.agent/
+postgres_data/
+uploads/
+.DS_Store
+*.log

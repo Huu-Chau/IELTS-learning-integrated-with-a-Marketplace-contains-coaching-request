@@ -1,0 +1,158 @@
+{
+    "book": "Cambridge 18",
+    "skill": "SPEAKING",
+    "tests": [
+        {
+            "test_number": 1,
+            "parts": [
+                {
+                    "part_number": 1,
+                    "topic": "Paying bills",
+                    "questions": [
+                        "What kinds of bills do you have to pay?",
+                        "How do you usually pay your bills - in cash or by another method? [Why?]",
+                        "Have you ever forgotten to pay a bill? [Why/Why not?]",
+                        "Is there anything you could do to make your bills cheaper? [Why/Why not?]"
+                    ]
+                },
+                {
+                    "part_number": 2,
+                    "topic": "Learning to prepare food",
+                    "instructions": "Describe some food or drink that you learned to prepare.",
+                    "bullet_points": [
+                        "what food or drink you learned to prepare",
+                        "when and where you learned to prepare this",
+                        "how you learned to prepare this",
+                        "and explain how you felt about learning to prepare this food or drink."
+                    ]
+                },
+                {
+                    "part_number": 3,
+                    "topic": "Young people and cooking & Working as a chef",
+                    "questions": [
+                        "What kinds of things can children learn to cook?",
+                        "Do you think it is important for children to learn to cook?",
+                        "Do you think young people should learn to cook at home or at school?",
+                        "How enjoyable do you think it would be to work as a professional chef?",
+                        "What skills does a person need to be a great chef?",
+                        "How much influence do celebrity/TV chefs have on what ordinary people cook?"
+                    ]
+                }
+            ]
+        },
+        {
+            "test_number": 2,
+            "parts": [
+                {
+                    "part_number": 1,
+                    "topic": "Chatting",
+                    "questions": [
+                        "Do you like chatting with friends? [Why/Why not?]",
+                        "What do you usually chat about with friends?",
+                        "Do you prefer to chat with a group of people or with just one friend? [Why?]",
+                        "Do you prefer to communicate face-to-face or via social media? [Why?]"
+                    ]
+                },
+                {
+                    "part_number": 2,
+                    "topic": "A person you met at a party",
+                    "instructions": "Describe a person you met at a party and enjoyed talking with.",
+                    "bullet_points": [
+                        "what party it was",
+                        "who this person was",
+                        "what you talked about",
+                        "and explain why you enjoyed talking with this person."
+                    ]
+                },
+                {
+                    "part_number": 3,
+                    "topic": "Parties and meeting new people",
+                    "questions": [
+                        "In what situations do people throw parties in your country?",
+                        "Do you think it's true that people spend too much money on parties these days?",
+                        "Why do some people dislike attending large social gatherings?",
+                        "How easy is it for people to meet new friends in your city?",
+                        "Are there any differences in the ways young and old people make new friends?",
+                        "Do you think people are more confident talking to strangers now than in the past?"
+                    ]
+                }
+            ]
+        },
+        {
+            "test_number": 3,
+            "parts": [
+                {
+                    "part_number": 1,
+                    "topic": "Keys",
+                    "questions": [
+                        "Do you always bring a lot of keys with you? [Why/Why not?]",
+                        "Have you ever lost your keys? [What happened?]",
+                        "Do you often forget where you put your keys? [Why/Why not?]",
+                        "Do you think it's a good idea to leave your keys with a neighbour? [Why/Why not?]"
+                    ]
+                },
+                {
+                    "part_number": 2,
+                    "topic": "A website you often visit",
+                    "instructions": "Describe a website you often visit.",
+                    "bullet_points": [
+                        "what the website is about",
+                        "how you found out about it",
+                        "how often you visit it",
+                        "and explain why you often visit this website."
+                    ]
+                },
+                {
+                    "part_number": 3,
+                    "topic": "The internet and society",
+                    "questions": [
+                        "What are the most popular types of websites in your country?",
+                        "Do you think people spend too much time on the internet these days?",
+                        "How has the internet changed the way people buy and sell things?",
+                        "What are the dangers of sharing personal information on the internet?",
+                        "Do you think older people find it more difficult to use the internet than younger people?",
+                        "In the future, do you think people will read news exclusively online?"
+                    ]
+                }
+            ]
+        },
+        {
+            "test_number": 4,
+            "parts": [
+                {
+                    "part_number": 1,
+                    "topic": "T-shirts",
+                    "questions": [
+                        "Do you like wearing T-shirts? [Why/Why not?]",
+                        "How often do you wear T-shirts?",
+                        "Do you like T-shirts with pictures or prints on them? [Why/Why not?]",
+                        "Do you think older people should wear T-shirts? [Why/Why not?]"
+                    ]
+                },
+                {
+                    "part_number": 2,
+                    "topic": "A piece of good news",
+                    "instructions": "Describe a piece of good news you heard from others.",
+                    "bullet_points": [
+                        "what the good news was",
+                        "who told you this news",
+                        "when you heard it",
+                        "and explain how you felt when you heard this good news."
+                    ]
+                },
+                {
+                    "part_number": 3,
+                    "topic": "Good news and the media",
+                    "questions": [
+                        "How do people usually share good news in your country?",
+                        "Do you think it's better to tell someone good news face-to-face or on the phone?",
+                        "Why do you think people like to share good news on social media?",
+                        "Do you agree that the news we see on television is mostly negative?",
+                        "Why do news media programs often focus on bad news rather than good news?",
+                        "How does reading or watching negative news affect people's moods?"
+                    ]
+                }
+            ]
+        }
+    ]
+}

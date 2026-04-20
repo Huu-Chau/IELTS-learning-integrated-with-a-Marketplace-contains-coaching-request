@@ -1,0 +1,104 @@
+services:
+  app:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    networks:
+      - ielts-network
+    env_file:
+      - .env
+    environment:
+      # Override DB_HOST from .env so postgres is reachable inside Docker network
+      DB_HOST: postgres
+      # Point the AI controllers at the Ollama instance running on the host Mac.
+      # host.docker.internal resolves to the Docker host's loopback address.
+      OLLAMA_HOST: http://host.docker.internal:11434
+      # Allow any origin so advisors on the same WiFi can connect via socket.io
+      CLIENT_ORIGIN: "*"
+      # MinIO connection (container-to-container via Docker network)
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: "9000"
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: ielts-audio
+      MINIO_USE_SSL: "false"
+      STORAGE_PROVIDER: minio
+      MINIO_PUBLIC_ENDPOINT: "http://localhost:9000"
+    extra_hosts:
+      # Required on Linux hosts; Docker Desktop for Mac has this built-in.
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+      # Persist the Whisper model cache so it isn't re-downloaded on every rebuild
+      - whisper_cache:/root/.cache/huggingface
+    ports:
+      - '${PORT}:${PORT}'
+    restart: unless-stopped
+    tty: true
+    depends_on:
+      - postgres
+      - minio-init
+    links:
+      - postgres
+      - minio
+    command: [ "npm", "run", "dev" ]
+
+  postgres:
+    image: 'postgres:13'
+    restart: always
+    networks:
+      - ielts-network
+    ports:
+      - '5432:5432'
+    command: [ "postgres", "-cshared_preload_libraries=pg_stat_statements", "-c", "max_connections=500", "-c", "shared_buffers=3GB" ]
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    environment:
+      PGDATA: '/var/lib/postgresql/data'
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: '123456'
+      POSTGRES_DB: 'ielts'
+
+  # ── MinIO: S3-compatible object storage for audio recordings ──
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    networks:
+      - ielts-network
+    ports:
+      - '9000:9000' # S3 API
+      - '9001:9001' # Web Console
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
+  # One-shot init container: creates the default bucket if it doesn't exist
+  minio-init:
+    image: minio/mc:latest
+    networks:
+      - ielts-network
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+        sleep 3;
+        mc alias set local http://minio:9000 minioadmin minioadmin;
+        mc mb --ignore-existing local/ielts-audio;
+        mc anonymous set download local/ielts-audio;
+        echo 'Bucket ielts-audio ready';
+        exit 0;
+      "
+
+networks:
+  ielts-network:
+    driver: bridge
+
+volumes:
+  # Named volume keeps the downloaded Whisper base.en model between rebuilds
+  whisper_cache: # Persist MinIO data (audio recordings) between container restarts
+
+  minio_data:

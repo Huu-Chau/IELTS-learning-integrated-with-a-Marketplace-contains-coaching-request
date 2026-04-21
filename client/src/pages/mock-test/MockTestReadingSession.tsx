@@ -244,9 +244,9 @@ export default function MockTestReadingSession() {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => navigate('/mock-test/reading')}
-                            className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 transition-colors"
+                            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 hover:-translate-x-1 transition-all font-medium"
                         >
-                            <ArrowLeft className="h-3.5 w-3.5" />
+                            <ArrowLeft className="h-4 w-4" /> Back to Reading tests
                         </button>
                         <div className="flex items-center gap-2">
                             <BookOpen className="h-4 w-4 text-gray-400" />

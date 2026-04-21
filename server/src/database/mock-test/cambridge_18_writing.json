@@ -1,0 +1,100 @@
+{
+    "book": "Cambridge 18",
+    "skill": "WRITING",
+    "tests": [
+        {
+            "test_number": 1,
+            "tasks": [
+                {
+                    "task_number": 1,
+                    "instructions": "The graph below gives information about the percentage of the population in four Asian countries living in cities from 1970 to 2020, with predictions for 2030 and 2040. Summarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.",
+                    "visual_data": [
+                        {
+                            "type": "line_graph",
+                            "title": "Percentage of the population living in cities",
+                            "src": "W_T1_1.jpg",
+                            "description": "Line graph showing urbanization percentages for four Asian countries (Philippines, Malaysia, Thailand, Indonesia) from 1970 to 2040. Key trends: Malaysia started at 30% in 1970 and showed the most dramatic, consistent growth, projected to reach the highest at over 80% by 2040. Indonesia started the lowest (under 15% in 1970) but experienced rapid growth after 1990, overtaking Thailand and the Philippines to become the second most urbanized by 2040 (approx. 60%). The Philippines started around 31%, peaked near 50% in 1990, dipped until 2010, and is projected to rise again to around 55% by 2040. Thailand had the slowest overall growth, starting at approx. 18% and projected to end as the lowest of the four at approx. 50% by 2040."
+                        }
+                    ]
+                },
+                {
+                    "task_number": 2,
+                    "instructions": "You should spend about 40 minutes on this task. Write about the following topic: Give reasons for your answer and include any relevant examples from your own knowledge or experience. Write at least 250 words.",
+                    "prompt": "The most important aim of science should be to improve people's lives. To what extent do you agree or disagree with this statement?"
+                }
+            ]
+        },
+        {
+            "test_number": 2,
+            "tasks": [
+                {
+                    "task_number": 1,
+                    "instructions": "The chart below shows the number of households in the US by their annual income in 2007, 2011 and 2015. Summarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.",
+                    "visual_data": [
+                        {
+                            "type": "bar_chart",
+                            "title": "Number of US households (in millions), by annual income",
+                            "src": "W_T2_1.jpg",
+                            "description": "A clustered bar chart comparing US households across five income brackets in 2007, 2011, and 2015. Key trends: The highest bracket ($100,000 or more) started as the largest group in 2007 (approx. 30 million), dipped slightly in 2011, and peaked significantly in 2015 (approx. 33 million). The two lowest brackets (Less than $25,000 and $25,000-$49,999) both increased between 2007 and 2011, before dropping slightly by 2015. The middle bracket ($50,000-$74,999) remained entirely stable at approximately 21 million across all three years. The $75,000-$99,999 bracket was consistently the smallest group, hovering around 14 to 15 million households each year."
+                        }
+                    ]
+                },
+                {
+                    "task_number": 2,
+                    "instructions": "You should spend about 40 minutes on this task. Write about the following topic: Give reasons for your answer and include any relevant examples from your own knowledge or experience. Write at least 250 words.",
+                    "prompt": "Some university students want to learn about other subjects in addition to their main subjects. Others believe it is more important to give all their time and attention to studying for a qualification. Discuss both these views and give your own opinion."
+                }
+            ]
+        },
+        {
+            "test_number": 3,
+            "tasks": [
+                {
+                    "task_number": 1,
+                    "instructions": "The diagram below shows the floor plan of a public library 20 years ago and how it looks now. Summarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.",
+                    "visual_data": [
+                        {
+                            "type": "map",
+                            "title": "Central Library 20 years ago",
+                            "src": "W_T3_1.jpg",
+                            "description": "Floor plan of the library 20 years ago. Central area: Entrance at the bottom center leading to an open space with tables and chairs. Left side (front to back): Reading room (newspapers & magazines), Adult fiction books, and CDs, videos, computer games. Right side (front to back): Enquiry desk (tickets, book returns, etc.), Adult non-fiction books, and Children's books."
+                        },
+                        {
+                            "type": "map",
+                            "title": "Central Library today",
+                            "src": "W_T3_2.jpg",
+                            "description": "Modernized floor plan showing significant room replacements. Central area: The tables and chairs have been removed, leaving an open space. Left side (front to back): The Reading room is now a Computer room. The Adult fiction and CDs/videos areas have been replaced by 'All reference books' and 'Children's fiction books' (which now includes storytelling events and sofas). Right side (front to back): The Enquiry desk is now a Café. The Adult non-fiction area has been replaced by Adult fiction books, an Information desk, and Self-service machines. The Children's books area is now a Lecture room."
+                        }
+                    ]
+                },
+                {
+                    "task_number": 2,
+                    "instructions": "You should spend about 40 minutes on this task. Write about the following topic: Give reasons for your answer and include any relevant examples from your own knowledge or experience. Write at least 250 words.",
+                    "prompt": "In many countries around the world, rural people are moving to cities, so the population in the countryside is decreasing. Do you think this is a positive or a negative development?"
+                }
+            ]
+        },
+        {
+            "test_number": 4,
+            "tasks": [
+                {
+                    "task_number": 1,
+                    "instructions": "The graph below shows the average monthly change in the prices of three metals during 2014. Summarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.",
+                    "visual_data": [
+                        {
+                            "type": "line_graph",
+                            "title": "Average monthly change in prices of copper, nickel and zinc (2014)",
+                            "src": "W_T4_1.jpg",
+                            "description": "Line graph tracking the monthly percentage price changes of three metals (Copper, Nickel, Zinc) throughout 2014. Key trend: The graph shows the rate of change, not absolute prices. All three metals began the year with positive price changes, experienced a significant dip into negative territory by mid-year (June), and recovered to positive changes by December. Nickel showed the greatest volatility, starting at the highest point (6% growth in January), plunging to the lowest point of any metal (-3% contraction in June), and ending the year at 1%. Zinc started at 1%, peaked at 3% in February, dipped to -1% in June, and ended highest at 2% in December. Copper was the most stable, starting at 2%, dipping to -0.5% in mid-year, and ending at roughly 1.5%."
+                        }
+                    ]
+                },
+                {
+                    "task_number": 2,
+                    "instructions": "You should spend about 40 minutes on this task. Write about the following topic: Give reasons for your answer and include any relevant examples from your own knowledge or experience. Write at least 250 words.",
+                    "prompt": "In many countries, people are now living longer than ever before. Some people say an ageing population creates problems for governments. Other people think there are benefits if society has more elderly people. To what extent do the advantages of having an ageing population outweigh the disadvantages?"
+                }
+            ]
+        }
+    ]
+}

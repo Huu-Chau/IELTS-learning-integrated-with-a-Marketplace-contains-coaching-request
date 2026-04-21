@@ -219,9 +219,9 @@ export default function MockTestListeningSession() {
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => navigate('/mock-test/listening')}
-                            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 transition-colors"
+                            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 hover:-translate-x-1 transition-all font-medium"
                         >
-                            <ArrowLeft className="h-4 w-4" />
+                            <ArrowLeft className="h-4 w-4" /> Back to Listening tests
                         </button>
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">

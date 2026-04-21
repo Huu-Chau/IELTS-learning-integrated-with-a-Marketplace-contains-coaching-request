@@ -123,6 +123,32 @@ router.get('/audio/:book/:file', async (req: Request, res: Response): Promise<vo
     }
 });
 
+// ─── GET /image/:book/:file — Stream image from MinIO ───────────────────────
+router.get('/image/:book/:file', async (req: Request, res: Response): Promise<void> => {
+    const { book, file } = req.params;
+    console.log('[cambridgeTestRoutes] getImage called', { book, file });
+
+    try {
+        const storageKey = `mock-test/cam${book}/${file}`;
+        console.log('[cambridgeTestRoutes] Streaming image from MinIO', { storageKey });
+
+        // Infer mime type from file extension
+        const ext = file.split('.').pop()?.toLowerCase();
+        let mimeType = 'image/jpeg';
+        if (ext === 'png') mimeType = 'image/png';
+        if (ext === 'webp') mimeType = 'image/webp';
+        else if (ext === 'svg') mimeType = 'image/svg+xml';
+
+        const stream = await storageProvider.getFileStream(storageKey);
+
+        res.setHeader('Content-Type', mimeType);
+        stream.pipe(res);
+    } catch (error) {
+        console.error('[cambridgeTestRoutes] getImage error', error);
+        res.status(404).json({ error: 'Image file not found' });
+    }
+});
+
 // ─── POST /grade — Compare user answers, compute band score ─────────────────
 router.post('/grade', async (req: Request, res: Response): Promise<void> => {
     const { skill, book, testNumber, answers } = req.body as {

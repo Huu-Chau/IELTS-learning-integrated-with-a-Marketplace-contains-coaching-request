@@ -4,153 +4,119 @@
     "tests": [
         {
             "test_number": 1,
-            "parts": [
+            "tasks": [
                 {
-                    "part_number": 1,
-                    "topic": "Walking",
-                    "questions": [
-                        "How much walking do you do in your daily life?",
-                        "Did you walk more when you were at school than now?",
-                        "What places are there to go for a walk near where you live?",
-                        "Would you ever like to go on a walking holiday?"
+                    "task_number": 1,
+                    "instructions": "The first table below shows changes in the total population of New York City from 1800 to 2000. The second and third tables show changes in the population of the five districts of the city (Manhattan, Brooklyn, Bronx, Queens, Staten Island) over the same period. Summarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.",
+                    "visual_data": [
+                        {
+                            "type": "table",
+                            "title": "New York City (all five districts)",
+                            "src": "W_T1_1.jpg",
+                            "description": "Total population figures for New York City across three centuries: 1800 (79,216); 1900 (3,437,202); 2000 (8,009,185)."
+                        },
+                        {
+                            "type": "table",
+                            "title": "Manhattan",
+                            "src": "W_T1_2.jpg",
+                            "description": "Manhattan's population and its percentage share of the total NYC population: 1800 (60,515 residents, 76%); 1900 (1,850,093 residents, 54%); 2000 (1,538,096 residents, 19%)."
+                        },
+                        {
+                            "type": "table",
+                            "title": "Other districts (Brooklyn, Bronx, Queens, Staten Island)",
+                            "src": "W_T1_3.jpg",
+                            "description": "Combined population and percentage share for Brooklyn, Bronx, Queens, and Staten Island: 1800 (18,701 residents, 24%); 1900 (1,587,109 residents, 46%); 2000 (6,471,089 residents, 81%)."
+                        }
                     ]
                 },
                 {
-                    "part_number": 2,
-                    "topic": "A play or a film",
-                    "instructions": "Describe a play or a film you have seen that you would like to see again with friends. You should say:",
-                    "bullet_points": [
-                        "what play or film you'd like to go to see again",
-                        "who you would go with",
-                        "what other people have said about this play or film",
-                        "and explain why you would like to see this play or film again with friends."
-                    ]
-                },
-                {
-                    "part_number": 3,
-                    "topic": "Theatres and acting",
-                    "questions": [
-                        "What are the most popular kinds of plays or shows at theatres in your country?",
-                        "How easy is it to get tickets to the theatre?",
-                        "Do you think theatres need to do more to attract younger audiences?",
-                        "What do you think attracts people to working as an actor?",
-                        "What are some of the qualities that a person needs to have if they want to become an actor?",
-                        "Can you think of any disadvantages of working as an actor?"
-                    ]
+                    "task_number": 2,
+                    "instructions": "You should spend about 40 minutes on this task. Write about the following topic: Give reasons for your answer and include any relevant examples from your own knowledge or experience. Write at least 250 words.",
+                    "prompt": "Access to clean water is a basic human right. Therefore every home should have a water supply that is provided free of charge. Do you agree or disagree?"
                 }
             ]
         },
         {
             "test_number": 2,
-            "parts": [
+            "tasks": [
                 {
-                    "part_number": 1,
-                    "topic": "Fruit",
-                    "questions": [
-                        "What's your favourite fruit?",
-                        "Are there any kinds of fruit that you don't like eating?",
-                        "Do you like eating cooked food that has fruit in it?",
-                        "Where's the best place to buy fruit where you live?"
+                    "task_number": 1,
+                    "instructions": "The plans below show the site of a farm in 1950 and the same site today. Summarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.",
+                    "visual_data": [
+                        {
+                            "type": "map",
+                            "title": "Beechwood Farm in 1950",
+                            "src": "W_T2_1.jpg",
+                            "description": "Original farm layout: Large areas for sheep (North East), Fruit trees, Soft fruits, and Vegetables. Infrastructure includes a barn, farmhouse, and chicken area. All sections are connected by simple tracks."
+                        },
+                        {
+                            "type": "map",
+                            "title": "Beechwood Farm Today",
+                            "src": "W_T2_2.jpg",
+                            "description": "Modernized layout: Sheep area replaced by a camping field and solar panels. A farm shop and parking have been added near the fruit trees. The barn is now a smaller structure, and new holiday cottages have been built. The original tracks have been upgraded to roads."
+                        }
                     ]
                 },
                 {
-                    "part_number": 2,
-                    "topic": "Changing a plan",
-                    "instructions": "Describe a time when you changed a plan you had made. You should say:",
-                    "bullet_points": [
-                        "what your original plan was",
-                        "why you changed it",
-                        "what new plan you made",
-                        "and explain how you felt about changing your plan."
-                    ]
-                },
-                {
-                    "part_number": 3,
-                    "topic": "Making plans and career choices",
-                    "questions": [
-                        "What kinds of plans do friends make together?",
-                        "Do you think it's better to discuss future plans with friends or with family?",
-                        "When making plans for the future, is it important not to copy friends?",
-                        "When people are choosing what to study, how important is it that their course should lead directly to a career?",
-                        "Why is it a good idea to get some work experience before deciding on a future career?",
-                        "How easy do you think it is for people to change from one career to another?"
-                    ]
+                    "task_number": 2,
+                    "instructions": "You should spend about 40 minutes on this task. Write about the following topic: Give reasons for your answer and include any relevant examples from your own knowledge or experience. Write at least 250 words.",
+                    "prompt": "In many countries, primary and secondary schools close for two months or more in the summer holidays. What is the value of long school holidays? What are the arguments in favour of shorter school holidays?"
                 }
             ]
         },
         {
             "test_number": 3,
-            "parts": [
+            "tasks": [
                 {
-                    "part_number": 1,
-                    "topic": "Museums",
-                    "questions": [
-                        "Did you enjoy going to museums when you were a child?",
-                        "Are there any interesting museums near where you live now?",
-                        "Do you think it is best to go to museums by yourself or with friends?",
-                        "When you visit another city or country, do you think it's important to go to a museum there?"
+                    "task_number": 1,
+                    "instructions": "The charts below give information about a public library in a town called Little Chalfont. Summarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.",
+                    "visual_data": [
+                        {
+                            "type": "pie_chart",
+                            "title": "Age of library members (2016)",
+                            "src": "W_T3_1.jpg",
+                            "description": "Pie chart showing age distribution: Adults 18-64 (51%), Children (22%), Young adults 13-17 (15%), and Adults 65 and over (12%)."
+                        },
+                        {
+                            "type": "table",
+                            "title": "Total loans by category (2016)",
+                            "src": "W_T3_2.jpg",
+                            "description": "Table showing loan percentages: Children's fiction (38%), Adult fiction (38%), Adult non-fiction (13%), Children's non-fiction (6%), Young adults (2%), Adult audio books (2%), and Children's DVDs (1%)."
+                        },
+                        {
+                            "type": "bar_chart",
+                            "title": "Total number of loans (2007-2016)",
+                            "src": "W_T3_3.jpg",
+                            "description": "Bar chart showing a general upward trend in total loans, starting at roughly 15,500 in 2007, dipping slightly in 2012 and 2013, and peaking at approximately 21,500 in 2016."
+                        }
                     ]
                 },
                 {
-                    "part_number": 2,
-                    "topic": "Satisfying work",
-                    "instructions": "Describe a piece of work you did for your job or your studies that you felt very satisfied with. You should say:",
-                    "bullet_points": [
-                        "what this piece of work was",
-                        "why you did this piece of work",
-                        "who or what helped you to do this work",
-                        "and explain why you felt so satisfied with this piece of work."
-                    ]
-                },
-                {
-                    "part_number": 3,
-                    "topic": "Satisfaction and ambition",
-                    "questions": [
-                        "What are some aspects of people's lives that they can often be dissatisfied with?",
-                        "Would you say that having ambitions in life is always a positive thing?",
-                        "What do you believe the most important components are of a satisfying life?",
-                        "What makes a job more satisfying: a high salary or having good colleagues?",
-                        "Do you think people need to change jobs regularly if they want to stay satisfied at work?",
-                        "Is it possible to find job satisfaction in all types of work?"
-                    ]
+                    "task_number": 2,
+                    "instructions": "You should spend about 40 minutes on this task. Write about the following topic: Give reasons for your answer and include any relevant examples from your own knowledge or experience. Write at least 250 words.",
+                    "prompt": "Some people have decided to reduce the number of times they fly every year or to stop flying altogether. Do you think the environmental benefits of this development outweigh the disadvantages for individuals and businesses?"
                 }
             ]
         },
         {
             "test_number": 4,
-            "parts": [
+            "tasks": [
                 {
-                    "part_number": 1,
-                    "topic": "Personal qualities",
-                    "questions": [
-                        "What do you think your best personal qualities are? [Why?]",
-                        "Do you have the same personal qualities as your parents? [Why/Why not?]",
-                        "What personal qualities are important to you in a friend? [Why?]",
-                        "Do you think you have the personal qualities to be a good/successful leader? Why/Why not?]"
+                    "task_number": 1,
+                    "instructions": "The diagram below shows how fabric is manufactured from bamboo. Summarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.",
+                    "visual_data": [
+                        {
+                            "type": "diagram",
+                            "title": "How bamboo fabric is made",
+                            "src": "W_T4_1.jpg",
+                            "description": "A 9-step process diagram: 1) Plant bamboo plants (Spring); 2) Harvest (Autumn); 3) Cut into strips; 4) Crush strips (to make liquid pulp); 5) Filter (separate long fibres from liquid); 6) Soften fibres (add water and amine oxide); 7) Spin (to make yarn); 8) Weave (to make fabric); 9) Final products (such as t-shirts and socks)."
+                        }
                     ]
                 },
                 {
-                    "part_number": 2,
-                    "topic": "A discussion about a news story",
-                    "instructions": "Describe a time when you had a long but interesting discussion with friends about a news story. You should say:",
-                    "bullet_points": [
-                        "What the news story was about",
-                        "Who you discussed this news story with",
-                        "What people's opinions were",
-                        "And explain why you had such a long discussion about this news story."
-                    ]
-                },
-                {
-                    "part_number": 3,
-                    "topic": "News reception",
-                    "questions": [
-                        "How do most people find out about the news ni your country?",
-                        "Are people more interested in local news than national news?",
-                        "How important is it to know about international news?",
-                        "Why are discussion programmes involving members of the public popular on [TV and radio]?",
-                        "What kinds of people want to take part ni discussion programmes?",
-                        "Do discussion programmes influence people ni a good or bad way?"
-                    ]
+                    "task_number": 2,
+                    "instructions": "You should spend about 40 minutes on this task. Write about the following topic: Give reasons for your answer and include any relevant examples from your own knowledge or experience. Write at least 250 words.",
+                    "prompt": "Many aspects of the way people dress today are influenced by global fashion trends. How has global fashion become such a strong influence on people's lives? Do you think this is a positive or negative development?"
                 }
             ]
         }

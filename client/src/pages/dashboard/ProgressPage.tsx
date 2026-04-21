@@ -4,6 +4,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { useAuth } from '@/context/AuthContext';
 import { apiClient } from '@/services/apiClient';
 import ResultFormModal from '@/components/progress/ResultFormModal';
+import WritingResultModal from '@/components/progress/WritingResultModal';
 import { Target, Book } from 'lucide-react';
 
 export default function ProgressPage() {
@@ -11,6 +12,7 @@ export default function ProgressPage() {
     const [attempts, setAttempts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedWritingSessionId, setSelectedWritingSessionId] = useState<string | null>(null);
 
     useEffect(() => {
         fetchAttempts();
@@ -21,8 +23,27 @@ export default function ProgressPage() {
         try {
             setLoading(true);
             const token = await getIdToken();
-            const data = await apiClient.get(`/attempts/user/${user.uid}`, token);
-            setAttempts(data);
+            
+            const [attemptsData, writingData] = await Promise.all([
+                apiClient.get(`/attempts/user/${user.uid}`, token),
+                apiClient.get(`/evaluate/writing/user/${user.uid}`, token).catch(() => []) // gracefully handle if writing module is down
+            ]);
+
+            // Map writing sessions so they match the Attempt schema shape we expect
+            const mappedWriting = (writingData || []).map((ws: any) => ({
+                id: ws.id,
+                createdAt: ws.createdAt,
+                type: 'writing',
+                score: ws.overallBand, // Could be null if in-progress
+                status: ws.status // 'in-progress', 'completed'
+            }));
+
+            // Combine both datasets and sort desc by date for the history table
+            const combined = [...attemptsData, ...mappedWriting].sort((a, b) => 
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+
+            setAttempts(combined);
         } catch (error) {
             console.error('Failed to fetch attempts:', error);
         } finally {
@@ -58,6 +79,7 @@ export default function ProgressPage() {
                 type: a.type
             };
         })
+        .filter(a => a.score > 0) // Don't plot in-progress or NULL scores
         .sort((a, b) => a.timestamp - b.timestamp); // Chronological
 
     const totalTests = attempts.length;
@@ -185,6 +207,18 @@ export default function ProgressPage() {
                                                                 <span>W: {attempt.answers.writing}</span>
                                                                 <span>S: {attempt.answers.speaking}</span>
                                                             </div>
+                                                        ) : attempt.type === 'writing' ? (
+                                                            <button 
+                                                                onClick={() => setSelectedWritingSessionId(attempt.id)}
+                                                                disabled={attempt.status !== 'completed'}
+                                                                className={`px-3 py-1 text-sm font-medium rounded-md ${
+                                                                    attempt.status === 'completed' 
+                                                                    ? 'bg-blue-50 text-blue-600 hover:bg-blue-100' 
+                                                                    : 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                                                                }`}
+                                                            >
+                                                                {attempt.status === 'completed' ? 'View Evaluation' : 'In Progress'}
+                                                            </button>
                                                         ) : (
                                                             <span>Mock Test Result</span>
                                                         )}
@@ -204,6 +238,12 @@ export default function ProgressPage() {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onSubmit={handleAddResult}
+            />
+
+            <WritingResultModal
+                isOpen={!!selectedWritingSessionId}
+                sessionId={selectedWritingSessionId}
+                onClose={() => setSelectedWritingSessionId(null)}
             />
         </DashboardLayout>
     );

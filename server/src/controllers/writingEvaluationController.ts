@@ -10,8 +10,12 @@
 
 import { Request, Response } from 'express';
 import { Ollama } from 'ollama';
+import { v4 as uuidv4 } from 'uuid';
 import { EssaySubmission, WritingPart } from '../types/ai-types';
 import { getRandomPart1Task, getRandomPart2Task } from '../services/writingQuestionBank';
+import { storageProvider } from '../services/storage/StorageService';
+import WritingSession from '../models/WritingSession';
+import Notification from '../models/Notification';
 
 // ─── Configuration ─────────────────────────────────────────────────────────
 
@@ -151,26 +155,70 @@ export const getTask = (req: Request, res: Response): void => {
 };
 
 /**
- * POST /api/evaluate/writing
+ * POST /api/evaluate/writing/start
+ * Initializes a new WritingSession and returns the sessionId.
+ * Body: { userId, book, testNumber }
+ */
+export const startSession = async (req: Request, res: Response): Promise<void> => {
+    console.log('[WritingEvaluationController] startSession called', req.body);
+    try {
+        const { userId, book, testNumber } = req.body;
+        
+        if (!userId || !book || testNumber === undefined) {
+            res.status(400).json({ error: 'Missing required fields: userId, book, testNumber.' });
+            return;
+        }
+
+        const sessionId = uuidv4();
+        
+        // Ensure WritingSession table exists (useful during dev)
+        await WritingSession.sync();
+
+        const session = await WritingSession.create({
+            id: sessionId,
+            userId,
+            book,
+            testNumber,
+            status: 'in-progress',
+        });
+
+        console.log('[WritingEvaluationController] startSession success', { sessionId });
+        res.json({ sessionId: session.id });
+    } catch (error) {
+        console.error('[WritingEvaluationController] startSession error', error);
+        res.status(500).json({ error: 'Failed to start writing session.' });
+    }
+};
+
+/**
+ * POST /api/evaluate/writing/:sessionId/evaluate
  * Evaluates an essay submission. Streams the response as SSE.
+ * Saves the raw essay and parsed feedback to MinIO.
+ * Updates the WritingSession DB row.
  *
- * Body: { essay: string, part: 'part1'|'part2', wordCount: number, task: WritingTask }
+ * Body: { essay: string, taskNumber: 1|2, wordCount: number, task: WritingTask, userId: string }
  */
 export const evaluateEssay = async (req: Request, res: Response): Promise<void> => {
+    const { sessionId } = req.params;
+    const { essay, taskNumber, wordCount, task, userId } = req.body;
+
     console.log('[WritingEvaluationController] evaluateEssay called', {
-        part: req.body.part,
-        wordCount: req.body.wordCount,
+        sessionId,
+        taskNumber,
+        wordCount,
     });
 
+    const part: WritingPart = taskNumber === 1 ? 'part1' : 'part2';
+
     const submission: EssaySubmission = {
-        essay: req.body.essay,
-        part: req.body.part,
-        wordCount: req.body.wordCount,
-        task: req.body.task,
+        essay,
+        part,
+        wordCount,
+        task,
     };
 
-    if (!submission.essay || !submission.part || !submission.task) {
-        res.status(400).json({ error: 'Missing required fields: essay, part, task.' });
+    if (!essay || !taskNumber || !task || !sessionId || !userId) {
+        res.status(400).json({ error: 'Missing required fields: essay, taskNumber, task, sessionId, userId.' });
         return;
     }
 
@@ -202,8 +250,74 @@ export const evaluateEssay = async (req: Request, res: Response): Promise<void> 
             res.write(`data: ${JSON.stringify({ chunk: content })}\n\n`);
         }
 
+        // Post-evaluation persistence 
+        try {
+            console.log(`[WritingEvaluationController] Saving essay array and feedback to MinIO for session: ${sessionId}`);
+            const essayFilename = `sessions/${userId}/${sessionId}/task${taskNumber}-essay.txt`;
+            const feedbackFilename = `sessions/${userId}/${sessionId}/task${taskNumber}-feedback.md`;
+
+            // 1. Upload Essay to MinIO
+            await storageProvider.uploadFile(essayFilename, Buffer.from(essay, 'utf-8'), 'text/plain');
+
+            // 2. Upload Feedback to MinIO
+            await storageProvider.uploadFile(feedbackFilename, Buffer.from(fullResponse, 'utf-8'), 'text/markdown');
+
+            // 3. Extract Band Score (basic regex, similar to Speaking)
+            let bandScore = null;
+            const match = fullResponse.match(/Overall\s*(?:Estimated\s*)?Band\s*(?:Score)?\s*[:=\-–—]\s*\*?\*?(\d+(?:\.\d+)?)\*?\*?/i);
+            if (match && match[1]) {
+                bandScore = parseFloat(match[1]);
+            }
+
+            // 4. Update Database
+            const sessionRec = await WritingSession.findByPk(sessionId);
+            if (sessionRec) {
+                if (taskNumber === 1) {
+                    sessionRec.task1EssayKey = essayFilename;
+                    sessionRec.task1FeedbackKey = feedbackFilename;
+                    sessionRec.task1Band = bandScore;
+                } else {
+                    sessionRec.task2EssayKey = essayFilename;
+                    sessionRec.task2FeedbackKey = feedbackFilename;
+                    sessionRec.task2Band = bandScore;
+                }
+
+                // If both tasks are complete, compute overall band & set complete
+                if (sessionRec.task1Band !== null && sessionRec.task2Band !== null && sessionRec.status !== 'completed') {
+                    // Task 2 is worth roughly 2/3 of the score, Task 1 is 1/3
+                    const rawScore = (sessionRec.task1Band + sessionRec.task2Band * 2) / 3;
+                    // Round to nearest 0.5
+                    sessionRec.overallBand = Math.round(rawScore * 2) / 2;
+                    sessionRec.status = 'completed';
+                    sessionRec.endTime = new Date();
+
+                    // Create System Notification
+                    try {
+                        await Notification.create({
+                            userId: userId,
+                            type: 'system',
+                            title: 'Writing Evaluation Complete 🎉',
+                            body: `Your IELTS Writing mock test for ${sessionRec.book} Test ${sessionRec.testNumber} has been fully evaluated. Click here to view your band score and detailed feedback!`,
+                            linkPath: '/progress',  // Could link directly to details if UI supports opening modal via URL
+                        });
+                        console.log(`[WritingEvaluationController] Notification created for user ${userId}`);
+                    } catch (notifErr) {
+                        console.error('[WritingEvaluationController] Failed to create notification:', notifErr);
+                    }
+                }
+
+                await sessionRec.save();
+                console.log(`[WritingEvaluationController] Successfully updated WritingSession ${sessionId}`);
+            } else {
+                console.warn(`[WritingEvaluationController] Session ${sessionId} not found in DB to update`);
+            }
+        } catch (storageErr) {
+            console.error('[WritingEvaluationController] Error storing files or updating DB:', storageErr);
+            // Non-fatal, stream still succeeded
+        }
+
         // Signal completion
-        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+        res.write(`data: ${JSON.stringify({ done: true, sessionId })}\n\n`);
         res.end();
         console.log('[WritingEvaluationController] evaluateEssay success', {
             responseLength: fullResponse.length,
@@ -212,5 +326,81 @@ export const evaluateEssay = async (req: Request, res: Response): Promise<void> 
         console.error('[WritingEvaluationController] evaluateEssay error', error);
         res.write(`data: ${JSON.stringify({ error: 'Evaluation failed. Is Ollama running?' })}\n\n`);
         res.end();
+    }
+};
+
+/**
+ * GET /api/evaluate/writing/user/:userId
+ * Returns all WritingSessions for a given userId, ordered newest-first.
+ * Used by the Dashboard Progress page to populate the Result History table.
+ */
+export const getSessionsByUser = async (req: Request, res: Response): Promise<void> => {
+    const { userId } = req.params;
+    console.log('[WritingEvaluationController] getSessionsByUser called', { userId });
+
+    try {
+        const sessions = await WritingSession.findAll({
+            where: { userId },
+            order: [['createdAt', 'DESC']],
+        });
+
+        console.log('[WritingEvaluationController] getSessionsByUser success', { count: sessions.length });
+        res.json(sessions);
+    } catch (error) {
+        console.error('[WritingEvaluationController] getSessionsByUser error', error);
+        res.status(500).json({ error: 'Failed to fetch writing sessions.' });
+    }
+};
+
+/**
+ * GET /api/evaluate/writing/session/:sessionId/details
+ * Returns a single WritingSession with short-lived presigned MinIO URLs
+ * for the essay and feedback files. The frontend can fetch the raw text
+ * directly from these URLs without burdening the Node.js server.
+ */
+export const getSessionDetails = async (req: Request, res: Response): Promise<void> => {
+    const { sessionId } = req.params;
+    console.log('[WritingEvaluationController] getSessionDetails called', { sessionId });
+
+    try {
+        const session = await WritingSession.findByPk(sessionId);
+        if (!session) {
+            console.warn('[WritingEvaluationController] getSessionDetails: session not found', { sessionId });
+            res.status(404).json({ error: 'Session not found.' });
+            return;
+        }
+
+        // Generate presigned URLs for each stored file (15 min expiry)
+        const EXPIRY = 900; // seconds
+        const urls: Record<string, string | null> = {
+            task1EssayUrl: null,
+            task1FeedbackUrl: null,
+            task2EssayUrl: null,
+            task2FeedbackUrl: null,
+        };
+
+        if (session.task1EssayKey) {
+            urls.task1EssayUrl = await storageProvider.getFileUrl(session.task1EssayKey, EXPIRY);
+        }
+        if (session.task1FeedbackKey) {
+            urls.task1FeedbackUrl = await storageProvider.getFileUrl(session.task1FeedbackKey, EXPIRY);
+        }
+        if (session.task2EssayKey) {
+            urls.task2EssayUrl = await storageProvider.getFileUrl(session.task2EssayKey, EXPIRY);
+        }
+        if (session.task2FeedbackKey) {
+            urls.task2FeedbackUrl = await storageProvider.getFileUrl(session.task2FeedbackKey, EXPIRY);
+        }
+
+        const result = {
+            ...session.toJSON(),
+            ...urls,
+        };
+
+        console.log('[WritingEvaluationController] getSessionDetails success', { sessionId, hasUrls: Object.values(urls).filter(Boolean).length });
+        res.json(result);
+    } catch (error) {
+        console.error('[WritingEvaluationController] getSessionDetails error', error);
+        res.status(500).json({ error: 'Failed to fetch session details.' });
     }
 };

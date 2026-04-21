@@ -56,7 +56,10 @@ async function seedMockMaterials() {
                     console.log(`[Seed] Inserted: ${title} (${skill})`);
                     totalInserted++;
                 } else {
-                    console.log(`[Seed] Already exists: ${title} (${skill}). Unchanged.`);
+                    // Update the existing material with the most up-to-date JSON content
+                    await material.update({ content: test });
+                    console.log(`[Seed] Updated existing: ${title} (${skill}).`);
+                    totalInserted++;
                 }
             }
         }

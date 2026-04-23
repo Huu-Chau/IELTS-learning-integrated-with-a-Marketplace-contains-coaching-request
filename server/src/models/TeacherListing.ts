@@ -17,6 +17,7 @@ class TeacherListing extends Model<
     declare pricePerHour: number;
     declare sessionDuration: number; // minutes, e.g. 30 or 60
     declare isActive: CreationOptional<boolean>;
+    declare version: CreationOptional<number>; // Optimistic lock — prevents double-reservation
     declare createdAt: CreationOptional<Date>;
     declare updatedAt: CreationOptional<Date>;
 }
@@ -60,12 +61,19 @@ TeacherListing.init(
             type: DataTypes.BOOLEAN,
             defaultValue: true,
         },
+        version: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 0,
+        },
     },
     {
         sequelize,
         modelName: 'TeacherListing',
         tableName: 'TeacherListings',
         timestamps: true,
+        // Enable Sequelize built-in optimistic locking
+        version: true,
     }
 );
 

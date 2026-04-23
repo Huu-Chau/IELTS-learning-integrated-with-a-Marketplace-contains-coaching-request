@@ -13,6 +13,7 @@ import {
     ChevronRight,
     X,
     Loader2,
+    Brain,
 } from 'lucide-react';
 import { useTeacherApi, useTeacherMutation } from '@/hooks/useTeacherApi';
 
@@ -66,8 +67,8 @@ function WithdrawModal({ balance, onClose, onSuccess }: { balance: number; onClo
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                     <h2 className="font-bold text-gray-900">Withdraw Funds</h2>
                     <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
@@ -79,7 +80,7 @@ function WithdrawModal({ balance, onClose, onSuccess }: { balance: number; onClo
                     <div className="px-6 py-10 text-center">
                         <CheckCircle className="h-12 w-12 text-emerald-500 mx-auto mb-4" />
                         <p className="font-semibold text-gray-800 text-lg">Withdrawal Requested</p>
-                        <p className="text-gray-500 text-sm mt-1">Your withdrawal of {parseFloat(amount).toLocaleString('vi-VN')} VND has been submitted. Processing takes 1–3 business days.</p>
+                        <p className="text-gray-500 text-sm mt-1">Your withdrawal of {parseFloat(amount).toLocaleString('vi-VN')} Brain Credits has been submitted. Processing takes 1–3 business days.</p>
                         <button onClick={onClose} className="mt-6 px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors">
                             Done
                         </button>
@@ -93,21 +94,21 @@ function WithdrawModal({ balance, onClose, onSuccess }: { balance: number; onClo
                             <Wallet className="h-6 w-6 text-emerald-600" />
                             <div>
                                 <p className="text-xs text-emerald-600 font-medium">Available Balance</p>
-                                <p className="text-xl font-bold text-emerald-700">{balance.toLocaleString('vi-VN')} VND</p>
+                                <p className="text-xl font-bold text-emerald-700 flex items-center gap-1.5">{balance.toLocaleString('vi-VN')} <Brain className="h-5 w-5" /></p>
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount to Withdraw (VND)</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1">Amount to Withdraw <Brain className="h-4 w-4 text-emerald-600" /></label>
                             <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-[55%] text-gray-400 font-medium">₫</span>
+                                <span className="absolute left-3 top-1/2 -translate-y-[55%] text-gray-400 font-medium"><Brain className="h-4 w-4" /></span>
                                 <input
                                     id="withdraw-amount"
                                     type="number"
                                     min="1"
                                     max={balance}
                                     step="0.01"
-                                    placeholder={`Max: ${balance.toLocaleString('vi-VN')} VND`}
+                                    placeholder={`Max: ${balance.toLocaleString('vi-VN')} Credits`}
                                     value={amount}
                                     onChange={(e) => setAmount(e.target.value)}
                                     required
@@ -197,8 +198,8 @@ export default function TeacherPayments() {
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10" />
                         <Wallet className="h-7 w-7 text-indigo-200 mb-3 relative z-10" />
                         <p className="text-sm text-indigo-200 font-medium">Wallet Balance</p>
-                        <p className="text-3xl font-bold mt-1 relative z-10">
-                            {loading ? '—' : `${walletBalance.toLocaleString('vi-VN')} VND`}
+                        <p className="text-3xl font-bold mt-1 relative z-10 flex items-center gap-2">
+                            {loading ? '—' : <>{walletBalance.toLocaleString('vi-VN')} <Brain className="h-6 w-6" /></>}
                         </p>
                         <button
                             id="open-withdraw"
@@ -215,8 +216,8 @@ export default function TeacherPayments() {
                         </div>
                         <div>
                             <p className="text-xs text-gray-500 font-medium">Total Earned</p>
-                            <p className="text-2xl font-bold text-gray-900">
-                                {loading ? <span className="bg-gray-200 rounded animate-pulse block h-7 w-20" /> : `${totalCleared.toLocaleString('vi-VN')} VND`}
+                            <p className="text-2xl font-bold text-gray-900 flex items-center gap-1.5">
+                                {loading ? <span className="bg-gray-200 rounded animate-pulse block h-7 w-20" /> : <>{totalCleared.toLocaleString('vi-VN')} <Brain className="h-5 w-5 text-emerald-600" /></>}
                             </p>
                         </div>
                     </div>
@@ -227,8 +228,8 @@ export default function TeacherPayments() {
                         </div>
                         <div>
                             <p className="text-xs text-gray-500 font-medium">Pending Clearance</p>
-                            <p className="text-2xl font-bold text-gray-900">
-                                {loading ? <span className="bg-gray-200 rounded animate-pulse block h-7 w-20" /> : `${totalPending.toLocaleString('vi-VN')} VND`}
+                            <p className="text-2xl font-bold text-gray-900 flex items-center gap-1.5">
+                                {loading ? <span className="bg-gray-200 rounded animate-pulse block h-7 w-20" /> : <>{totalPending.toLocaleString('vi-VN')} <Brain className="h-5 w-5 text-amber-500" /></>}
                             </p>
                         </div>
                     </div>
@@ -299,7 +300,9 @@ export default function TeacherPayments() {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-sm font-bold text-emerald-600 text-right">
-                                                    +{tx.amount.toLocaleString('vi-VN')} VND
+                                                    <span className="flex items-center justify-end gap-1">
+                                                        +{tx.amount.toLocaleString('vi-VN')} <Brain className="h-4 w-4" />
+                                                    </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${statusCfg.color}`}>

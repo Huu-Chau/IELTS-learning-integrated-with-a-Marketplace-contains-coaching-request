@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { userService } from '../services/userService';
+import User from '../models/User';
 
 export const userController = {
     // GET /api/users/me — Get authenticated user's own profile (from Postgres)
@@ -46,6 +47,40 @@ export const userController = {
             res.json(user);
         } catch (error: any) {
             console.error('[UserController] getById error', error);
+            res.status(500).json({ error: error.message });
+        }
+    },
+
+    // POST /api/users/me/top-up — Mock Payment Gateway to add credits
+    async topUp(req: Request, res: Response): Promise<void> {
+        console.log('[UserController] topUp called', { uid: req.user?.uid, body: req.body });
+        try {
+            const uid = req.user?.uid;
+            if (!uid) {
+                res.status(401).json({ error: 'Not authenticated' });
+                return;
+            }
+
+            const { credits } = req.body;
+            if (!credits || typeof credits !== 'number' || credits <= 0) {
+                res.status(400).json({ error: 'Invalid credits amount' });
+                return;
+            }
+
+            const user = await User.findByPk(uid);
+            if (!user) {
+                res.status(404).json({ error: 'User not found' });
+                return;
+            }
+
+            // Atomically increment the wallet balance
+            await user.increment('wallet_balance', { by: credits });
+            await user.reload();
+
+            console.log('[UserController] topUp success', { uid, newBalance: user.wallet_balance });
+            res.json({ message: 'Credits successfully added', walletBalance: Number(user.wallet_balance) });
+        } catch (error: any) {
+            console.error('[UserController] topUp error', error);
             res.status(500).json({ error: error.message });
         }
     },

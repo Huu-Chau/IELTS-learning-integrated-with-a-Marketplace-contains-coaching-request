@@ -16,6 +16,8 @@ import teacherRoutes from './routes/teacherRoutes';
 import marketplaceRoutes from './routes/marketplaceRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import messageRoutes from './routes/messageRoutes';
+import reservationRoutes from './routes/reservationRoutes';
+import { startAllJobs } from './services/cronService';
 
 const app = express();
 
@@ -58,6 +60,12 @@ app.use('/api/notifications', notificationRoutes);
 console.log('[App]   ✅ /api/notifications');
 app.use('/api/messages', messageRoutes);
 console.log('[App]   ✅ /api/messages');
+app.use('/api/reservations', reservationRoutes);
+console.log('[App]   ✅ /api/reservations');
 console.log('[App] All routes mounted successfully');
+
+// ── Background Jobs ───────────────────────────────────────────────────────────
+// Starts all cron jobs (session reminders, auto-complete payouts, stale rejections)
+startAllJobs();
 
 export default app;

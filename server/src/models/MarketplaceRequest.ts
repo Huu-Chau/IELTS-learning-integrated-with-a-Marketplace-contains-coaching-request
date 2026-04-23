@@ -19,6 +19,8 @@ class MarketplaceRequest extends Model {
     declare message: string | null;       // Student's message / description
     declare skill: string | null;         // e.g. 'Writing', 'Speaking'
     declare requestType: string;          // 'broadcast' | 'targeted' | 'booking'
+    declare scheduledAt: Date | null;     // The specific time-slot booked
+    declare durationMinutes: number;      // Duration of the booking
     declare createdAt: Date;
     declare updatedAt: Date;
 }
@@ -68,6 +70,15 @@ MarketplaceRequest.init(
             type: DataTypes.STRING(50),
             allowNull: false,
             defaultValue: 'booking',
+        },
+        scheduledAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },
+        durationMinutes: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 60,
         },
     },
     {

@@ -6,6 +6,7 @@ import Message from '../models/Message';
 import Notification from '../models/Notification';
 import MarketplaceRequest from '../models/MarketplaceRequest';
 import User from '../models/User';
+import TeacherAvailability from '../models/TeacherAvailability';
 
 const router = Router();
 
@@ -177,6 +178,68 @@ router.delete('/listings/:id', async (req: Request, res: Response): Promise<void
 });
 
 // =============================================================================
+// AVAILABILITY SCHEDULE
+// =============================================================================
+
+/**
+ * GET /api/teacher/availability
+ * Returns the authenticated teacher's recurring weekly availability rules.
+ */
+router.get('/availability', async (req: Request, res: Response): Promise<void> => {
+    console.log('[TeacherRoutes] GET /availability called', { uid: req.user?.uid });
+    try {
+        const teacherId = req.user!.uid;
+        const rules = await TeacherAvailability.findAll({
+            where: { teacherId },
+            order: [['dayOfWeek', 'ASC'], ['startTime', 'ASC']],
+        });
+        console.log('[TeacherRoutes] GET /availability success', { count: rules.length });
+        res.json(rules);
+    } catch (error) {
+        console.error('[TeacherRoutes] GET /availability error', error);
+        res.status(500).json({ error: 'Failed to fetch availability' });
+    }
+});
+
+/**
+ * PUT /api/teacher/availability
+ * Replaces the teacher's entire weekly schedule.
+ * Body: { rules: [{ dayOfWeek: 1, startTime: '09:00', endTime: '17:00' }] }
+ */
+router.put('/availability', async (req: Request, res: Response): Promise<void> => {
+    console.log('[TeacherRoutes] PUT /availability called', { uid: req.user?.uid, body: req.body });
+    try {
+        const teacherId = req.user!.uid;
+        const { rules } = req.body as { rules: { dayOfWeek: number; startTime: string; endTime: string }[] };
+
+        if (!Array.isArray(rules)) {
+            res.status(400).json({ error: 'rules must be an array' });
+            return;
+        }
+
+        // Replace all existing rules atomically
+        await TeacherAvailability.destroy({ where: { teacherId } });
+
+        if (rules.length > 0) {
+            await TeacherAvailability.bulkCreate(
+                rules.map((r) => ({ teacherId, dayOfWeek: r.dayOfWeek, startTime: r.startTime, endTime: r.endTime, isAvailable: true }))
+            );
+        }
+
+        const updated = await TeacherAvailability.findAll({
+            where: { teacherId },
+            order: [['dayOfWeek', 'ASC'], ['startTime', 'ASC']],
+        });
+
+        console.log('[TeacherRoutes] PUT /availability success', { count: updated.length });
+        res.json(updated);
+    } catch (error) {
+        console.error('[TeacherRoutes] PUT /availability error', error);
+        res.status(500).json({ error: 'Failed to update availability' });
+    }
+});
+
+// =============================================================================
 // MARKETPLACE — ORDERS (incoming student requests)
 // =============================================================================
 
@@ -208,6 +271,8 @@ router.get('/orders', async (req: Request, res: Response): Promise<void> => {
                     fee: Number(order.fee ?? 0),
                     skill: order.skill,
                     message: order.message,
+                    scheduledAt: order.scheduledAt,
+                    durationMinutes: order.durationMinutes,
                     createdAt: order.createdAt,
                     updatedAt: order.updatedAt,
                 };
@@ -255,8 +320,6 @@ router.patch('/orders/:id', async (req: Request, res: Response): Promise<void> =
             });
 
             // ── Seed a conversation message so chat inbox is never empty ──
-            // This creates the first Message row with a stable conversationId,
-            // so both teacher and student see the chat immediately after acceptance.
             const conversationId = buildConversationId(req.user!.uid, order.studentId);
             const skillLabel = order.skill ? `IELTS ${order.skill}` : 'your session';
             await Message.create({
@@ -267,7 +330,6 @@ router.patch('/orders/:id', async (req: Request, res: Response): Promise<void> =
                 type: 'text',
             });
             console.log('[TeacherRoutes] seeded conversation message', { conversationId });
-            // ─────────────────────────────────────────────────────────────
         } else if (status === 'rejected') {
             await Notification.create({
                 userId: order.studentId,
@@ -374,7 +436,7 @@ router.post('/withdraw', async (req: Request, res: Response): Promise<void> => {
             userId: teacherId,
             type: 'payment',
             title: 'Withdrawal Requested',
-            body: `Your withdrawal of ${withdrawAmount.toLocaleString('vi-VN')} VND has been submitted. Processing takes 1–3 business days.`,
+            body: `Your withdrawal of ${withdrawAmount.toLocaleString('vi-VN')} Brain Credits has been submitted. Processing takes 1–3 business days.`,
             linkPath: '/teacher/payments',
         });
 
@@ -392,15 +454,12 @@ router.post('/withdraw', async (req: Request, res: Response): Promise<void> => {
 
 /**
  * GET /api/teacher/conversations
- * Returns a list of unique conversations the teacher is part of.
- * Each conversation includes the last message and unread count.
  */
 router.get('/conversations', async (req: Request, res: Response): Promise<void> => {
     console.log('[TeacherRoutes] GET /conversations called', { uid: req.user?.uid });
     try {
         const teacherId = req.user!.uid;
 
-        // Find all messages involving this teacher
         const messages = await Message.findAll({
             where: {
                 [Op.or]: [{ senderId: teacherId }, { receiverId: teacherId }],
@@ -408,7 +467,6 @@ router.get('/conversations', async (req: Request, res: Response): Promise<void> 
             order: [['sentAt', 'DESC']],
         });
 
-        // Group by conversationId, pick last message per conversation
         const convMap = new Map<string, {
             conversationId: string;
             otherId: string;
@@ -433,7 +491,6 @@ router.get('/conversations', async (req: Request, res: Response): Promise<void> 
             }
         }
 
-        // Enrich with user display names
         const conversations = await Promise.all(
             Array.from(convMap.values()).map(async (conv) => {
                 const otherUser = await User.findByPk(conv.otherId, {
@@ -448,7 +505,6 @@ router.get('/conversations', async (req: Request, res: Response): Promise<void> 
             })
         );
 
-        // Sort by newest message
         conversations.sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
 
         console.log('[TeacherRoutes] GET /conversations success', { count: conversations.length });
@@ -461,8 +517,6 @@ router.get('/conversations', async (req: Request, res: Response): Promise<void> 
 
 /**
  * GET /api/teacher/messages/:conversationId
- * Returns all messages in a specific conversation.
- * Also marks all received messages as read.
  */
 router.get('/messages/:conversationId', async (req: Request, res: Response): Promise<void> => {
     console.log('[TeacherRoutes] GET /messages/:conversationId called', { id: req.params.conversationId });
@@ -475,7 +529,6 @@ router.get('/messages/:conversationId', async (req: Request, res: Response): Pro
             order: [['sentAt', 'ASC']],
         });
 
-        // Mark received messages as read
         await Message.update(
             { isRead: true },
             { where: { conversationId, receiverId: teacherId, isRead: false } }
@@ -491,7 +544,6 @@ router.get('/messages/:conversationId', async (req: Request, res: Response): Pro
 
 /**
  * POST /api/teacher/messages/:receiverId
- * Send a message to another user. Body: { content, type? }
  */
 router.post('/messages/:receiverId', async (req: Request, res: Response): Promise<void> => {
     console.log('[TeacherRoutes] POST /messages/:receiverId called', { receiverId: req.params.receiverId });
@@ -515,7 +567,6 @@ router.post('/messages/:receiverId', async (req: Request, res: Response): Promis
             type,
         });
 
-        // Notify the receiver
         await Notification.create({
             userId: receiverId,
             type: 'message',
@@ -536,10 +587,6 @@ router.post('/messages/:receiverId', async (req: Request, res: Response): Promis
 // NOTIFICATIONS
 // =============================================================================
 
-/**
- * GET /api/teacher/notifications
- * Returns notifications for the authenticated teacher, newest first.
- */
 router.get('/notifications', async (req: Request, res: Response): Promise<void> => {
     console.log('[TeacherRoutes] GET /notifications called', { uid: req.user?.uid });
     try {
@@ -556,10 +603,6 @@ router.get('/notifications', async (req: Request, res: Response): Promise<void> 
     }
 });
 
-/**
- * PATCH /api/teacher/notifications/read-all
- * Marks all notifications for the teacher as read.
- */
 router.patch('/notifications/read-all', async (req: Request, res: Response): Promise<void> => {
     console.log('[TeacherRoutes] PATCH /notifications/read-all called', { uid: req.user?.uid });
     try {

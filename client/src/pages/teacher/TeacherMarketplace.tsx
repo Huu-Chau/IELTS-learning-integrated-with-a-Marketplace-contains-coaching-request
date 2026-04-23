@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import TeacherLayout from '@/layouts/TeacherLayout';
 import {
     Plus,
@@ -10,6 +10,7 @@ import {
     Banknote,
     Tag,
     X,
+    Brain,
     Loader2,
     Search,
     Filter,
@@ -18,8 +19,12 @@ import {
     Pen,
     Mic,
     CheckCircle,
+    CalendarDays,
+    Save,
 } from 'lucide-react';
 import { useTeacherApi, useTeacherMutation } from '@/hooks/useTeacherApi';
+import { useAuth } from '@/context/AuthContext';
+import { apiClient } from '@/services/apiClient';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -42,8 +47,18 @@ interface Order {
     fee: number;
     skill: string | null;
     message: string | null;
+    scheduledAt: string | null;
     createdAt: string;
 }
+
+interface AvailabilityRule {
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+}
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DEFAULT_HOURS = { startTime: '09:00', endTime: '17:00' };
 
 // ── Skill config ──────────────────────────────────────────────────────────────
 
@@ -113,8 +128,8 @@ function CreateListingModal({ onClose, onCreated }: CreateModalProps) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                     <h2 className="font-bold text-gray-900">Create New Listing</h2>
                     <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
@@ -175,9 +190,9 @@ function CreateListingModal({ onClose, onCreated }: CreateModalProps) {
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Price / hr (VND) *</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1">Price / hr <Brain className="h-3 w-3 text-indigo-500" /> *</label>
                             <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-[55%] text-gray-400 font-medium">₫</span>
+                                <span className="absolute left-3 top-1/2 -translate-y-[55%] text-gray-400 font-medium"><Brain className="h-4 w-4 text-gray-400" /></span>
                                 <input
                                     id="listing-price"
                                     type="number"
@@ -240,10 +255,204 @@ const STATUS_COLORS: Record<string, string> = {
     rejected: 'bg-red-100 text-red-700',
 };
 
+// ── Schedule Panel ────────────────────────────────────────────────────────────
+
+function SchedulePanel() {
+    const { getIdToken } = useAuth();
+    const [rules, setRules] = useState<AvailabilityRule[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+
+    // Which days are toggled on
+    const [enabledDays, setEnabledDays] = useState<Record<number, boolean>>({});
+    const [hours, setHours] = useState<Record<number, { startTime: string; endTime: string }>>({});
+
+    useEffect(() => {
+        async function fetchSchedule() {
+            console.log('[SchedulePanel] fetchSchedule called');
+            try {
+                const token = await getIdToken();
+                const data: AvailabilityRule[] = await apiClient.get('/teacher/availability', token);
+                // Hydrate state from existing rules
+                const dayMap: Record<number, boolean> = {};
+                const hourMap: Record<number, { startTime: string; endTime: string }> = {};
+                data.forEach((r) => {
+                    dayMap[r.dayOfWeek] = true;
+                    hourMap[r.dayOfWeek] = { startTime: r.startTime, endTime: r.endTime };
+                });
+                setEnabledDays(dayMap);
+                setHours(hourMap);
+                setRules(data);
+                console.log('[SchedulePanel] fetchSchedule success', { count: data.length });
+            } catch (err) {
+                console.error('[SchedulePanel] fetchSchedule error', err);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchSchedule();
+    }, [getIdToken]);
+
+    const toggleDay = (day: number) => {
+        console.log('[SchedulePanel] toggleDay called', { day });
+        setEnabledDays((prev) => ({ ...prev, [day]: !prev[day] }));
+        if (!hours[day]) {
+            setHours((prev) => ({ ...prev, [day]: { ...DEFAULT_HOURS } }));
+        }
+    };
+
+    const handleSave = async () => {
+        console.log('[SchedulePanel] handleSave called');
+        setSaving(true);
+        setSaved(false);
+        try {
+            const token = await getIdToken();
+            const rulesPayload: AvailabilityRule[] = Object.entries(enabledDays)
+                .filter(([, enabled]) => enabled)
+                .map(([day]) => ({
+                    dayOfWeek: parseInt(day),
+                    startTime: hours[parseInt(day)]?.startTime ?? DEFAULT_HOURS.startTime,
+                    endTime: hours[parseInt(day)]?.endTime ?? DEFAULT_HOURS.endTime,
+                }));
+            await apiClient.put('/teacher/availability', { rules: rulesPayload }, token);
+            setSaved(true);
+            setTimeout(() => setSaved(false), 3000);
+            console.log('[SchedulePanel] handleSave success', { count: rulesPayload.length });
+        } catch (err) {
+            console.error('[SchedulePanel] handleSave error', err);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="bg-white rounded-2xl border border-gray-100 p-8 space-y-4 animate-pulse">
+                {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="h-14 bg-gray-100 rounded-xl" />
+                ))}
+            </div>
+        );
+    }
+
+    return (
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            {/* Panel header */}
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-50 rounded-xl">
+                        <CalendarDays className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <div>
+                        <h2 className="font-bold text-gray-900">Weekly Availability</h2>
+                        <p className="text-xs text-gray-500 mt-0.5">Set the days and hours you're available for 1-hour coaching sessions.</p>
+                    </div>
+                </div>
+                <button
+                    id="save-schedule"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-60 shadow-sm shadow-indigo-200"
+                >
+                    {saving ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : saved ? (
+                        <CheckCircle className="h-4 w-4" />
+                    ) : (
+                        <Save className="h-4 w-4" />
+                    )}
+                    {saved ? 'Saved!' : 'Save Schedule'}
+                </button>
+            </div>
+
+            {/* Day rows */}
+            <div className="divide-y divide-gray-50">
+                {[1, 2, 3, 4, 5, 6, 0].map((day) => {
+                    const isOn = enabledDays[day] ?? false;
+                    const dayHours = hours[day] ?? DEFAULT_HOURS;
+
+                    return (
+                        <div key={day} className={`px-6 py-4 flex items-center gap-5 transition-colors ${isOn ? 'bg-indigo-50/30' : 'bg-white'}`}>
+                            {/* Toggle */}
+                            <button
+                                id={`toggle-day-${day}`}
+                                onClick={() => toggleDay(day)}
+                                className="flex-shrink-0"
+                            >
+                                {isOn ? (
+                                    <ToggleRight className="h-8 w-8 text-indigo-600 transition-colors" />
+                                ) : (
+                                    <ToggleLeft className="h-8 w-8 text-gray-300 transition-colors" />
+                                )}
+                            </button>
+
+                            {/* Day name */}
+                            <span className={`w-28 font-semibold text-sm ${isOn ? 'text-gray-900' : 'text-gray-400'}`}>
+                                {DAY_NAMES[day]}
+                            </span>
+
+                            {/* Time pickers */}
+                            {isOn ? (
+                                <div className="flex items-center gap-3 flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <Clock className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                        <input
+                                            id={`start-time-${day}`}
+                                            type="time"
+                                            value={dayHours.startTime}
+                                            onChange={(e) =>
+                                                setHours((prev) => ({
+                                                    ...prev,
+                                                    [day]: { ...prev[day], startTime: e.target.value },
+                                                }))
+                                            }
+                                            className="px-3 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
+                                        />
+                                    </div>
+                                    <span className="text-gray-400 text-sm font-medium">to</span>
+                                    <input
+                                        id={`end-time-${day}`}
+                                        type="time"
+                                        value={dayHours.endTime}
+                                        onChange={(e) =>
+                                            setHours((prev) => ({
+                                                ...prev,
+                                                [day]: { ...prev[day], endTime: e.target.value },
+                                            }))
+                                        }
+                                        className="px-3 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
+                                    />
+                                    <span className="text-xs text-indigo-600 font-medium bg-indigo-50 px-2 py-1 rounded-lg">
+                                        {(() => {
+                                            const [sh, sm] = dayHours.startTime.split(':').map(Number);
+                                            const [eh, em] = dayHours.endTime.split(':').map(Number);
+                                            const mins = (eh * 60 + em) - (sh * 60 + sm);
+                                            return mins > 0 ? `${Math.floor(mins / 60)}h ${mins % 60 > 0 ? `${mins % 60}m` : ''}`.trim() : 'Invalid';
+                                        })()}
+                                    </span>
+                                </div>
+                            ) : (
+                                <span className="text-sm text-gray-400 italic">Unavailable</span>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100">
+                <p className="text-xs text-gray-400 text-center">
+                    Students can book any available 1-hour slot within your working hours. Booked slots are automatically blocked.
+                </p>
+            </div>
+        </div>
+    );
+}
+
 export default function TeacherMarketplace() {
     console.log('[TeacherMarketplace] render called');
 
-    const [activeTab, setActiveTab] = useState<'listings' | 'requests'>('listings');
+    const [activeTab, setActiveTab] = useState<'listings' | 'requests' | 'schedule'>('listings');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [skillFilter, setSkillFilter] = useState<string>('All');
@@ -325,8 +534,8 @@ export default function TeacherMarketplace() {
 
             {/* ── Edit Listing Modal ───────────────────────────────────── */}
             {editingListing && (
-                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setEditingListing(null)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                             <h2 className="font-bold text-gray-900">Edit Listing</h2>
                             <button onClick={() => setEditingListing(null)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
@@ -356,7 +565,7 @@ export default function TeacherMarketplace() {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Price / hr (VND)</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1">Price / hr <Brain className="h-3 w-3 text-indigo-500" /></label>
                                     <input
                                         id="edit-listing-price"
                                         type="number" min="1" step="0.01"
@@ -424,7 +633,7 @@ export default function TeacherMarketplace() {
 
                 {/* Tabs */}
                 <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-                    {([['listings', 'My Listings'], ['requests', 'Student Requests']] as const).map(([tab, label]) => (
+                    {([['listings', 'My Listings'], ['requests', 'Student Requests'], ['schedule', 'My Schedule']] as const).map(([tab, label]) => (
                         <button
                             key={tab}
                             id={`tab-${tab}`}
@@ -549,8 +758,8 @@ export default function TeacherMarketplace() {
 
                                         <div className="flex items-center gap-4 text-xs text-gray-500">
                                             <span className="flex items-center gap-1 font-semibold text-emerald-600">
-                                                <Banknote className="h-3.5 w-3.5" />
-                                                {listing.pricePerHour.toLocaleString('vi-VN')} VND/hr
+                                                <Brain className="h-3.5 w-3.5" />
+                                                {listing.pricePerHour.toLocaleString('vi-VN')} /hr
                                             </span>
                                             <span className="flex items-center gap-1">
                                                 <Clock className="h-3.5 w-3.5" />
@@ -605,8 +814,8 @@ export default function TeacherMarketplace() {
                                                         <span className="ml-2 text-indigo-500 font-medium">· {order.skill}</span>
                                                     )}
                                                     {order.fee > 0 && (
-                                                        <span className="ml-2 text-emerald-600 font-semibold">
-                                                            · {(order.fee).toLocaleString('vi-VN')} VND
+                                                        <span className="ml-2 text-emerald-600 font-semibold flex items-center gap-1">
+                                                            · {(order.fee).toLocaleString('vi-VN')} <Brain className="h-3 w-3" />
                                                         </span>
                                                     )}
                                                 </p>
@@ -645,6 +854,11 @@ export default function TeacherMarketplace() {
                             ))
                         )}
                     </div>
+                )}
+
+                {/* My Schedule tab */}
+                {activeTab === 'schedule' && (
+                    <SchedulePanel />
                 )}
             </div>
         </TeacherLayout>

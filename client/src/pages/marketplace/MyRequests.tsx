@@ -11,7 +11,7 @@ import {
     RefreshCw,
     Inbox,
     User,
-    Banknote,
+    Brain,
 } from 'lucide-react';
 
 interface StudentRequest {
@@ -194,9 +194,8 @@ export default function MyRequests() {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex items-center gap-1 text-sm font-medium text-gray-800">
-                                                        <Banknote className="h-3.5 w-3.5 text-gray-400" />
-                                                        {req.fee.toLocaleString('vi-VN')} VND
+                                                    <div className="flex items-center gap-1.5 text-sm font-medium text-gray-800">
+                                                        {req.fee.toLocaleString('vi-VN')} <Brain className="h-3.5 w-3.5 text-indigo-600" />
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

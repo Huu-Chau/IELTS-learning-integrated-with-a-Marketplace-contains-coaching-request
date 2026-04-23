@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
+import TopUpModal from '@/components/payment/TopUpModal';
 import {
     Banknote,
     TrendingUp,
@@ -10,6 +11,9 @@ import {
     ChevronLeft,
     ChevronRight,
     ReceiptText,
+    Brain,
+    Wallet,
+    Plus,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { apiClient } from '@/services/apiClient';
@@ -28,6 +32,7 @@ interface Payment {
 }
 
 interface PaymentsResponse {
+    walletBalance: number;
     payments: Payment[];
     totalSpent: number;
 }
@@ -68,6 +73,7 @@ export default function StudentPayments() {
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState<FilterStatus>('All');
     const [currentPage, setCurrentPage] = useState(1);
+    const [showTopUp, setShowTopUp] = useState(false);
 
     useEffect(() => {
         async function fetchPayments() {
@@ -88,6 +94,7 @@ export default function StudentPayments() {
 
     const allPayments = data?.payments ?? [];
     const totalSpent = data?.totalSpent ?? 0;
+    const walletBalance = data?.walletBalance ?? 0;
 
     const filtered = statusFilter === 'All'
         ? allPayments
@@ -106,6 +113,17 @@ export default function StudentPayments() {
 
     return (
         <DashboardLayout role="student">
+            {showTopUp && (
+                <TopUpModal 
+                    onClose={() => setShowTopUp(false)} 
+                    onSuccess={(newBalance) => {
+                        if (data) {
+                            setData({ ...data, walletBalance: newBalance });
+                        }
+                    }} 
+                />
+            )}
+            
             <div className="space-y-6 max-w-5xl">
                 {/* ── Header ──────────────────────────────────────────── */}
                 <div>
@@ -116,16 +134,38 @@ export default function StudentPayments() {
                 </div>
 
                 {/* ── Summary cards ────────────────────────────────────── */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {/* Total Spent */}
-                    <div className="sm:col-span-1 bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-600 rounded-2xl p-6 text-white shadow-lg shadow-indigo-200 relative overflow-hidden">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {/* Wallet Balance */}
+                    <div className="md:col-span-2 bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-600 rounded-2xl p-6 text-white shadow-lg shadow-indigo-200 relative overflow-hidden flex flex-col justify-between">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10" />
-                        <Banknote className="h-7 w-7 text-indigo-200 mb-3 relative z-10" />
-                        <p className="text-sm text-indigo-200 font-medium">Total Spent</p>
-                        <p className="text-3xl font-bold mt-1 relative z-10">
-                            {loading ? '—' : `${totalSpent.toLocaleString('vi-VN')} VND`}
+                        
+                        <div className="flex items-start justify-between relative z-10">
+                            <div>
+                                <Wallet className="h-7 w-7 text-indigo-200 mb-2" />
+                                <p className="text-sm text-indigo-200 font-medium">Wallet Balance</p>
+                                <p className="text-3xl font-bold mt-1 flex items-center gap-2">
+                                    {loading ? '—' : <>{walletBalance.toLocaleString('vi-VN')} <Brain className="h-6 w-6" /></>}
+                                </p>
+                            </div>
+                            
+                            <button
+                                onClick={() => setShowTopUp(true)}
+                                className="flex items-center gap-1.5 text-sm bg-white/20 hover:bg-white/30 text-white font-semibold px-4 py-2.5 rounded-xl transition-colors backdrop-blur-sm"
+                            >
+                                <Plus className="h-4 w-4" /> Buy Credits
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Total Spent */}
+                    <div className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col justify-center">
+                        <div className="p-3 bg-gray-50 w-fit rounded-xl mb-3">
+                            <Banknote className="h-6 w-6 text-gray-400" />
+                        </div>
+                        <p className="text-xs text-gray-500 font-medium">Total Spent</p>
+                        <p className="text-2xl font-bold text-gray-900 mt-1 flex items-center gap-1.5">
+                            {loading ? '—' : <>{totalSpent.toLocaleString('vi-VN')} <Brain className="h-4 w-4 text-indigo-600" /></>}
                         </p>
-                        <p className="text-xs text-indigo-300 mt-1">on expert reviews</p>
                     </div>
 
                     {/* Completed Sessions */}
@@ -232,12 +272,12 @@ export default function StudentPayments() {
                                                 </td>
                                                 <td className="px-6 py-4 text-sm font-bold text-right">
                                                     {tx.rawStatus === 'rejected' ? (
-                                                        <span className="text-gray-400 line-through">
-                                                            {tx.amount.toLocaleString('vi-VN')} VND
+                                                        <span className="text-gray-400 line-through flex items-center justify-end gap-1">
+                                                            {tx.amount.toLocaleString('vi-VN')} <Brain className="h-4 w-4" />
                                                         </span>
                                                     ) : (
-                                                        <span className="text-indigo-700">
-                                                            {tx.amount.toLocaleString('vi-VN')} VND
+                                                        <span className="text-indigo-700 flex items-center justify-end gap-1">
+                                                            {tx.amount.toLocaleString('vi-VN')} <Brain className="h-4 w-4" />
                                                         </span>
                                                     )}
                                                 </td>

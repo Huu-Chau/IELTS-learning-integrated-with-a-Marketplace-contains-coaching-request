@@ -5,6 +5,8 @@ import TeacherListing from '../models/TeacherListing';
 import MarketplaceRequest from '../models/MarketplaceRequest';
 import Notification from '../models/Notification';
 import User from '../models/User';
+import Reservation from '../models/Reservation';
+import TeacherAvailability from '../models/TeacherAvailability';
 
 const router = Router();
 
@@ -57,12 +59,43 @@ router.get('/listings', async (req: Request, res: Response): Promise<void> => {
             order: [['createdAt', 'DESC']],
         });
 
-        // Enrich each listing with the teacher's profile data
+        // Enrich each listing with the teacher's profile data + reservation status
+        const currentUserId = req.user?.uid;
         const enriched = await Promise.all(
             listings.map(async (listing) => {
                 const teacher = await User.findByPk(listing.teacherId, {
                     attributes: ['id', 'firstName', 'lastName', 'email'],
                 });
+
+                // Check if this listing has an active (non-expired) reservation
+                const activeReservation = await Reservation.findOne({
+                    where: {
+                        listingId: listing.id,
+                        status: 'pending',
+                        expiresAt: { [Op.gt]: new Date() },
+                    },
+                    attributes: ['studentId', 'expiresAt'],
+                });
+
+                // Check if there's a completed booking for this listing
+                const completedBooking = await Reservation.findOne({
+                    where: {
+                        listingId: listing.id,
+                        status: 'completed',
+                    },
+                });
+
+                let reservationStatus: 'available' | 'pending' | 'booked' = 'available';
+                let isOwnReservation = false;
+                let reservationExpiresAt: Date | null = null;
+
+                if (completedBooking) {
+                    reservationStatus = 'booked';
+                } else if (activeReservation) {
+                    reservationStatus = 'pending';
+                    isOwnReservation = activeReservation.studentId === currentUserId;
+                    reservationExpiresAt = activeReservation.expiresAt;
+                }
 
                 return {
                     id: listing.id,
@@ -84,6 +117,10 @@ router.get('/listings', async (req: Request, res: Response): Promise<void> => {
                               )}&background=random`,
                           }
                         : null,
+                    // Reservation status for frontend badge rendering
+                    reservationStatus,
+                    isOwnReservation,
+                    reservationExpiresAt,
                 };
             })
         );
@@ -312,6 +349,7 @@ router.get('/payments', async (req: Request, res: Response): Promise<void> => {
     console.log('[MarketplaceRoutes] GET /payments called', { uid: req.user?.uid });
     try {
         const studentId = req.user!.uid;
+        const student = await User.findByPk(studentId);
 
         const requests = await MarketplaceRequest.findAll({
             where: { studentId },
@@ -354,10 +392,104 @@ router.get('/payments', async (req: Request, res: Response): Promise<void> => {
             .reduce((sum, p) => sum + p.amount, 0);
 
         console.log('[MarketplaceRoutes] GET /payments success', { count: payments.length, totalSpent });
-        res.json({ payments, totalSpent });
+        res.json({ 
+            walletBalance: Number(student?.wallet_balance ?? 0),
+            payments, 
+            totalSpent 
+        });
     } catch (error) {
         console.error('[MarketplaceRoutes] GET /payments error', error);
         res.status(500).json({ error: 'Failed to fetch payment history' });
+    }
+});
+
+/**
+ * GET /api/marketplace/teachers/:uid/availability
+ * Returns available 1-hour booking slots for a teacher over the next 14 days.
+ * Automatically subtracts already-booked time slots.
+ */
+router.get('/teachers/:uid/availability', async (req: Request, res: Response): Promise<void> => {
+    console.log('[MarketplaceRoutes] GET /teachers/:uid/availability called', { uid: req.params.uid });
+    try {
+        const teacherId = req.params.uid;
+
+        // 1. Fetch teacher's recurring weekly schedule
+        const rules = await TeacherAvailability.findAll({
+            where: { teacherId, isAvailable: true },
+        });
+
+        if (rules.length === 0) {
+            res.json({ slots: [] });
+            return;
+        }
+
+        // 2. Fetch already-booked slots in the next 14 days
+        const now = new Date();
+        const twoWeeksOut = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+
+        const bookedRequests = await MarketplaceRequest.findAll({
+            where: {
+                teacherId,
+                status: { [Op.in]: ['pending', 'accepted'] },
+                scheduledAt: { [Op.between]: [now, twoWeeksOut] },
+            },
+            attributes: ['scheduledAt', 'durationMinutes'],
+        });
+
+        // 3. Generate all 1-hour slots for the next 14 days based on rules
+        const slots: { start: string; end: string; available: boolean }[] = [];
+
+        for (let d = 0; d < 14; d++) {
+            const date = new Date(now);
+            date.setDate(date.getDate() + d);
+            date.setHours(0, 0, 0, 0);
+            const dayOfWeek = date.getDay();
+
+            // Find rules matching this day of week
+            const dayRules = rules.filter((r) => r.dayOfWeek === dayOfWeek);
+
+            for (const rule of dayRules) {
+                const [startH, startM] = rule.startTime.split(':').map(Number);
+                const [endH, endM] = rule.endTime.split(':').map(Number);
+
+                const windowStart = new Date(date);
+                windowStart.setHours(startH, startM, 0, 0);
+                const windowEnd = new Date(date);
+                windowEnd.setHours(endH, endM, 0, 0);
+
+                // Generate 1-hour slots within the window
+                let cursor = new Date(windowStart);
+                while (cursor.getTime() + 60 * 60 * 1000 <= windowEnd.getTime()) {
+                    const slotStart = new Date(cursor);
+                    const slotEnd = new Date(cursor.getTime() + 60 * 60 * 1000);
+
+                    // Skip past slots (must be at least 1h in the future)
+                    if (slotStart.getTime() > now.getTime() + 60 * 60 * 1000) {
+                        // Check if this slot overlaps with any booked request
+                        const isBooked = bookedRequests.some((b) => {
+                            if (!b.scheduledAt) return false;
+                            const bStart = new Date(b.scheduledAt).getTime();
+                            const bEnd = bStart + (b.durationMinutes ?? 60) * 60 * 1000;
+                            return slotStart.getTime() < bEnd && slotEnd.getTime() > bStart;
+                        });
+
+                        slots.push({
+                            start: slotStart.toISOString(),
+                            end: slotEnd.toISOString(),
+                            available: !isBooked,
+                        });
+                    }
+
+                    cursor = new Date(cursor.getTime() + 60 * 60 * 1000);
+                }
+            }
+        }
+
+        console.log('[MarketplaceRoutes] GET /teachers/:uid/availability success', { slots: slots.length });
+        res.json({ slots });
+    } catch (error) {
+        console.error('[MarketplaceRoutes] GET /teachers/:uid/availability error', error);
+        res.status(500).json({ error: 'Failed to fetch teacher availability' });
     }
 });
 

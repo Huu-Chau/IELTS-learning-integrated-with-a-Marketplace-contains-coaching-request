@@ -6,6 +6,8 @@ import path from 'path';
 import express from 'express';
 import { Server as SocketIOServer } from 'socket.io';
 import { registerSpeakingSocketHandlers } from './controllers/speakingSessionController';
+// Model imports — ensure all tables are created/synced on startup
+import './models/Reservation';
 
 dotenv.config();
 

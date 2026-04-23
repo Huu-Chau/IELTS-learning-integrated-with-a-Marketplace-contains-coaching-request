@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import TeacherCard from '@/components/marketplace/TeacherCard';
-import { Search, SlidersHorizontal, AlertCircle } from 'lucide-react';
+import BookingCheckoutModal from '@/components/payment/BookingCheckoutModal';
+import CalendarMatrix from '@/components/calendar/CalendarMatrix';
+import { Search, SlidersHorizontal, AlertCircle, X, CalendarDays, Brain } from 'lucide-react';
 import { apiClient } from '@/services/apiClient';
 import { useAuth } from '@/context/AuthContext';
 
@@ -22,6 +24,10 @@ export interface MarketplaceListing {
         email: string;
         avatar: string;
     } | null;
+    // ── Reservation status enriched by backend ──────────────────────────────
+    reservationStatus: 'available' | 'pending' | 'booked';
+    isOwnReservation: boolean;
+    reservationExpiresAt: string | null;
 }
 
 export default function TeacherList() {
@@ -33,6 +39,15 @@ export default function TeacherList() {
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeFilter, setActiveFilter] = useState('All Tutors');
+    // ── Checkout flow state ─────────────────────────────────────────────────
+    const [checkoutListingId, setCheckoutListingId] = useState<number | null>(null);
+    const checkoutListing = listings.find((l) => l.id === checkoutListingId) ?? null;
+
+    // ── Calendar / slot selection step ──────────────────────────────────────
+    interface TimeSlot { start: string; end: string; available: boolean; }
+    const [calendarListingId, setCalendarListingId] = useState<number | null>(null);
+    const calendarListing = listings.find((l) => l.id === calendarListingId) ?? null;
+    const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
 
     const SKILL_FILTERS = ['All Tutors', 'Speaking', 'Writing', 'Reading', 'Listening'];
 
@@ -69,6 +84,31 @@ export default function TeacherList() {
 
         fetchListings();
     }, [activeFilter]); // Re-fetch when filter changes
+
+    // Called by TeacherCard when a student clicks "Book Now"
+    // Now opens the calendar step first
+    const handleReserve = (listingId: number) => {
+        console.log('[TeacherList] handleReserve called', { listingId });
+        setCalendarListingId(listingId);
+        setSelectedSlot(null);
+    };
+
+    const handleCheckoutClose = (didComplete: boolean) => {
+        console.log('[TeacherList] handleCheckoutClose called', { didComplete });
+        setCheckoutListingId(null);
+        setCalendarListingId(null);
+        setSelectedSlot(null);
+        if (didComplete) {
+            setActiveFilter((prev) => prev);
+        }
+    };
+
+    const handleSlotConfirm = () => {
+        console.log('[TeacherList] handleSlotConfirm called', { selectedSlot });
+        if (!calendarListingId) return;
+        setCheckoutListingId(calendarListingId);
+        setCalendarListingId(null);
+    };
 
     // Client-side search on top of loaded listings (for instant feedback)
     const filteredListings = searchTerm.trim()
@@ -172,11 +212,91 @@ export default function TeacherList() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {filteredListings.map((listing) => (
-                            <TeacherCard key={listing.id} listing={listing} />
+                            <TeacherCard
+                                key={listing.id}
+                                listing={listing}
+                                onReserved={handleReserve}
+                            />
                         ))}
                     </div>
                 )}
             </div>
+
+            {/* ── CalendarMatrix step ── shown before checkout ─────────── */}
+            {calendarListing && !checkoutListingId && (
+                <div
+                    className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm"
+                    onClick={() => { setCalendarListingId(null); setSelectedSlot(null); }}
+                >
+                    <div
+                        className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-indigo-50 rounded-xl">
+                                    <CalendarDays className="h-5 w-5 text-indigo-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-900 text-base">Pick a Time Slot</h3>
+                                    <p className="text-xs text-gray-500 mt-0.5">{calendarListing.teacher?.name ?? 'Tutor'}</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => { setCalendarListingId(null); setSelectedSlot(null); }}
+                                className="p-2 rounded-full hover:bg-gray-100 text-gray-400 transition-colors"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        {/* Calendar */}
+                        <div className="p-5">
+                            <CalendarMatrix
+                                teacherId={calendarListing.teacherId}
+                                onSlotSelected={setSelectedSlot}
+                                selectedSlot={selectedSlot}
+                            />
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-6 pb-6 flex items-center justify-between gap-3 border-t border-gray-100 pt-4">
+                            <div className="text-sm text-gray-600">
+                                {selectedSlot ? (
+                                    <span className="font-semibold text-indigo-700">
+                                        {new Date(selectedSlot.start).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                                    </span>
+                                ) : (
+                                    <span className="text-gray-400">No slot selected yet</span>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-bold text-gray-800 flex items-center gap-1">
+                                    {calendarListing.pricePerHour} <Brain className="h-4 w-4 text-indigo-600" />
+                                </span>
+                                <button
+                                    id="confirm-slot"
+                                    disabled={!selectedSlot}
+                                    onClick={handleSlotConfirm}
+                                    className="px-5 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm shadow-indigo-200"
+                                >
+                                    Confirm & Pay
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── BookingCheckoutModal ──────────────────────────────────── */}
+            {checkoutListing && (
+                <BookingCheckoutModal
+                    listing={checkoutListing}
+                    onClose={handleCheckoutClose}
+                    scheduledAt={selectedSlot?.start ?? null}
+                />
+            )}
         </DashboardLayout>
     );
 }

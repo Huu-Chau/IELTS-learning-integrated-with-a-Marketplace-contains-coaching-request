@@ -9,6 +9,7 @@ import {
     CheckCircle,
     AlertCircle,
     ArrowRight,
+    Brain,
 } from 'lucide-react';
 import { useTeacherApi } from '@/hooks/useTeacherApi';
 import { Link } from 'react-router-dom';
@@ -56,7 +57,7 @@ export default function TeacherDashboardPage() {
         ? [
               {
                   label: 'Wallet Balance',
-                  value: `${(stats.monthlyEarnings ?? 0).toLocaleString('vi-VN')} VND`,
+                  value: <div className="flex items-center gap-1.5">{(stats.monthlyEarnings ?? 0).toLocaleString('vi-VN')} <Brain className="h-6 w-6" /></div>,
                   icon: Banknote,
                   gradient: 'from-emerald-500 to-teal-500',
                   bg: 'bg-emerald-50',
@@ -181,7 +182,11 @@ export default function TeacherDashboardPage() {
                                                 <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
                                                     <Clock className="h-3 w-3" />
                                                     {new Date(order.createdAt).toLocaleDateString()}
-                                                    {order.fee > 0 && ` · ${(order.fee).toLocaleString('vi-VN')} VND`}
+                                                    {order.fee > 0 && (
+                                                        <span className="flex items-center gap-1 ml-1">
+                                                            · {(order.fee).toLocaleString('vi-VN')} <Brain className="h-3 w-3" />
+                                                        </span>
+                                                    )}
                                                 </p>
                                             </div>
                                         </div>

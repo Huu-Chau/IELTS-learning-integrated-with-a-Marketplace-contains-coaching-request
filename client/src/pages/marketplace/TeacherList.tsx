@@ -4,6 +4,7 @@ import TeacherCard from '@/components/marketplace/TeacherCard';
 import BookingCheckoutModal from '@/components/payment/BookingCheckoutModal';
 import CalendarMatrix from '@/components/calendar/CalendarMatrix';
 import { Search, SlidersHorizontal, AlertCircle, X, CalendarDays, Brain } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { apiClient } from '@/services/apiClient';
 import { useAuth } from '@/context/AuthContext';
 
@@ -34,6 +35,9 @@ export default function TeacherList() {
     console.log('[TeacherList] render called');
 
     const { getIdToken } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+    
     const [listings, setListings] = useState<MarketplaceListing[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -145,6 +149,30 @@ export default function TeacherList() {
                             <SlidersHorizontal className="h-5 w-5" />
                         </button>
                     </div>
+                </div>
+
+                {/* Tabs */}
+                <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+                    <button
+                        onClick={() => navigate('/marketplace')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                            location.pathname === '/marketplace'
+                                ? 'bg-white text-indigo-700 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        All Tutors
+                    </button>
+                    <button
+                        onClick={() => navigate('/my-requests')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                            location.pathname === '/my-requests'
+                                ? 'bg-white text-indigo-700 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        My Requests
+                    </button>
                 </div>
 
                 {/* Skill Filters */}

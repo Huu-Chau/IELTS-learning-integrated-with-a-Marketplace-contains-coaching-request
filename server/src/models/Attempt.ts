@@ -53,6 +53,26 @@ Attempt.init(
         sequelize,
         modelName: 'Attempt',
         tableName: 'Attempts',
+        hooks: {
+            afterCreate: async (attempt) => {
+                try {
+                    const Notification = (await import('./Notification')).default;
+                    const typeLabel = attempt.type.charAt(0).toUpperCase() + attempt.type.slice(1);
+                    const scoreStr = attempt.score ? ` · Band ${attempt.score.toFixed(1)}` : '';
+                    
+                    await Notification.create({
+                        userId: attempt.userId,
+                        type: 'attempt',
+                        title: `${typeLabel} Test Completed${scoreStr}`,
+                        body: `Your ${attempt.type} mock test result has been saved to your progress.`,
+                        linkPath: '/progress',
+                        isRead: false
+                    });
+                } catch (err) {
+                    console.error('[Attempt Hook] Failed to create notification:', err);
+                }
+            }
+        }
     }
 );
 

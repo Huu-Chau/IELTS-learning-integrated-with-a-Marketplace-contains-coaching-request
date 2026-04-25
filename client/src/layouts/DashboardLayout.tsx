@@ -58,7 +58,7 @@ const getNavItems = (role: UserRole): SidebarItem[] => {
                 { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard/student' },
                 { icon: BookOpen, label: 'Vocabulary', path: '/vocabulary' },
                 { icon: Users, label: 'Find Tutors', path: '/marketplace' },
-                { icon: ClipboardList, label: 'My Requests', path: '/my-requests' },
+                { icon: Bell, label: 'Notifications', path: '/notifications' },
                 { icon: MessageSquare, label: 'Messages', path: '/messages' },
                 { icon: DollarSign, label: 'Payments', path: '/payments' },
                 { icon: TrendingUp, label: 'Progress', path: '/progress' },
@@ -298,21 +298,28 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
 
                     {/* Remaining nav items (Find Tutors, Schedule, Progress…) */}
                     {navItems.slice(1).map((item) => {
-                        const isActive = location.pathname === item.path;
+                        const isActive = location.pathname === item.path || (item.path === '/marketplace' && location.pathname === '/my-requests');
                         const Icon = item.icon;
                         return (
                             <Link
                                 key={item.path}
                                 to={item.path}
                                 className={cn(
-                                    "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors",
+                                    "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors justify-between",
                                     isActive
                                         ? "bg-indigo-50 text-indigo-600"
                                         : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                                 )}
                             >
-                                <Icon className={cn("h-5 w-5 mr-3", isActive ? "text-indigo-600" : "text-gray-400")} />
-                                {item.label}
+                                <div className="flex items-center">
+                                    <Icon className={cn("h-5 w-5 mr-3", isActive ? "text-indigo-600" : "text-gray-400")} />
+                                    {item.label}
+                                </div>
+                                {item.path === '/notifications' && unreadCount > 0 && (
+                                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                        {unreadCount}
+                                    </span>
+                                )}
                             </Link>
                         );
                     })}

@@ -219,20 +219,17 @@ router.post('/:reservationId/pay', async (req: Request, res: Response): Promise<
             return;
         }
 
-        // Step 6: Fetch teacher and credit their wallet
-        const teacher = await User.findByPk(listing.teacherId, { transaction: t, lock: t.LOCK.UPDATE });
+        // Step 6: Fetch teacher (just to verify they exist, though not strictly necessary if listing is tied to them)
+        const teacher = await User.findByPk(listing.teacherId, { transaction: t });
         if (!teacher) {
             await t.rollback();
             res.status(404).json({ error: 'Teacher account not found' });
             return;
         }
 
-        // Step 7: Execute the atomic wallet transfer
+        // Step 7: Execute the atomic wallet transfer (Deduct from student only, hold in escrow)
         await student.update({ wallet_balance: studentBalance - price }, { transaction: t });
-        await teacher.update(
-            { wallet_balance: Number(teacher.wallet_balance ?? 0) + price },
-            { transaction: t }
-        );
+        // Teacher is NOT credited here. They are credited by the cron job after the session completes.
 
         // Step 8: Mark reservation as completed
         await reservation.update({ status: 'completed' }, { transaction: t });
@@ -277,7 +274,7 @@ router.post('/:reservationId/pay', async (req: Request, res: Response): Promise<
                 userId: listing.teacherId,
                 type: 'order',
                 title: '🛎️ New Session Booked!',
-                body: `${studentName} has confirmed a booking for "${serviceLabel}" — ${priceFormatted} 🧠 Credits transferred to your wallet.`,
+                body: `${studentName} has confirmed a booking for "${serviceLabel}". ${priceFormatted} 🧠 Credits are held in escrow and will be transferred to your wallet after completion.`,
                 linkPath: '/teacher/marketplace',
             }),
         ]);

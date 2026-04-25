@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
 import { apiClient } from '@/services/apiClient';
@@ -36,6 +37,9 @@ export default function MyRequests() {
     console.log('[MyRequests] render called');
 
     const { getIdToken } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+    
     const [requests, setRequests] = useState<StudentRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -71,8 +75,8 @@ export default function MyRequests() {
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">My Requests</h1>
-                        <p className="text-gray-500 mt-1">Track your tutoring requests and their status.</p>
+                        <h1 className="text-2xl font-bold text-gray-900">Find a Tutor</h1>
+                        <p className="text-gray-500 mt-1">Connect with expert IELTS instructors for personalized guidance.</p>
                     </div>
                     <button
                         onClick={fetchRequests}
@@ -81,6 +85,30 @@ export default function MyRequests() {
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                         Refresh
+                    </button>
+                </div>
+
+                {/* Tabs */}
+                <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+                    <button
+                        onClick={() => navigate('/marketplace')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                            location.pathname === '/marketplace'
+                                ? 'bg-white text-indigo-700 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        All Tutors
+                    </button>
+                    <button
+                        onClick={() => navigate('/my-requests')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                            location.pathname === '/my-requests'
+                                ? 'bg-white text-indigo-700 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        My Requests
                     </button>
                 </div>
 

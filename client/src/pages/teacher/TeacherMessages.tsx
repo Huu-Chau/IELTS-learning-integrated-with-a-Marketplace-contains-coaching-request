@@ -196,6 +196,7 @@ export default function TeacherMessages() {
     }, [navigate]);
 
     const handleSend = async (content: string, type: 'text' | 'meeting_link' = 'text') => {
+        if (sending) return;
         if (!content.trim() || !activeReceiverId) return;
         console.log('[TeacherMessages] handleSend called', { content, type });
         try {
@@ -210,9 +211,12 @@ export default function TeacherMessages() {
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.nativeEvent.isComposing) return;
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            handleSend(messageInput);
+            if (!sending) {
+                handleSend(messageInput);
+            }
         }
     };
 

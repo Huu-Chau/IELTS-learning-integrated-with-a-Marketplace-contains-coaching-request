@@ -28,19 +28,25 @@ async function autoCompleteSessions() {
         }
 
         for (const req of overdueRequests) {
+            const teacherId = req.teacherId;
+            if (!teacherId) {
+                console.warn('[CronService] autoCompleteSessions: request missing teacherId', { id: req.id });
+                continue;
+            }
+
             await sequelize.transaction(async (t) => {
                 // Mark request as completed
                 await req.update({ status: 'completed' }, { transaction: t });
 
                 // Credit teacher's wallet
-                const teacher = await User.findByPk(req.teacherId, { transaction: t });
+                const teacher = await User.findByPk(teacherId, { transaction: t });
                 if (teacher) {
                     await teacher.increment('wallet_balance', { by: Number(req.fee), transaction: t });
                 }
 
                 // Notify teacher
                 await Notification.create({
-                    userId: req.teacherId,
+                    userId: teacherId,
                     type: 'payment',
                     title: '💸 Session Completed & Funds Released!',
                     body: `Your session has been auto-completed. ${Number(req.fee)} 🧠 has been added to your wallet balance.`,

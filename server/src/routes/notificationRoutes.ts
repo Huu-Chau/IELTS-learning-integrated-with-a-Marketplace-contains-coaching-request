@@ -8,125 +8,76 @@
  */
 import { Router, Request, Response } from 'express';
 import { verifyToken } from '../middleware/authMiddleware';
-import Attempt from '../models/Attempt';
-import MarketplaceRequest from '../models/MarketplaceRequest';
-import User from '../models/User';
+import Notification from '../models/Notification';
 
 const router = Router();
 router.use(verifyToken());
 
 interface NotificationItem {
     id: string;
-    type: 'attempt' | 'marketplace';
+    type: string;
     title: string;
     body: string;
-    linkPath: string;
+    linkPath: string | null;
     isRead: boolean;
     createdAt: Date;
 }
 
 /**
  * GET /api/notifications
- * Aggregates the student's last 20 attempts + marketplace requests
- * into a unified notification feed, sorted by date (newest first).
+ * Returns the student's notifications sorted by date (newest first).
  */
 router.get('/', async (req: Request, res: Response): Promise<void> => {
     console.log('[NotificationRoutes] GET / called', { uid: req.user?.uid });
     try {
         const userId = req.user!.uid;
 
-        // ── 1. Fetch recent attempts ────────────────────────────────────────
-        const attempts = await Attempt.findAll({
+        const dbNotifications = await Notification.findAll({
             where: { userId },
             order: [['createdAt', 'DESC']],
-            limit: 10,
+            limit: 50,
         });
 
-        const attemptNotifications: NotificationItem[] = attempts.map((attempt) => {
-            const typeLabel = attempt.type.charAt(0).toUpperCase() + attempt.type.slice(1);
-            const scoreStr = attempt.score ? ` · Band ${attempt.score.toFixed(1)}` : '';
-            return {
-                id: `attempt-${attempt.id}`,
-                type: 'attempt',
-                title: `${typeLabel} Test Completed${scoreStr}`,
-                body: `Your ${attempt.type} mock test result has been saved to your progress.`,
-                linkPath: '/progress',
-                isRead: false,
-                createdAt: attempt.createdAt,
-            };
-        });
+        const notifications: NotificationItem[] = dbNotifications.map(n => ({
+            id: `db-${n.id}`,
+            type: n.type,
+            title: n.title,
+            body: n.body,
+            linkPath: n.linkPath,
+            isRead: n.isRead,
+            createdAt: n.createdAt,
+        }));
 
-        // ── 2. Fetch marketplace requests ──────────────────────────────────
-        const requests = await MarketplaceRequest.findAll({
-            where: { studentId: userId },
-            order: [['updatedAt', 'DESC']],
-            limit: 10,
-        });
-
-        const marketplaceNotifications: NotificationItem[] = await Promise.all(
-            requests.map(async (mr) => {
-                const teacher = mr.teacherId
-                    ? await User.findByPk(mr.teacherId, {
-                          attributes: ['firstName', 'lastName'],
-                      })
-                    : null;
-
-                const teacherName = teacher
-                    ? `${teacher.firstName} ${teacher.lastName}`.trim()
-                    : 'a teacher';
-
-                const statusMessages: Record<string, { title: string; body: string }> = {
-                    pending: {
-                        title: 'Review Request Pending',
-                        body: `Your expert review request is waiting. We'll notify you when ${teacherName} responds.`,
-                    },
-                    accepted: {
-                        title: '🎉 Request Accepted!',
-                        body: `${teacherName} has accepted your review request. Check your requests page.`,
-                    },
-                    completed: {
-                        title: '✅ Review Completed',
-                        body: `${teacherName} has completed your IELTS review. Your feedback is ready!`,
-                    },
-                    rejected: {
-                        title: 'Request Declined',
-                        body: `${teacherName} was unable to accept your request. Try another tutor.`,
-                    },
-                };
-
-                const msg = statusMessages[mr.status] || {
-                    title: 'Marketplace Update',
-                    body: `Your request status changed to: ${mr.status}`,
-                };
-
-                return {
-                    id: `marketplace-${mr.id}`,
-                    type: 'marketplace' as const,
-                    title: msg.title,
-                    body: msg.body,
-                    linkPath: '/my-requests',
-                    isRead: mr.status === 'pending',  // Mark older statuses as "read"
-                    createdAt: mr.updatedAt,           // Use updatedAt so status changes surface first
-                };
-            })
-        );
-
-        // ── 3. Merge, sort, limit ──────────────────────────────────────────
-        const allNotifications = [...attemptNotifications, ...marketplaceNotifications]
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-            .slice(0, 20);
-
-        const unreadCount = allNotifications.filter((n) => !n.isRead).length;
+        const unreadCount = notifications.filter((n) => !n.isRead).length;
 
         console.log('[NotificationRoutes] GET / success', {
-            total: allNotifications.length,
+            total: notifications.length,
             unread: unreadCount,
         });
 
-        res.json({ notifications: allNotifications, unreadCount });
+        res.json({ notifications, unreadCount });
     } catch (error) {
         console.error('[NotificationRoutes] GET / error', error);
         res.status(500).json({ error: 'Failed to fetch notifications' });
+    }
+});
+
+/**
+ * PATCH /api/notifications/read-all
+ * Mark all real database notifications for the student as read.
+ */
+router.patch('/read-all', async (req: Request, res: Response): Promise<void> => {
+    console.log('[NotificationRoutes] PATCH /read-all called', { uid: req.user?.uid });
+    try {
+        await Notification.update(
+            { isRead: true },
+            { where: { userId: req.user!.uid, isRead: false } }
+        );
+        console.log('[NotificationRoutes] PATCH /read-all success');
+        res.json({ message: 'All notifications marked as read' });
+    } catch (error) {
+        console.error('[NotificationRoutes] PATCH /read-all error', error);
+        res.status(500).json({ error: 'Failed to mark notifications as read' });
     }
 });
 

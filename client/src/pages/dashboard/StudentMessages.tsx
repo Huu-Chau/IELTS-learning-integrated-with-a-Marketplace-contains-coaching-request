@@ -158,6 +158,7 @@ export default function StudentMessages() {
 
     // ── Send message ──────────────────────────────────────────────────────────
     const handleSend = async () => {
+        if (sending) return;
         const content = messageInput.trim();
         if (!content || !activeReceiverId) return;
         console.log('[StudentMessages] handleSend called', { content });
@@ -177,9 +178,12 @@ export default function StudentMessages() {
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.nativeEvent.isComposing) return;
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            handleSend();
+            if (!sending) {
+                handleSend();
+            }
         }
     };
 

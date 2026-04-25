@@ -11,7 +11,7 @@ class Notification extends Model<
 > {
     declare id: CreationOptional<number>;
     declare userId: string;          // Firebase UID of recipient
-    declare type: 'order' | 'payment' | 'message' | 'review' | 'system';
+    declare type: 'order' | 'payment' | 'message' | 'review' | 'system' | 'marketplace' | 'attempt';
     declare title: string;
     declare body: string;
     declare linkPath: CreationOptional<string | null>; // front-end route to navigate to

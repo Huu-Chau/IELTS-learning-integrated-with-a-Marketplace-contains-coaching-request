@@ -85,6 +85,68 @@ MarketplaceRequest.init(
         sequelize,
         modelName: 'MarketplaceRequest',
         tableName: 'MarketplaceRequests',
+        hooks: {
+            afterCreate: async (request) => {
+                try {
+                    const Notification = (await import('./Notification')).default;
+                    const User = (await import('./User')).default;
+                    
+                    const teacher = request.teacherId ? await User.findByPk(request.teacherId) : null;
+                    const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}`.trim() : 'a teacher';
+                    
+                    await Notification.create({
+                        userId: request.studentId,
+                        type: 'marketplace',
+                        title: 'Review Request Pending',
+                        body: `Your expert review request is waiting. We'll notify you when ${teacherName} responds.`,
+                        linkPath: '/my-requests',
+                        isRead: true // Don't trigger unread badge for creating your own request
+                    });
+                } catch (err) {
+                    console.error('[MarketplaceRequest Hook] afterCreate error', err);
+                }
+            },
+            afterUpdate: async (request, options) => {
+                if (request.changed('status')) {
+                    try {
+                        const Notification = (await import('./Notification')).default;
+                        const User = (await import('./User')).default;
+                        
+                        const teacher = request.teacherId ? await User.findByPk(request.teacherId) : null;
+                        const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}`.trim() : 'a teacher';
+                        
+                        const statusMessages: Record<string, { title: string; body: string }> = {
+                            accepted: {
+                                title: '🎉 Request Accepted!',
+                                body: `${teacherName} has accepted your review request. Check your requests page.`,
+                            },
+                            completed: {
+                                title: '✅ Review Completed',
+                                body: `${teacherName} has completed your IELTS review. Your feedback is ready!`,
+                            },
+                            rejected: {
+                                title: 'Request Declined',
+                                body: `${teacherName} was unable to accept your request. Try another tutor.`,
+                            },
+                        };
+                        
+                        const msg = statusMessages[request.status];
+                        if (msg) {
+                            await Notification.create({
+                                userId: request.studentId,
+                                type: 'marketplace',
+                                title: msg.title,
+                                body: msg.body,
+                                linkPath: '/my-requests',
+                                isRead: false // Trigger unread badge
+                            });
+                        }
+                    } catch (err) {
+                        console.error('[MarketplaceRequest Hook] afterUpdate error', err);
+                    }
+                }
+            }
+        }
     }
 );
 

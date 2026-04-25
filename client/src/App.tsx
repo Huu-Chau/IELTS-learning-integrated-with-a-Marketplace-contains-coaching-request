@@ -28,6 +28,7 @@ import MockTestListeningSession from '@/pages/mock-test/MockTestListeningSession
 import MockTestWritingSession from '@/pages/mock-test/MockTestWritingSession';
 import ManageVocabulary from '@/pages/vocabulary/ManageVocabulary';
 import StudentMessages from '@/pages/dashboard/StudentMessages';
+import StudentNotifications from '@/pages/dashboard/StudentNotifications';
 
 function App() {
     return (
@@ -51,6 +52,7 @@ function App() {
                         <Route path="/payments" element={<StudentPayments />} />
                         <Route path="/marketplace" element={<TeacherList />} />
                         <Route path="/my-requests" element={<MyRequests />} />
+                        <Route path="/notifications" element={<StudentNotifications />} />
                         <Route path="/messages" element={<StudentMessages />} />
                         <Route path="/messages/:conversationId" element={<StudentMessages />} />
                         {/* Mock Test — test-set list pages */}

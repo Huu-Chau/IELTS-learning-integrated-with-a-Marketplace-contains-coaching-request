@@ -8,7 +8,7 @@
     "start": "node dist/server.js",
     "dev": "nodemon src/server.ts",
     "build": "tsc",
-    "postbuild": "mkdir -p dist/database/practice && cp src/database/practice/*.json dist/database/practice/"
+    "postbuild": "mkdir -p dist/database/practice && (ls src/database/practice/*.json >/dev/null 2>&1 && cp src/database/practice/*.json dist/database/practice/ || true)"
   },
   "keywords": [],
   "author": "",

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
 import { verifyToken } from '../middleware/authMiddleware';
+import sequelize from '../config/database';
 import TeacherListing from '../models/TeacherListing';
 import MarketplaceRequest from '../models/MarketplaceRequest';
 import Notification from '../models/Notification';
@@ -247,39 +248,46 @@ router.post('/requests', async (req: Request, res: Response): Promise<void> => {
         const serviceLabel = primarySkill ? `IELTS ${primarySkill} Review` : listing.title;
         const amountFormatted = Number(listing.pricePerHour).toLocaleString('vi-VN');
 
-        // Create the MarketplaceRequest — status stays 'pending' until teacher accepts
-        const request = await MarketplaceRequest.create({
-            studentId,
-            teacherId,
-            attemptId: attemptId || null,
-            status: 'pending',
-            fee: Number(listing.pricePerHour),
-            message: message || null,
-            skill: primarySkill,
-            feedbackPath: null,
-        });
+        // ── Atomic transaction: request + notifications together ─────────
+        // Previously these were 3 separate un-transacted writes. If any step
+        // failed mid-way, the connection would be left in 'idle in transaction'
+        // state — never committed or rolled back — exhausting the pool.
+        const request = await sequelize.transaction(async (t) => {
+            // Create the MarketplaceRequest — status stays 'pending' until teacher accepts
+            const newRequest = await MarketplaceRequest.create({
+                studentId,
+                teacherId,
+                attemptId: attemptId || null,
+                status: 'pending',
+                fee: Number(listing.pricePerHour),
+                message: message || null,
+                skill: primarySkill,
+                feedbackPath: null,
+            }, { transaction: t });
 
-        // ── Fire notifications to both parties ──────────────────────────
+            // 1. Student: payment / booking confirmation
+            await Notification.create({
+                userId: studentId,
+                type: 'payment',
+                title: '✅ Booking Confirmed!',
+                body: `Your payment of ${amountFormatted} VND for "${serviceLabel}" has been received. Waiting for tutor confirmation.`,
+                linkPath: '/payments',
+                isRead: false,
+            }, { transaction: t });
 
-        // 1. Student: payment / booking confirmation
-        await Notification.create({
-            userId: studentId,
-            type: 'payment',
-            title: '✅ Booking Confirmed!',
-            body: `Your payment of ${amountFormatted} VND for "${serviceLabel}" has been received. Waiting for tutor confirmation.`,
-            linkPath: '/payments',
-            isRead: false,
-        });
+            // 2. Teacher: new order alert
+            await Notification.create({
+                userId: teacherId,
+                type: 'order',
+                title: '🛎️ New Booking Request',
+                body: `${studentName} has booked your "${serviceLabel}" service for ${amountFormatted} VND. Please review and accept.`,
+                linkPath: '/teacher/marketplace',
+                isRead: false,
+            }, { transaction: t });
 
-        // 2. Teacher: new order alert
-        await Notification.create({
-            userId: teacherId,
-            type: 'order',
-            title: '🛎️ New Booking Request',
-            body: `${studentName} has booked your "${serviceLabel}" service for ${amountFormatted} VND. Please review and accept.`,
-            linkPath: '/teacher/marketplace',
-            isRead: false,
+            return newRequest;
         });
+        // ────────────────────────────────────────────────────────────────
 
         console.log('[MarketplaceRoutes] POST /requests success', { id: request.id, fee: request.fee });
         res.status(201).json({

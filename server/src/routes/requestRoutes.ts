@@ -4,7 +4,8 @@ import { verifyToken } from '../middleware/authMiddleware';
 
 const router = Router();
 
-router.post('/', verifyToken(), requestController.create);
+// NOTE: POST / removed — requestController.create was deleted.
+// Use POST /api/marketplace/requests for creating marketplace requests.
 router.get('/', verifyToken(), requestController.getOpen);
 router.get('/teacher/:id', verifyToken(), requestController.getForTeacher);
 router.get('/student/:id', verifyToken(), requestController.getByStudent);

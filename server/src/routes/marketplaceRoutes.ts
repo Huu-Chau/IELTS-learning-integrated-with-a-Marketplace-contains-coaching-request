@@ -70,7 +70,7 @@ router.get('/listings', async (req: Request, res: Response): Promise<void> => {
                 // Check if this listing has an active (non-expired) reservation
                 const activeReservation = await Reservation.findOne({
                     where: {
-                        listingId: listing.id,
+                        'listing.id': listing.id,
                         status: 'pending',
                         expiresAt: { [Op.gt]: new Date() },
                     },
@@ -80,7 +80,7 @@ router.get('/listings', async (req: Request, res: Response): Promise<void> => {
                 // Check if there's a completed booking for this listing
                 const completedBooking = await Reservation.findOne({
                     where: {
-                        listingId: listing.id,
+                        'listing.id': listing.id,
                         status: 'completed',
                     },
                 });
@@ -109,13 +109,13 @@ router.get('/listings', async (req: Request, res: Response): Promise<void> => {
                     createdAt: listing.createdAt,
                     teacher: teacher
                         ? {
-                              id: teacher.id,
-                              name: `${teacher.firstName} ${teacher.lastName}`.trim(),
-                              email: teacher.email,
-                              avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                                  `${teacher.firstName} ${teacher.lastName}`
-                              )}&background=random`,
-                          }
+                            id: teacher.id,
+                            name: `${teacher.firstName} ${teacher.lastName}`.trim(),
+                            email: teacher.email,
+                            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                `${teacher.firstName} ${teacher.lastName}`
+                            )}&background=random`,
+                        }
                         : null,
                     // Reservation status for frontend badge rendering
                     reservationStatus,
@@ -166,13 +166,13 @@ router.get('/listings/:id', async (req: Request, res: Response): Promise<void> =
             createdAt: listing.createdAt,
             teacher: teacher
                 ? {
-                      id: teacher.id,
-                      name: `${teacher.firstName} ${teacher.lastName}`.trim(),
-                      email: teacher.email,
-                      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                          `${teacher.firstName} ${teacher.lastName}`
-                      )}&background=random`,
-                  }
+                    id: teacher.id,
+                    name: `${teacher.firstName} ${teacher.lastName}`.trim(),
+                    email: teacher.email,
+                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                        `${teacher.firstName} ${teacher.lastName}`
+                    )}&background=random`,
+                }
                 : null,
         };
 
@@ -313,8 +313,8 @@ router.get('/requests/mine', async (req: Request, res: Response): Promise<void> 
             requests.map(async (req) => {
                 const teacher = req.teacherId
                     ? await User.findByPk(req.teacherId, {
-                          attributes: ['id', 'firstName', 'lastName', 'email'],
-                      })
+                        attributes: ['id', 'firstName', 'lastName', 'email'],
+                    })
                     : null;
                 return {
                     id: req.id,
@@ -358,18 +358,18 @@ router.get('/payments', async (req: Request, res: Response): Promise<void> => {
 
         // Map status to payment-friendly labels
         const statusMap: Record<string, string> = {
-            pending:   'Pending',
-            accepted:  'Processing',
+            pending: 'Pending',
+            accepted: 'Processing',
             completed: 'Paid',
-            rejected:  'Refunded',
+            rejected: 'Refunded',
         };
 
         const payments = await Promise.all(
             requests.map(async (r) => {
                 const teacher = r.teacherId
                     ? await User.findByPk(r.teacherId, {
-                          attributes: ['id', 'firstName', 'lastName'],
-                      })
+                        attributes: ['id', 'firstName', 'lastName'],
+                    })
                     : null;
                 return {
                     id: r.id,
@@ -392,10 +392,10 @@ router.get('/payments', async (req: Request, res: Response): Promise<void> => {
             .reduce((sum, p) => sum + p.amount, 0);
 
         console.log('[MarketplaceRoutes] GET /payments success', { count: payments.length, totalSpent });
-        res.json({ 
+        res.json({
             walletBalance: Number(student?.wallet_balance ?? 0),
-            payments, 
-            totalSpent 
+            payments,
+            totalSpent
         });
     } catch (error) {
         console.error('[MarketplaceRoutes] GET /payments error', error);
@@ -408,89 +408,89 @@ router.get('/payments', async (req: Request, res: Response): Promise<void> => {
  * Returns available 1-hour booking slots for a teacher over the next 14 days.
  * Automatically subtracts already-booked time slots.
  */
-router.get('/teachers/:uid/availability', async (req: Request, res: Response): Promise<void> => {
-    console.log('[MarketplaceRoutes] GET /teachers/:uid/availability called', { uid: req.params.uid });
-    try {
-        const teacherId = req.params.uid;
+// router.get('/teachers/:uid/availability', async (req: Request, res: Response): Promise<void> => {
+//     console.log('[MarketplaceRoutes] GET /teachers/:uid/availability called', { uid: req.params.uid });
+//     try {
+//         const teacherId = req.params.uid;
 
-        // 1. Fetch teacher's recurring weekly schedule
-        const rules = await TeacherAvailability.findAll({
-            where: { teacherId, isAvailable: true },
-        });
+//         // 1. Fetch teacher's recurring weekly schedule
+//         const rules = await TeacherAvailability.findAll({
+//             where: { teacherId, isAvailable: true },
+//         });
 
-        if (rules.length === 0) {
-            res.json({ slots: [] });
-            return;
-        }
+//         if (rules.length === 0) {
+//             res.json({ slots: [] });
+//             return;
+//         }
 
-        // 2. Fetch already-booked slots in the next 14 days
-        const now = new Date();
-        const twoWeeksOut = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+//         // 2. Fetch already-booked slots in the next 14 days
+//         const now = new Date();
+//         const twoWeeksOut = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
 
-        const bookedRequests = await MarketplaceRequest.findAll({
-            where: {
-                teacherId,
-                status: { [Op.in]: ['pending', 'accepted'] },
-                scheduledAt: { [Op.between]: [now, twoWeeksOut] },
-            },
-            attributes: ['scheduledAt', 'durationMinutes'],
-        });
+//         const bookedRequests = await MarketplaceRequest.findAll({
+//             where: {
+//                 teacherId,
+//                 status: { [Op.in]: ['pending', 'accepted'] },
+//                 scheduledAt: { [Op.between]: [now, twoWeeksOut] },
+//             },
+//             attributes: ['scheduledAt', 'durationMinutes'],
+//         });
 
-        // 3. Generate all 1-hour slots for the next 14 days based on rules
-        const slots: { start: string; end: string; available: boolean }[] = [];
+//         // 3. Generate all 1-hour slots for the next 14 days based on rules
+//         const slots: { start: string; end: string; available: boolean }[] = [];
 
-        for (let d = 0; d < 14; d++) {
-            const date = new Date(now);
-            date.setDate(date.getDate() + d);
-            date.setHours(0, 0, 0, 0);
-            const dayOfWeek = date.getDay();
+//         for (let d = 0; d < 14; d++) {
+//             const date = new Date(now);
+//             date.setDate(date.getDate() + d);
+//             date.setHours(0, 0, 0, 0);
+//             const dayOfWeek = date.getDay();
 
-            // Find rules matching this day of week
-            const dayRules = rules.filter((r) => r.dayOfWeek === dayOfWeek);
+//             // Find rules matching this day of week
+//             const dayRules = rules.filter((r) => r.dayOfWeek === dayOfWeek);
 
-            for (const rule of dayRules) {
-                const [startH, startM] = rule.startTime.split(':').map(Number);
-                const [endH, endM] = rule.endTime.split(':').map(Number);
+//             for (const rule of dayRules) {
+//                 const [startH, startM] = rule.startTime.split(':').map(Number);
+//                 const [endH, endM] = rule.endTime.split(':').map(Number);
 
-                const windowStart = new Date(date);
-                windowStart.setHours(startH, startM, 0, 0);
-                const windowEnd = new Date(date);
-                windowEnd.setHours(endH, endM, 0, 0);
+//                 const windowStart = new Date(date);
+//                 windowStart.setHours(startH, startM, 0, 0);
+//                 const windowEnd = new Date(date);
+//                 windowEnd.setHours(endH, endM, 0, 0);
 
-                // Generate 1-hour slots within the window
-                let cursor = new Date(windowStart);
-                while (cursor.getTime() + 60 * 60 * 1000 <= windowEnd.getTime()) {
-                    const slotStart = new Date(cursor);
-                    const slotEnd = new Date(cursor.getTime() + 60 * 60 * 1000);
+//                 // Generate 1-hour slots within the window
+//                 let cursor = new Date(windowStart);
+//                 while (cursor.getTime() + 60 * 60 * 1000 <= windowEnd.getTime()) {
+//                     const slotStart = new Date(cursor);
+//                     const slotEnd = new Date(cursor.getTime() + 60 * 60 * 1000);
 
-                    // Skip past slots (must be at least 1h in the future)
-                    if (slotStart.getTime() > now.getTime() + 60 * 60 * 1000) {
-                        // Check if this slot overlaps with any booked request
-                        const isBooked = bookedRequests.some((b) => {
-                            if (!b.scheduledAt) return false;
-                            const bStart = new Date(b.scheduledAt).getTime();
-                            const bEnd = bStart + (b.durationMinutes ?? 60) * 60 * 1000;
-                            return slotStart.getTime() < bEnd && slotEnd.getTime() > bStart;
-                        });
+//                     // Skip past slots (must be at least 1h in the future)
+//                     if (slotStart.getTime() > now.getTime() + 60 * 60 * 1000) {
+//                         // Check if this slot overlaps with any booked request
+//                         const isBooked = bookedRequests.some((b) => {
+//                             if (!b.scheduledAt) return false;
+//                             const bStart = new Date(b.scheduledAt).getTime();
+//                             const bEnd = bStart + (b.durationMinutes ?? 60) * 60 * 1000;
+//                             return slotStart.getTime() < bEnd && slotEnd.getTime() > bStart;
+//                         });
 
-                        slots.push({
-                            start: slotStart.toISOString(),
-                            end: slotEnd.toISOString(),
-                            available: !isBooked,
-                        });
-                    }
+//                         slots.push({
+//                             start: slotStart.toISOString(),
+//                             end: slotEnd.toISOString(),
+//                             available: !isBooked,
+//                         });
+//                     }
 
-                    cursor = new Date(cursor.getTime() + 60 * 60 * 1000);
-                }
-            }
-        }
+//                     cursor = new Date(cursor.getTime() + 60 * 60 * 1000);
+//                 }
+//             }
+//         }
 
-        console.log('[MarketplaceRoutes] GET /teachers/:uid/availability success', { slots: slots.length });
-        res.json({ slots });
-    } catch (error) {
-        console.error('[MarketplaceRoutes] GET /teachers/:uid/availability error', error);
-        res.status(500).json({ error: 'Failed to fetch teacher availability' });
-    }
-});
+//         console.log('[MarketplaceRoutes] GET /teachers/:uid/availability success', { slots: slots.length });
+//         res.json({ slots });
+//     } catch (error) {
+//         console.error('[MarketplaceRoutes] GET /teachers/:uid/availability error', error);
+//         res.status(500).json({ error: 'Failed to fetch teacher availability' });
+//     }
+// });
 
 export default router;

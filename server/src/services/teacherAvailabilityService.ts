@@ -3,7 +3,7 @@ import sequelize from '../config/database';
 import Reservation from '../models/Reservation';
 import TeacherAvailability from '../models/TeacherAvailability';
 import TeacherListing from '../models/TeacherListing';
-import { BookAvailabilityPayload, CreateAvailabilityPayload, UpdateAvailabilityPayload } from '../types/availability';
+import { BookAvailabilityPayload, CreateAvailabilityPayload, DeleteAvailabilityPayload, UpdateAvailabilityPayload } from '../types/availability';
 import { GetAvailabilityParams } from '../types/availability/get-availability.params';
 
 export interface ITeacherAvailabilityService {
@@ -11,6 +11,7 @@ export interface ITeacherAvailabilityService {
     updateAvailability(payload: UpdateAvailabilityPayload): Promise<void>;
     bookAvailability(payload: BookAvailabilityPayload): Promise<Reservation>;
     getAvailability(params: GetAvailabilityParams): Promise<TeacherAvailability[]>;
+    deleteAvailability(payload: DeleteAvailabilityPayload): Promise<void>;
 }
 
 export class TeacherAvailabilityService implements ITeacherAvailabilityService {
@@ -106,5 +107,20 @@ export class TeacherAvailabilityService implements ITeacherAvailabilityService {
             where: condition,
         });
         return availabilities;
+    }
+
+    public async deleteAvailability(payload: DeleteAvailabilityPayload): Promise<void> {
+        const { id, teacherId } = payload;
+        const deletedCount = await TeacherAvailability.destroy({
+            where: {
+                id,
+                teacherId,
+                isAvailable: true,
+            }
+        });
+
+        if (deletedCount === 0) {
+            throw new Error('Availability not found or already booked');
+        }
     }
 }

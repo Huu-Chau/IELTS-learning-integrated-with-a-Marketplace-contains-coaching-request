@@ -324,6 +324,24 @@ function SchedulePanel() {
         }
     };
 
+    const handleDelete = async (avail: TeacherAvailabilityRecord) => {
+        if (!avail.isAvailable) return;
+        if (!window.confirm('Delete this availability?')) return;
+        
+        try {
+            const token = await getIdToken();
+            await apiClient.del(`/teacher-availability/${avail.id}`, token);
+            setAvailabilities(availabilities.filter(a => a.id !== avail.id));
+        } catch (err: any) {
+            console.error('[SchedulePanel] handleDelete error', err);
+            if (err.response?.status === 409) {
+                alert('Cannot delete this availability as it was just booked or not found.');
+            } else {
+                alert('Failed to delete availability');
+            }
+        }
+    };
+
     if (loading) {
         return (
             <div className="bg-white rounded-2xl border border-gray-100 p-8 space-y-4 animate-pulse">
@@ -395,6 +413,15 @@ function SchedulePanel() {
                                 </div>
                             </div>
                             {!avail.isAvailable && <span className="text-xs font-semibold text-gray-400 bg-gray-100 px-2 py-1 rounded-md uppercase tracking-wider">Booked / Unavailable</span>}
+                            {avail.isAvailable && (
+                                <button
+                                    onClick={() => handleDelete(avail)}
+                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Delete availability"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            )}
                         </div>
                     ))
                 )}

@@ -1,12 +1,13 @@
 import { NextFunction, Request, Response } from "express";
 import { ITeacherAvailabilityService } from '../services/teacherAvailabilityService';
-import { GetAvailabilityParams, CreateAvailabilityPayload, UpdateAvailabilityPayload, BookAvailabilityPayload } from '../types/availability';
+import { GetAvailabilityParams, CreateAvailabilityPayload, UpdateAvailabilityPayload, BookAvailabilityPayload, DeleteAvailabilityPayload } from '../types/availability';
 
 export interface ITeacherAvailabilityController {
     getAvailability(req: Request, res: Response, next: NextFunction): Promise<void>;
     createAvailability(req: Request, res: Response, next: NextFunction): Promise<void>;
     updateAvailability(req: Request, res: Response, next: NextFunction): Promise<void>;
     bookAvailability(req: Request, res: Response, next: NextFunction): Promise<void>;
+    deleteAvailability(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export class TeacherAvailabilityController implements ITeacherAvailabilityController {
@@ -54,5 +55,21 @@ export class TeacherAvailabilityController implements ITeacherAvailabilityContro
         const result = await this.teacherAvailabilityService.bookAvailability(payload);
         res.status(200).json(result);
         return next();
+    }
+
+    public async deleteAvailability(req: Request, res: Response, next: NextFunction): Promise<void> {
+        const { id } = req.params;
+        const teacherId = req.user!.uid;
+        const payload = new DeleteAvailabilityPayload(Number(id), teacherId);
+        try {
+            await this.teacherAvailabilityService.deleteAvailability(payload);
+            res.status(200).json({ success: true });
+        } catch (error: any) {
+            if (error.message === 'Availability not found or already booked') {
+                res.status(409).json({ error: error.message });
+            } else {
+                next(error);
+            }
+        }
     }
 }

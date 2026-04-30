@@ -357,8 +357,9 @@ export default function MockTestReadingSession() {
 
                                         {/* Paragraphs */}
                                         {(() => {
+                                            const rawText = currentPassage.passage_text || currentPassage.text;
                                             const paragraphs = normalizePassageText(
-                                                currentPassage.text as string | string[] | undefined
+                                                rawText as string | string[] | undefined
                                             );
                                             return paragraphs.length > 0 ? (
                                                 <div className="space-y-4">

@@ -38,10 +38,15 @@ function formatSetName(setId: string): string {
 
 /**
  * Builds the audio URL for a specific test + section.
+ * Extension varies by Cambridge book:
+ *   cam18 → .mp3   cam19 → .mp3   cam20 → .m4a
  */
 function buildAudioUrl(book: string, testNum: number, section: number): string {
-    return `${API_BASE}/api/cambridge-tests/audio/${book}/T${testNum}S${section}.m4a`;
+    // cam20 was uploaded as .m4a; cam18 and cam19 as .mp3
+    const ext = book === '20' ? 'm4a' : 'mp3';
+    return `${API_BASE}/api/cambridge-tests/audio/${book}/T${testNum}S${section}.${ext}`;
 }
+
 
 /**
  * Collects all sub-sections from a part, normalizing the different JSON shapes.

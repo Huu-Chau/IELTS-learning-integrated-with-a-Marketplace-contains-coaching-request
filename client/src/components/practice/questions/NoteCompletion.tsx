@@ -7,41 +7,75 @@
  */
 import type { QuestionComponentProps, AnswerMap } from '@/types/questionTypes';
 
+
 /**
- * Parses a note string like "Some text [31] more text" or "Some text [Q7] more text" and renders
- * the bracketed numbers as inline inputs.
- * Supports both [N] (listening) and [QN] (reading) placeholder formats.
+ * Parses a note string and renders inline inputs for blanks.
+ *
+ * Supports two formats:
+ *  1. Bracket:   "Some text [31] more text"  (used by Listening JSON)
+ *  2. Underline: "Some text 2 ________"      (used by Reading JSON)
+ *     — the number immediately before the underscores is the question number.
  */
 function renderNoteText(
     text: string,
     answers: AnswerMap,
     onAnswer: (qn: number, val: string) => void
 ) {
-    // Match patterns like [31], [Q31], etc.
-    const parts = text.split(/(\[Q?\d+\])/g);
-    return parts.map((part, i) => {
-        const match = part.match(/^\[Q?(\d+)\]$/);
-        if (match) {
-            const qn = parseInt(match[1], 10);
-            const val = answers[String(qn)] ?? '';
-            return (
-                <span key={i} className="inline-flex items-center gap-0.5 mx-0.5">
-                    <span className="inline-flex items-center justify-center w-[18px] h-[18px] rounded bg-gray-900 text-white text-[9px] font-bold">
-                        {qn}
-                    </span>
-                    <input
-                        type="text"
-                        value={val}
-                        placeholder="___"
-                        onChange={(e) => onAnswer(qn, e.target.value)}
-                        className="inline-block min-w-[80px] border-b-2 border-gray-300 focus:border-gray-900 bg-transparent outline-none text-sm font-semibold text-gray-800 px-1 py-0.5 text-center transition-colors"
-                    />
-                </span>
-            );
+    // Combined regex: matches [N], [QN], or  N ___ (number followed by 2+ underscores)
+    const TOKEN = /(\[Q?\d+\]|\d+\s*_{2,})/g;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parts: any[] = [];
+
+
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = TOKEN.exec(text)) !== null) {
+        // Push literal text before this match
+        if (match.index > lastIndex) {
+            parts.push(text.slice(lastIndex, match.index));
         }
-        return <span key={i}>{part}</span>;
-    });
+
+        const raw = match[0];
+
+        // Determine question number
+        let qn: number;
+        if (raw.startsWith('[')) {
+            // Format: [31] or [Q31]
+            qn = parseInt(raw.match(/\d+/)![0], 10);
+        } else {
+            // Format: "2 ________" — number is the first token
+            qn = parseInt(raw.match(/\d+/)![0], 10);
+        }
+
+        const val = answers[String(qn)] ?? '';
+        parts.push(
+            <span key={`${qn}-${match.index}`} className="inline-flex items-center gap-0.5 mx-0.5">
+                <span className="inline-flex items-center justify-center w-[18px] h-[18px] rounded bg-gray-900 text-white text-[9px] font-bold shrink-0">
+                    {qn}
+                </span>
+                <input
+                    id={`q-${qn}`}
+                    type="text"
+                    value={val}
+                    placeholder="___"
+                    onChange={(e) => onAnswer(qn, e.target.value)}
+                    className="inline-block min-w-[80px] border-b-2 border-gray-300 focus:border-violet-500 bg-transparent outline-none text-sm font-semibold text-gray-800 px-1 py-0.5 text-center transition-colors"
+                />
+            </span>
+        );
+
+        lastIndex = match.index + raw.length;
+    }
+
+    // Push any remaining text
+    if (lastIndex < text.length) {
+        parts.push(text.slice(lastIndex));
+    }
+
+    return parts;
 }
+
 
 export default function NoteCompletion({ subSection, answers, onAnswer }: QuestionComponentProps) {
     console.log('[NoteCompletion] render called', { qCount: subSection.questions.length });

@@ -3,9 +3,15 @@
  *
  * Monochrome audio player component with play/pause, seekbar,
  * time display, and speed control. Black/white/gray design.
+ *
+ * Fixes applied:
+ *  - audio.play() is awaited and its rejection caught (prevents NotSupportedError crash)
+ *  - audio.load() is called when src changes (required when setting src via React prop)
+ *  - isPlaying is driven by `play` / `pause` events, not optimistic state
+ *  - Displays a friendly error banner when the audio source cannot be loaded
  */
 import { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2 } from 'lucide-react';
+import { Play, Pause, Volume2, AlertCircle } from 'lucide-react';
 
 interface AudioPlayerProps {
     src: string;
@@ -20,27 +26,64 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [speed, setSpeed] = useState(1);
+    const [audioError, setAudioError] = useState<string | null>(null);
 
+    // ── Reset + reload when src changes ───────────────────────────────────────
     useEffect(() => {
-        // Reset state when src changes
+        console.log('[AudioPlayer] src changed, reloading', { src });
         setIsPlaying(false);
         setCurrentTime(0);
         setDuration(0);
-        if (audioRef.current) {
-            audioRef.current.pause();
-            audioRef.current.currentTime = 0;
-        }
+        setAudioError(null);
+
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        audio.pause();
+        audio.currentTime = 0;
+        // CRITICAL: call load() so the browser picks up the new src
+        audio.load();
     }, [src]);
 
-    const togglePlay = () => {
-        console.log('[AudioPlayer] togglePlay called', { wasPlaying: isPlaying });
-        if (!audioRef.current) return;
+    // ── Drive isPlaying from native audio events (not optimistic state) ───────
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        const onPlay  = () => { console.log('[AudioPlayer] play event'); setIsPlaying(true); };
+        const onPause = () => { console.log('[AudioPlayer] pause event'); setIsPlaying(false); };
+        const onEnded = () => { console.log('[AudioPlayer] ended event'); setIsPlaying(false); };
+
+        audio.addEventListener('play',  onPlay);
+        audio.addEventListener('pause', onPause);
+        audio.addEventListener('ended', onEnded);
+
+        return () => {
+            audio.removeEventListener('play',  onPlay);
+            audio.removeEventListener('pause', onPause);
+            audio.removeEventListener('ended', onEnded);
+        };
+    }, []);
+
+    // ── Play / Pause ──────────────────────────────────────────────────────────
+    const togglePlay = async () => {
+        console.log('[AudioPlayer] togglePlay called', { isPlaying });
+        const audio = audioRef.current;
+        if (!audio) return;
+
         if (isPlaying) {
-            audioRef.current.pause();
+            audio.pause();
         } else {
-            audioRef.current.play();
+            try {
+                await audio.play();
+                console.log('[AudioPlayer] play() resolved');
+            } catch (err: unknown) {
+                const msg = err instanceof Error ? err.message : String(err);
+                console.error('[AudioPlayer] play() rejected', err);
+                setAudioError(`Cannot play audio: ${msg}`);
+                setIsPlaying(false);
+            }
         }
-        setIsPlaying(!isPlaying);
     };
 
     const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,17 +108,35 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
 
     return (
         <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+            {/* Hidden native audio element */}
             <audio
                 ref={audioRef}
                 src={src}
+                preload="metadata"
                 onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
                 onLoadedMetadata={() => {
+                    console.log('[AudioPlayer] loadedmetadata', { duration: audioRef.current?.duration });
                     setDuration(audioRef.current?.duration ?? 0);
+                    setAudioError(null);
                     if (audioRef.current) audioRef.current.playbackRate = speed;
                 }}
-                onEnded={() => setIsPlaying(false)}
+                onError={(e) => {
+                    const media = e.currentTarget as HTMLAudioElement;
+                    const code = media.error?.code ?? 0;
+                    const msgs: Record<number, string> = {
+                        1: 'Audio loading aborted.',
+                        2: 'Network error loading audio.',
+                        3: 'Audio decoding failed.',
+                        4: 'Audio format not supported or file not found.',
+                    };
+                    const msg = msgs[code] ?? 'Unknown audio error.';
+                    console.error('[AudioPlayer] audio element error', { code, msg, src });
+                    setAudioError(msg);
+                    setIsPlaying(false);
+                }}
             />
 
+            {/* Title row */}
             {title && (
                 <div className="flex items-center gap-2 mb-3">
                     <Volume2 className="w-4 h-4 text-gray-400" />
@@ -83,11 +144,20 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
                 </div>
             )}
 
+            {/* Error banner */}
+            {audioError && (
+                <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-3">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                    <span>{audioError}</span>
+                </div>
+            )}
+
             <div className="flex items-center gap-3">
                 {/* Play/Pause button */}
                 <button
                     onClick={togglePlay}
-                    className="w-10 h-10 rounded-full bg-gray-900 hover:bg-gray-700 text-white flex items-center justify-center transition-colors shadow shrink-0"
+                    disabled={!!audioError}
+                    className="w-10 h-10 rounded-full bg-gray-900 hover:bg-gray-700 disabled:bg-gray-300 text-white flex items-center justify-center transition-colors shadow shrink-0"
                 >
                     {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
                 </button>
@@ -127,3 +197,4 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
         </div>
     );
 }
+

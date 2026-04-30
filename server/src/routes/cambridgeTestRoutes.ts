@@ -12,7 +12,7 @@
  */
 import { Router, Request, Response } from 'express';
 import { PostgresMockMaterialStorage } from '../database/PostgresMockMaterialStorage';
-import Recording from '../models/Recording';
+
 import { storageProvider } from '../services/storage/StorageService';
 
 const router = Router();
@@ -95,33 +95,40 @@ router.get('/audio/:book/:file', async (req: Request, res: Response): Promise<vo
     console.log('[cambridgeTestRoutes] getAudio called', { book, file });
 
     try {
+        // Storage key pattern: mock-test/cam{book}/{file}
+        // e.g. mock-test/cam18/T1S1.mp3
         const storageKey = `mock-test/cam${book}/${file}`;
-        const recording = await Recording.findOne({
-            where: { storage_key: storageKey },
-        });
 
-        if (recording) {
-            console.log('[cambridgeTestRoutes] Streaming audio from MinIO', { storageKey });
-            const mimeType = recording.mimetype || 'audio/mp4';
-            const stream = await storageProvider.getFileStream(storageKey);
+        // Infer MIME type from file extension
+        const ext = file.split('.').pop()?.toLowerCase();
+        let mimeType = 'audio/mpeg'; // default for .mp3
+        if (ext === 'm4a') mimeType = 'audio/mp4';
+        else if (ext === 'ogg') mimeType = 'audio/ogg';
+        else if (ext === 'wav') mimeType = 'audio/wav';
+        else if (ext === 'webm') mimeType = 'audio/webm';
 
-            res.setHeader('Content-Type', mimeType);
-            res.setHeader('Accept-Ranges', 'bytes');
-            if (recording.size_bytes) {
-                res.setHeader('Content-Length', recording.size_bytes);
+        console.log('[cambridgeTestRoutes] Streaming audio from MinIO', { storageKey, mimeType });
+
+        const stream = await storageProvider.getFileStream(storageKey);
+
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+
+        stream.pipe(res);
+
+        stream.on('error', (err) => {
+            console.error('[cambridgeTestRoutes] getAudio stream error', err);
+            if (!res.headersSent) {
+                res.status(404).json({ error: 'Audio file not found' });
             }
-
-            stream.pipe(res);
-            return;
-        }
-
-        console.error('[cambridgeTestRoutes] Audio not found', { storageKey });
-        res.status(404).json({ error: 'Audio file not found' });
+        });
     } catch (error) {
         console.error('[cambridgeTestRoutes] getAudio error', error);
-        res.status(500).json({ error: 'Failed to serve audio file' });
+        res.status(404).json({ error: 'Audio file not found' });
     }
 });
+
 
 // ─── GET /image/:book/:file — Stream image from MinIO ───────────────────────
 router.get('/image/:book/:file', async (req: Request, res: Response): Promise<void> => {
@@ -201,42 +208,77 @@ router.post('/grade', async (req: Request, res: Response): Promise<void> => {
                 allQuestions.push(...section.questions);
             }
 
-            for (const q of allQuestions) {
+        for (const q of allQuestions) {
                 const qNum = String(q.question_number);
-                const correctAnswer = String(q.answer || '').trim();
+                const rawAnswer = q.answer;
 
-                // Handle grouped questions like "23-24" => check both "23" and "24"
+                // ── Case 1: answer is an array of { question_number, answer } objects ──────
+                // Used by: multiple_choice_multiple, multiple_choice_multiple_answers
+                // These are "Choose TWO" questions where each sub-question has its own correct letter.
+                if (Array.isArray(rawAnswer) && rawAnswer.length > 0 && typeof rawAnswer[0] === 'object' && rawAnswer[0] !== null) {
+                    // Build a pool of correct answers for any-order matching
+                    const correctPool: string[] = rawAnswer.map((a: any) => String(a.answer || '').trim().toLowerCase());
+
+                    for (const entry of rawAnswer as any[]) {
+                        const subQNum = String(entry.question_number);
+                        const expectedAns = String(entry.answer || '').trim();
+                        const userAns = (answers[subQNum] || '').trim();
+
+                        // Check if user answer is anywhere in the pool (order-independent)
+                        const userLower = userAns.toLowerCase();
+                        const poolCopy = [...correctPool];
+                        const matchIdx = poolCopy.indexOf(userLower);
+                        const isCorrect = userAns !== '' && matchIdx !== -1;
+
+                        results.push({
+                            questionNumber: subQNum,
+                            correctAnswer: expectedAns,
+                            userAnswer: userAns,
+                            isCorrect,
+                        });
+                    }
+                    continue; // handled — skip other cases
+                }
+
+                // ── Case 2: string answer, ranged question_number like "5-7" ───────────────
+                // Some listening/reading note-completion questions span a range but give
+                // answers as a "/" separated string e.g. "answer1/answer2/answer3"
+                const correctAnswer = String(rawAnswer ?? '').trim();
+
                 if (qNum.includes('-')) {
                     const [start, end] = qNum.split('-').map(Number);
-                    // For grouped questions, the correct answer may be multi-part separated by /
                     const correctParts = correctAnswer.split('/').map((s: string) => s.trim());
 
                     for (let i = start; i <= end; i++) {
                         const userAns = (answers[String(i)] || '').trim();
                         const partIndex = i - start;
                         const expectedAns = correctParts[partIndex] || correctAnswer;
+                        const acceptableList = expectedAns.split('|').map((s: string) => s.trim().toLowerCase());
 
                         results.push({
                             questionNumber: String(i),
                             correctAnswer: expectedAns,
                             userAnswer: userAns,
-                            isCorrect: userAns !== '' && userAns.toLowerCase() === expectedAns.toLowerCase(),
+                            isCorrect: userAns !== '' && acceptableList.includes(userAns.toLowerCase()),
                         });
                     }
-                } else {
-                    const userAns = (answers[qNum] || '').trim();
-                    // Handle multiple acceptable answers separated by /
-                    const acceptableAnswers = correctAnswer.split('/').map((s: string) => s.trim().toLowerCase());
-                    const isCorrect = userAns !== '' && acceptableAnswers.includes(userAns.toLowerCase());
-
-                    results.push({
-                        questionNumber: qNum,
-                        correctAnswer,
-                        userAnswer: userAns,
-                        isCorrect,
-                    });
+                    continue;
                 }
+
+                // ── Case 3: single question, possibly multiple acceptable answers (/ or |) ─
+                const userAns = (answers[qNum] || '').trim();
+                // Support "/" as alternative separator (e.g. "gut / intestines")
+                const acceptableAnswers = correctAnswer.split(/[/|]/).map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+                const isCorrect = userAns !== '' && acceptableAnswers.includes(userAns.toLowerCase());
+
+                results.push({
+                    questionNumber: qNum,
+                    correctAnswer,
+                    userAnswer: userAns,
+                    isCorrect,
+                });
             }
+
         }
 
         // Sort by question number

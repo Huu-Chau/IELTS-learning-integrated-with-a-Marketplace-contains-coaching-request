@@ -37,9 +37,13 @@ import MultipleChoiceMultiple from './MultipleChoiceMultiple';
 import NoteCompletion from './NoteCompletion';
 import TableCompletion from './TableCompletion';
 import MatchingDropdown from './MatchingDropdown';
+import MatchingHeadings from './MatchingHeadings';
 import MatchingSentenceEndings from './MatchingSentenceEndings';
+import MatchingStatementsToPeople from './MatchingStatementsToPeople';
 import SummaryCompletion from './SummaryCompletion';
 import SummaryCompletionOptions from './SummaryCompletionOptions';
+import SentenceCompletionOptions from './SentenceCompletionOptions';
+import FlowchartCompletion from './FlowchartCompletion';
 
 interface QuestionSectionCardProps {
     subSection: SubSection;
@@ -56,16 +60,24 @@ function getTypeLabel(type: string): string {
         'yes_no_not_given': 'Yes / No / Not Given',
         'multiple_choice': 'Multiple Choice',
         'multiple_choice_multiple': 'Multiple Select',
+        'multiple_choice_multiple_answers': 'Multiple Select',
         'note_completion': 'Note Completion',
         'table_completion': 'Table Completion',
         'matching': 'Matching',
         'matching_information': 'Matching Information',
         'matching_features': 'Matching Features',
         'matching_paragraph': 'Matching Paragraphs',
+        'matching_headings': 'Matching Headings',
+        'heading_matching': 'Matching Headings',
         'matching_sentence_endings': 'Matching Sentence Endings',
+        'matching_statements_to_people': 'Matching Statements',
         'summary_completion': 'Summary Completion',
         'summary_completion_options': 'Summary Completion',
         'sentence_completion': 'Sentence Completion',
+        'sentence_completion_options': 'Sentence Completion',
+        'flowchart_completion': 'Flowchart Completion',
+        'form_completion': 'Form Completion',
+        'map_labelling': 'Map Labelling',
     };
     return map[type] ?? type.replace(/_/g, ' ');
 }
@@ -102,13 +114,24 @@ export default function QuestionSectionCard({ subSection, answers, onAnswer }: Q
             case 'matching_features':
             case 'matching_paragraph':
                 return <MatchingDropdown {...props} />;
+            case 'matching_headings':
+            case 'heading_matching':
+                return <MatchingHeadings {...props} />;
             case 'matching_sentence_endings':
                 return <MatchingSentenceEndings {...props} />;
+            case 'matching_statements_to_people':
+                return <MatchingStatementsToPeople {...props} />;
             case 'summary_completion':
             case 'sentence_completion':
                 return <SummaryCompletion {...props} />;
             case 'summary_completion_options':
                 return <SummaryCompletionOptions {...props} />;
+            case 'sentence_completion_options':
+                return <SentenceCompletionOptions {...props} />;
+            case 'flowchart_completion':
+            case 'form_completion':
+            case 'map_labelling':
+                return <FlowchartCompletion {...props} />;
             default:
                 return (
                     <div className="text-sm text-gray-400 italic p-3 bg-gray-50 rounded-lg">

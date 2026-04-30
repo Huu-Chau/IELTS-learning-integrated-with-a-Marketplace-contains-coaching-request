@@ -14,7 +14,16 @@ export class TeacherAvailabilityController implements ITeacherAvailabilityContro
 
     public async getAvailability(req: Request, res: Response, next: NextFunction): Promise<void> {
         const { teacherId, from, to } = req.query;
-        const params = new GetAvailabilityParams(teacherId as string, new Date(from as string), new Date(to as string));
+
+        let fromDate = undefined;
+        let toDate = undefined;
+        if (from) {
+            fromDate = new Date(from as string);
+        }
+        if (to) {
+            toDate = new Date(to as string);
+        }
+        const params = new GetAvailabilityParams(teacherId as string, fromDate, toDate);
         const result = await this.teacherAvailabilityService.getAvailability(params);
         res.status(200).json(result);
         return next();
@@ -33,7 +42,7 @@ export class TeacherAvailabilityController implements ITeacherAvailabilityContro
         const { teacherId, date, startTime, endTime, timezone, isAvailable } = req.body;
         const payload = new UpdateAvailabilityPayload(Number(id), teacherId, date, startTime, endTime, timezone, isAvailable);
         const result = await this.teacherAvailabilityService.updateAvailability(payload);
-        res.status(200).json(result);
+        res.status(200).json({ success: true });
         return next();
     }
 

@@ -58,7 +58,6 @@ export class TeacherAvailabilityService implements ITeacherAvailabilityService {
             });
 
             if (!listing) {
-                await t.rollback();
                 throw new Error('Listing not found');
             }
 
@@ -71,7 +70,6 @@ export class TeacherAvailabilityService implements ITeacherAvailabilityService {
             });
 
             if (updatedCount === 0) {
-                await t.rollback();
                 throw new Error('Availability not found or already booked');
             }
 

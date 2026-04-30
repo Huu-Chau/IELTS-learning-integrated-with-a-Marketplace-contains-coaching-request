@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import TeacherCard from '@/components/marketplace/TeacherCard';
 import BookingCheckoutModal from '@/components/payment/BookingCheckoutModal';
-import CalendarMatrix from '@/components/calendar/CalendarMatrix';
+import CalendarMatrix, { TeacherAvailability } from '@/components/calendar/CalendarMatrix';
 import { Search, SlidersHorizontal, AlertCircle, X, CalendarDays, Brain } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { apiClient } from '@/services/apiClient';
@@ -48,10 +48,9 @@ export default function TeacherList() {
     const checkoutListing = listings.find((l) => l.id === checkoutListingId) ?? null;
 
     // ── Calendar / slot selection step ──────────────────────────────────────
-    interface TimeSlot { start: string; end: string; available: boolean; }
     const [calendarListingId, setCalendarListingId] = useState<number | null>(null);
     const calendarListing = listings.find((l) => l.id === calendarListingId) ?? null;
-    const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
+    const [selectedSlot, setSelectedSlot] = useState<TeacherAvailability | null>(null);
 
     const SKILL_FILTERS = ['All Tutors', 'Speaking', 'Writing', 'Reading', 'Listening'];
 
@@ -293,7 +292,7 @@ export default function TeacherList() {
                             <div className="text-sm text-gray-600">
                                 {selectedSlot ? (
                                     <span className="font-semibold text-indigo-700">
-                                        {new Date(selectedSlot.start).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                                        {new Date(`${selectedSlot.date}T${selectedSlot.startTime}:00`).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                                     </span>
                                 ) : (
                                     <span className="text-gray-400">No slot selected yet</span>
@@ -318,11 +317,12 @@ export default function TeacherList() {
             )}
 
             {/* ── BookingCheckoutModal ──────────────────────────────────── */}
-            {checkoutListing && (
+            {checkoutListing && selectedSlot && (
                 <BookingCheckoutModal
                     listing={checkoutListing}
                     onClose={handleCheckoutClose}
-                    scheduledAt={selectedSlot?.start ?? null}
+                    availabilityId={selectedSlot.id}
+                    scheduledAt={`${selectedSlot.date}T${selectedSlot.startTime}:00`}
                 />
             )}
         </DashboardLayout>

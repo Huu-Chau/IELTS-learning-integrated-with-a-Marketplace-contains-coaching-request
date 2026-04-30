@@ -256,77 +256,78 @@ const STATUS_COLORS: Record<string, string> = {
 
 // ── Schedule Panel ────────────────────────────────────────────────────────────
 
+interface TeacherAvailabilityRecord {
+    id: number;
+    date: string;
+    startTime: string;
+    endTime: string;
+    isAvailable: boolean;
+}
+
 function SchedulePanel() {
-    const { getIdToken } = useAuth();
+    const { getIdToken, user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [saved, setSaved] = useState(false);
-
-    // Which days are toggled on
-    const [enabledDays, setEnabledDays] = useState<Record<number, boolean>>({});
-    const [hours, setHours] = useState<Record<number, { startTime: string; endTime: string }>>({});
+    
+    const [availabilities, setAvailabilities] = useState<TeacherAvailabilityRecord[]>([]);
+    const [date, setDate] = useState('');
+    const [startTime, setStartTime] = useState('09:00');
+    const [endTime, setEndTime] = useState('10:00');
 
     useEffect(() => {
         async function fetchSchedule() {
-            console.log('[SchedulePanel] fetchSchedule called');
             try {
                 const token = await getIdToken();
-                const data: AvailabilityRule[] = await apiClient.get('/teacher/availability', token);
-                // Hydrate state from existing rules
-                const dayMap: Record<number, boolean> = {};
-                const hourMap: Record<number, { startTime: string; endTime: string }> = {};
-                data.forEach((r) => {
-                    dayMap[r.dayOfWeek] = true;
-                    hourMap[r.dayOfWeek] = { startTime: r.startTime, endTime: r.endTime };
-                });
-                setEnabledDays(dayMap);
-                setHours(hourMap);
-                console.log('[SchedulePanel] fetchSchedule success', { count: data.length });
+                const data = await apiClient.get(`/teacher-availability?teacherId=${user?.uid}`, token);
+                setAvailabilities(Array.isArray(data) ? data : []);
             } catch (err) {
                 console.error('[SchedulePanel] fetchSchedule error', err);
             } finally {
                 setLoading(false);
             }
         }
-        fetchSchedule();
-    }, [getIdToken]);
+        if (user?.uid) fetchSchedule();
+    }, [getIdToken, user?.uid]);
 
-    const toggleDay = (day: number) => {
-        console.log('[SchedulePanel] toggleDay called', { day });
-        setEnabledDays((prev) => ({ ...prev, [day]: !prev[day] }));
-        if (!hours[day]) {
-            setHours((prev) => ({ ...prev, [day]: { ...DEFAULT_HOURS } }));
+    const handleAdd = async () => {
+        if (!date || !startTime || !endTime) return;
+        setSaving(true);
+        try {
+            const token = await getIdToken();
+            const payload = {
+                teacherId: user?.uid,
+                date,
+                startTime,
+                endTime,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            };
+            await apiClient.post('/teacher-availability', payload, token);
+            // Refetch to ensure we get the ID correctly
+            const data = await apiClient.get(`/teacher-availability?teacherId=${user?.uid}`, token);
+            setAvailabilities(Array.isArray(data) ? data : []);
+            setDate(''); // reset
+        } catch (err) {
+            console.error('[SchedulePanel] handleAdd error', err);
+        } finally {
+            setSaving(false);
         }
     };
 
-    const handleSave = async () => {
-        console.log('[SchedulePanel] handleSave called');
-        setSaving(true);
-        setSaved(false);
+    const handleToggle = async (avail: TeacherAvailabilityRecord) => {
         try {
             const token = await getIdToken();
-            const rulesPayload: AvailabilityRule[] = Object.entries(enabledDays)
-                .filter(([, enabled]) => enabled)
-                .map(([day]) => ({
-                    dayOfWeek: parseInt(day),
-                    startTime: hours[parseInt(day)]?.startTime ?? DEFAULT_HOURS.startTime,
-                    endTime: hours[parseInt(day)]?.endTime ?? DEFAULT_HOURS.endTime,
-                }));
-            await apiClient.put('/teacher/availability', { rules: rulesPayload }, token);
-            setSaved(true);
-            setTimeout(() => setSaved(false), 3000);
-            console.log('[SchedulePanel] handleSave success', { count: rulesPayload.length });
+            const payload = { ...avail, isAvailable: !avail.isAvailable };
+            await apiClient.put(`/teacher-availability/${avail.id}`, payload, token);
+            setAvailabilities(availabilities.map(a => a.id === avail.id ? payload : a));
         } catch (err) {
-            console.error('[SchedulePanel] handleSave error', err);
-        } finally {
-            setSaving(false);
+            console.error('[SchedulePanel] handleToggle error', err);
         }
     };
 
     if (loading) {
         return (
             <div className="bg-white rounded-2xl border border-gray-100 p-8 space-y-4 animate-pulse">
-                {[1, 2, 3, 4, 5].map((i) => (
+                {[1, 2, 3].map((i) => (
                     <div key={i} className="h-14 bg-gray-100 rounded-xl" />
                 ))}
             </div>
@@ -342,105 +343,61 @@ function SchedulePanel() {
                         <CalendarDays className="h-5 w-5 text-indigo-600" />
                     </div>
                     <div>
-                        <h2 className="font-bold text-gray-900">Weekly Availability</h2>
-                        <p className="text-xs text-gray-500 mt-0.5">Set the days and hours you're available for 1-hour coaching sessions.</p>
+                        <h2 className="font-bold text-gray-900">Manage Availability</h2>
+                        <p className="text-xs text-gray-500 mt-0.5">Add specific dates and times when you are available to teach.</p>
                     </div>
                 </div>
+            </div>
+
+            {/* Add new availability form */}
+            <div className="px-6 py-4 bg-gray-50/50 border-b border-gray-100 flex items-end gap-4 flex-wrap">
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">Date</label>
+                    <input type="date" value={date} onChange={e => setDate(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none bg-white" />
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">Start Time</label>
+                    <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none bg-white" />
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">End Time</label>
+                    <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none bg-white" />
+                </div>
                 <button
-                    id="save-schedule"
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-60 shadow-sm shadow-indigo-200"
+                    onClick={handleAdd}
+                    disabled={saving || !date}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-60 shadow-sm shadow-indigo-200 h-[38px]"
                 >
-                    {saving ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : saved ? (
-                        <CheckCircle className="h-4 w-4" />
-                    ) : (
-                        <Save className="h-4 w-4" />
-                    )}
-                    {saved ? 'Saved!' : 'Save Schedule'}
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    Add Slot
                 </button>
             </div>
 
-            {/* Day rows */}
+            {/* Existing slots */}
             <div className="divide-y divide-gray-50">
-                {[1, 2, 3, 4, 5, 6, 0].map((day) => {
-                    const isOn = enabledDays[day] ?? false;
-                    const dayHours = hours[day] ?? DEFAULT_HOURS;
-
-                    return (
-                        <div key={day} className={`px-6 py-4 flex items-center gap-5 transition-colors ${isOn ? 'bg-indigo-50/30' : 'bg-white'}`}>
-                            {/* Toggle */}
-                            <button
-                                id={`toggle-day-${day}`}
-                                onClick={() => toggleDay(day)}
-                                className="flex-shrink-0"
-                            >
-                                {isOn ? (
-                                    <ToggleRight className="h-8 w-8 text-indigo-600 transition-colors" />
-                                ) : (
-                                    <ToggleLeft className="h-8 w-8 text-gray-300 transition-colors" />
-                                )}
-                            </button>
-
-                            {/* Day name */}
-                            <span className={`w-28 font-semibold text-sm ${isOn ? 'text-gray-900' : 'text-gray-400'}`}>
-                                {DAY_NAMES[day]}
-                            </span>
-
-                            {/* Time pickers */}
-                            {isOn ? (
-                                <div className="flex items-center gap-3 flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <Clock className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                        <input
-                                            id={`start-time-${day}`}
-                                            type="time"
-                                            value={dayHours.startTime}
-                                            onChange={(e) =>
-                                                setHours((prev) => ({
-                                                    ...prev,
-                                                    [day]: { ...prev[day], startTime: e.target.value },
-                                                }))
-                                            }
-                                            className="px-3 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
-                                        />
-                                    </div>
-                                    <span className="text-gray-400 text-sm font-medium">to</span>
-                                    <input
-                                        id={`end-time-${day}`}
-                                        type="time"
-                                        value={dayHours.endTime}
-                                        onChange={(e) =>
-                                            setHours((prev) => ({
-                                                ...prev,
-                                                [day]: { ...prev[day], endTime: e.target.value },
-                                            }))
-                                        }
-                                        className="px-3 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
-                                    />
-                                    <span className="text-xs text-indigo-600 font-medium bg-indigo-50 px-2 py-1 rounded-lg">
-                                        {(() => {
-                                            const [sh, sm] = dayHours.startTime.split(':').map(Number);
-                                            const [eh, em] = dayHours.endTime.split(':').map(Number);
-                                            const mins = (eh * 60 + em) - (sh * 60 + sm);
-                                            return mins > 0 ? `${Math.floor(mins / 60)}h ${mins % 60 > 0 ? `${mins % 60}m` : ''}`.trim() : 'Invalid';
-                                        })()}
+                {availabilities.length === 0 ? (
+                    <div className="px-6 py-8 text-center text-sm text-gray-400">No availability slots added yet.</div>
+                ) : (
+                    availabilities.sort((a, b) => new Date(`${a.date}T${a.startTime}`).getTime() - new Date(`${b.date}T${b.startTime}`).getTime()).map((avail) => (
+                        <div key={avail.id} className={`px-6 py-4 flex items-center justify-between transition-colors ${avail.isAvailable ? 'bg-white' : 'bg-gray-50'}`}>
+                            <div className="flex items-center gap-5">
+                                <button onClick={() => handleToggle(avail)} className="flex-shrink-0">
+                                    {avail.isAvailable ? <ToggleRight className="h-8 w-8 text-indigo-600 transition-colors" /> : <ToggleLeft className="h-8 w-8 text-gray-300 transition-colors" />}
+                                </button>
+                                <div>
+                                    <span className={`block font-semibold text-sm ${avail.isAvailable ? 'text-gray-900' : 'text-gray-400 line-through'}`}>
+                                        {new Date(avail.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                    </span>
+                                    <span className="text-xs text-gray-500 mt-0.5 block flex items-center gap-1">
+                                        <Clock className="h-3 w-3" />
+                                        {avail.startTime} - {avail.endTime}
                                     </span>
                                 </div>
-                            ) : (
-                                <span className="text-sm text-gray-400 italic">Unavailable</span>
-                            )}
+                            </div>
+                            {!avail.isAvailable && <span className="text-xs font-semibold text-gray-400 bg-gray-100 px-2 py-1 rounded-md uppercase tracking-wider">Booked / Unavailable</span>}
                         </div>
-                    );
-                })}
-            </div>
-
-            <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100">
-                <p className="text-xs text-gray-400 text-center">
-                    Students can book any available 1-hour slot within your working hours. Booked slots are automatically blocked.
-                </p>
+                    ))
+                )}
             </div>
         </div>
     );

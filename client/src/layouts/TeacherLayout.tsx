@@ -46,10 +46,18 @@ interface TeacherLayoutProps {
 export default function TeacherLayout({ children, unreadMessages = 0, unreadNotifications = 0 }: TeacherLayoutProps) {
     console.log('[TeacherLayout] render called', { unreadMessages, unreadNotifications });
 
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    // Default closed on mobile, open on desktop (lg = 1024px)
+    const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
     const location = useLocation();
     const navigate = useNavigate();
     const { user, logout, getIdToken } = useAuth();
+
+    // Auto open/close when window crosses the lg breakpoint
+    useEffect(() => {
+        const handleResize = () => setIsSidebarOpen(window.innerWidth >= 1024);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // Self-fetch live unread counts on mount so the bell dot is always accurate
     const [liveUnreadNotifications, setLiveUnreadNotifications] = useState(unreadNotifications);

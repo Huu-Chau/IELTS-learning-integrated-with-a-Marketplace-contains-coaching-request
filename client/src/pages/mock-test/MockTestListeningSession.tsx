@@ -22,7 +22,7 @@ import DashboardLayout from '@/layouts/DashboardLayout';
 import AudioPlayer from '@/components/practice/AudioPlayer';
 import { QuestionSectionCard } from '@/components/practice/questions';
 import MockTestResults, { GradeResult } from './MockTestResults';
-import type { ListeningBook, ListeningTest, ListeningPart, SubSection, AnswerMap } from '@/types/questionTypes';
+import type { ListeningBook, ListeningTest, ListeningPart, SubSection } from '@/types/questionTypes';
 import { useTestDraft } from '@/hooks/useTestDraft';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -86,7 +86,7 @@ export default function MockTestListeningSession() {
     const [gradeResult, setGradeResult] = useState<GradeResult | null>(null);
 
     // ── Draft persistence: answers + timer survive page refresh ───────────────
-    const { answers, setAnswers, secondsLeft, clearDraft } = useTestDraft({
+    const { answers, setAnswers, secondsLeft, timerExpired, clearDraft } = useTestDraft({
         skill: 'listening',
         setId,
         testNumber,
@@ -124,6 +124,13 @@ export default function MockTestListeningSession() {
     }, [setId, testNumber]);
 
     // Timer is managed by useTestDraft hook (secondsLeft)
+    useEffect(() => {
+        if (timerExpired && !submitting && !gradeResult && test) {
+            console.log('[MockTestListeningSession] Timer expired — auto-submitting');
+            handleSubmit();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [timerExpired]);
 
     const formatTimer = (s: number) =>
         `${Math.floor(s / 60).toString().padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;

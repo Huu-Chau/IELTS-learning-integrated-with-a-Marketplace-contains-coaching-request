@@ -89,7 +89,8 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children, role }: DashboardLayoutProps) {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    // Default closed on mobile, open on desktop (lg = 1024px)
+    const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
     const location = useLocation();
     const navigate = useNavigate();
     const { user, getIdToken } = useAuth();
@@ -100,6 +101,20 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
     // Auto-expand Mock Test dropdown when on a /mock-test/* route
     const onMockTestPath = location.pathname.startsWith('/mock-test');
     const [isMockTestOpen, setIsMockTestOpen] = useState(onMockTestPath);
+
+    // Close sidebar on mobile when route changes (user tapped a nav link)
+    useEffect(() => {
+        if (window.innerWidth < 1024) {
+            setIsSidebarOpen(false);
+        }
+    }, [location.pathname]);
+
+    // Auto open/close when window crosses the lg breakpoint
+    useEffect(() => {
+        const handleResize = () => setIsSidebarOpen(window.innerWidth >= 1024);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // ── Notification state ────────────────────────────────────────────────
     interface NotificationItem {
@@ -337,10 +352,18 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
                 </div>
             </aside>
 
+            {/* Mobile overlay — tap to close sidebar */}
+            {isSidebarOpen && (
+                <div
+                    className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
+
             {/* Main Content */}
             <div className="flex-1 flex flex-col min-w-0">
                 {/* Top Header */}
-                <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-8">
+                <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30">
                     <button
                         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                         className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"

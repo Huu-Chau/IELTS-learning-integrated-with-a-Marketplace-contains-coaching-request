@@ -7,7 +7,6 @@ import {
     ToggleLeft,
     ToggleRight,
     Clock,
-    Banknote,
     Tag,
     X,
     Brain,
@@ -259,7 +258,6 @@ const STATUS_COLORS: Record<string, string> = {
 
 function SchedulePanel() {
     const { getIdToken } = useAuth();
-    const [rules, setRules] = useState<AvailabilityRule[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
@@ -283,7 +281,6 @@ function SchedulePanel() {
                 });
                 setEnabledDays(dayMap);
                 setHours(hourMap);
-                setRules(data);
                 console.log('[SchedulePanel] fetchSchedule success', { count: data.length });
             } catch (err) {
                 console.error('[SchedulePanel] fetchSchedule error', err);

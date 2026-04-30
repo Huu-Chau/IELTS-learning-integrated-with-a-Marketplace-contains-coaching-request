@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
 import { verifyToken } from '../middleware/authMiddleware';
-import sequelize from '../config/database';
 import TeacherListing from '../models/TeacherListing';
 import MarketplaceRequest from '../models/MarketplaceRequest';
 import Notification from '../models/Notification';
@@ -110,13 +109,13 @@ router.get('/listings', async (req: Request, res: Response): Promise<void> => {
                     createdAt: listing.createdAt,
                     teacher: teacher
                         ? {
-                              id: teacher.id,
-                              name: `${teacher.firstName} ${teacher.lastName}`.trim(),
-                              email: teacher.email,
-                              avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                                  `${teacher.firstName} ${teacher.lastName}`
-                              )}&background=random`,
-                          }
+                            id: teacher.id,
+                            name: `${teacher.firstName} ${teacher.lastName}`.trim(),
+                            email: teacher.email,
+                            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                `${teacher.firstName} ${teacher.lastName}`
+                            )}&background=random`,
+                        }
                         : null,
                     // Reservation status for frontend badge rendering
                     reservationStatus,
@@ -167,13 +166,13 @@ router.get('/listings/:id', async (req: Request, res: Response): Promise<void> =
             createdAt: listing.createdAt,
             teacher: teacher
                 ? {
-                      id: teacher.id,
-                      name: `${teacher.firstName} ${teacher.lastName}`.trim(),
-                      email: teacher.email,
-                      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                          `${teacher.firstName} ${teacher.lastName}`
-                      )}&background=random`,
-                  }
+                    id: teacher.id,
+                    name: `${teacher.firstName} ${teacher.lastName}`.trim(),
+                    email: teacher.email,
+                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                        `${teacher.firstName} ${teacher.lastName}`
+                    )}&background=random`,
+                }
                 : null,
         };
 
@@ -248,46 +247,39 @@ router.post('/requests', async (req: Request, res: Response): Promise<void> => {
         const serviceLabel = primarySkill ? `IELTS ${primarySkill} Review` : listing.title;
         const amountFormatted = Number(listing.pricePerHour).toLocaleString('vi-VN');
 
-        // ── Atomic transaction: request + notifications together ─────────
-        // Previously these were 3 separate un-transacted writes. If any step
-        // failed mid-way, the connection would be left in 'idle in transaction'
-        // state — never committed or rolled back — exhausting the pool.
-        const request = await sequelize.transaction(async (t) => {
-            // Create the MarketplaceRequest — status stays 'pending' until teacher accepts
-            const newRequest = await MarketplaceRequest.create({
-                studentId,
-                teacherId,
-                attemptId: attemptId || null,
-                status: 'pending',
-                fee: Number(listing.pricePerHour),
-                message: message || null,
-                skill: primarySkill,
-                feedbackPath: null,
-            }, { transaction: t });
-
-            // 1. Student: payment / booking confirmation
-            await Notification.create({
-                userId: studentId,
-                type: 'payment',
-                title: '✅ Booking Confirmed!',
-                body: `Your payment of ${amountFormatted} VND for "${serviceLabel}" has been received. Waiting for tutor confirmation.`,
-                linkPath: '/payments',
-                isRead: false,
-            }, { transaction: t });
-
-            // 2. Teacher: new order alert
-            await Notification.create({
-                userId: teacherId,
-                type: 'order',
-                title: '🛎️ New Booking Request',
-                body: `${studentName} has booked your "${serviceLabel}" service for ${amountFormatted} VND. Please review and accept.`,
-                linkPath: '/teacher/marketplace',
-                isRead: false,
-            }, { transaction: t });
-
-            return newRequest;
+        // Create the MarketplaceRequest — status stays 'pending' until teacher accepts
+        const request = await MarketplaceRequest.create({
+            studentId,
+            teacherId,
+            attemptId: attemptId || null,
+            status: 'pending',
+            fee: Number(listing.pricePerHour),
+            message: message || null,
+            skill: primarySkill,
+            feedbackPath: null,
         });
-        // ────────────────────────────────────────────────────────────────
+
+        // ── Fire notifications to both parties ──────────────────────────
+
+        // 1. Student: payment / booking confirmation
+        await Notification.create({
+            userId: studentId,
+            type: 'payment',
+            title: '✅ Booking Confirmed!',
+            body: `Your payment of ${amountFormatted} VND for "${serviceLabel}" has been received. Waiting for tutor confirmation.`,
+            linkPath: '/payments',
+            isRead: false,
+        });
+
+        // 2. Teacher: new order alert
+        await Notification.create({
+            userId: teacherId,
+            type: 'order',
+            title: '🛎️ New Booking Request',
+            body: `${studentName} has booked your "${serviceLabel}" service for ${amountFormatted} VND. Please review and accept.`,
+            linkPath: '/teacher/marketplace',
+            isRead: false,
+        });
 
         console.log('[MarketplaceRoutes] POST /requests success', { id: request.id, fee: request.fee });
         res.status(201).json({
@@ -321,8 +313,8 @@ router.get('/requests/mine', async (req: Request, res: Response): Promise<void> 
             requests.map(async (req) => {
                 const teacher = req.teacherId
                     ? await User.findByPk(req.teacherId, {
-                          attributes: ['id', 'firstName', 'lastName', 'email'],
-                      })
+                        attributes: ['id', 'firstName', 'lastName', 'email'],
+                    })
                     : null;
                 return {
                     id: req.id,
@@ -366,18 +358,18 @@ router.get('/payments', async (req: Request, res: Response): Promise<void> => {
 
         // Map status to payment-friendly labels
         const statusMap: Record<string, string> = {
-            pending:   'Pending',
-            accepted:  'Processing',
+            pending: 'Pending',
+            accepted: 'Processing',
             completed: 'Paid',
-            rejected:  'Refunded',
+            rejected: 'Refunded',
         };
 
         const payments = await Promise.all(
             requests.map(async (r) => {
                 const teacher = r.teacherId
                     ? await User.findByPk(r.teacherId, {
-                          attributes: ['id', 'firstName', 'lastName'],
-                      })
+                        attributes: ['id', 'firstName', 'lastName'],
+                    })
                     : null;
                 return {
                     id: r.id,
@@ -400,10 +392,10 @@ router.get('/payments', async (req: Request, res: Response): Promise<void> => {
             .reduce((sum, p) => sum + p.amount, 0);
 
         console.log('[MarketplaceRoutes] GET /payments success', { count: payments.length, totalSpent });
-        res.json({ 
+        res.json({
             walletBalance: Number(student?.wallet_balance ?? 0),
-            payments, 
-            totalSpent 
+            payments,
+            totalSpent
         });
     } catch (error) {
         console.error('[MarketplaceRoutes] GET /payments error', error);

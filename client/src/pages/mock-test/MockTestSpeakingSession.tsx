@@ -29,6 +29,7 @@ import {
     Radio,
     ExternalLink,
     Save,
+    Clock,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -44,6 +45,7 @@ interface TranscriptEntry {
 
 interface TopicInfo {
     part1?: string;
+    part2?: string;
     part3?: string;
 }
 
@@ -76,6 +78,10 @@ export default function MockTestSpeakingSession() {
     const [recordingSeconds, setRecordingSeconds] = useState(0);
     const [savedAttempt, setSavedAttempt] = useState<SavedAttemptInfo | null>(null);
 
+    // ─── Session Timer (14 min = 840 seconds, standard IELTS speaking duration)
+    const SPEAKING_TOTAL_SECONDS = 14 * 60;
+    const [sessionTimer, setSessionTimer] = useState(SPEAKING_TOTAL_SECONDS);
+
     // Refs
     const socketRef = useRef<Socket | null>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -92,6 +98,33 @@ export default function MockTestSpeakingSession() {
     useEffect(() => {
         transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [transcript]);
+
+    // ── Session countdown timer (starts when ready, stops on done/error) ───
+    useEffect(() => {
+        if (phase === 'connecting' || phase === 'done' || phase === 'error' || phase === 'evaluating') return;
+        const interval = setInterval(() => {
+            setSessionTimer(prev => {
+                if (prev <= 1) {
+                    clearInterval(interval);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [phase]);
+
+    // ── Auto-submit when session timer hits zero ──────────────────────────
+    useEffect(() => {
+        if (sessionTimer === 0 && phase !== 'done' && phase !== 'evaluating' && phase !== 'error' && phase !== 'connecting') {
+            console.log('[MockTestSpeakingSession] Timer expired — auto-submitting');
+            stopRecording();
+            socketRef.current?.emit('speaking:end');
+            setPhase('evaluating');
+            setStatusText('Time\'s up! Evaluating your performance…');
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sessionTimer]);
 
     // ── Audio playback queue ───────────────────────────────────────────────
     const playNextInQueue = useCallback(async () => {
@@ -130,7 +163,7 @@ export default function MockTestSpeakingSession() {
         socket.on('connect', () => {
             console.log('[MockTestSpeakingSession] Socket connected', { id: socket.id });
             setStatusText('Connected — starting examiner…');
-            socket.emit('speaking:start', { 
+            socket.emit('speaking:start', {
                 userId: user?.uid ?? null,
                 setId: setId,             // e.g. "cambridge-19"
                 testNum: parseInt(testNum, 10) // e.g. 1
@@ -157,6 +190,13 @@ export default function MockTestSpeakingSession() {
         });
 
         socket.on('speaking:processing', (data: { status: string }) => {
+            // If the backend signals 'ready' (e.g. after no-speech-detected),
+            // restore the mic instead of leaving it stuck in processing.
+            if (data.status === 'ready') {
+                setPhase('ready');
+                setStatusText('Press the microphone to respond.');
+                return;
+            }
             const labels: Record<string, string> = {
                 transcribing: 'Transcribing your response…',
                 thinking: 'Examiner is thinking…',
@@ -199,7 +239,7 @@ export default function MockTestSpeakingSession() {
             socket.disconnect();
             stopRecording();
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const appendTranscript = (speaker: 'user' | 'ai', text: string) => {
@@ -299,17 +339,23 @@ export default function MockTestSpeakingSession() {
                         <ChevronLeft className="h-4 w-4" />
                         Back to Speaking Tests
                     </button>
-                    <div className="text-sm text-gray-400">
-                        {setId && <span className="font-medium text-gray-600">{setId} — Test {testNum}</span>}
+                    <div className="flex items-center gap-3">
+                        <div className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full
+                            ${sessionTimer < 60 ? 'text-red-600 bg-red-50' : sessionTimer < 180 ? 'text-amber-600 bg-amber-50' : 'text-gray-500 bg-gray-100'}`}>
+                            <Clock className="h-3 w-3" />
+                            <span className="font-mono">{formatTime(sessionTimer)}</span>
+                        </div>
+                        <div className="text-sm text-gray-400">
+                            {setId && <span className="font-medium text-gray-600">{setId} — Test {testNum}</span>}
+                        </div>
                     </div>
                 </div>
 
                 {/* Status Bar */}
-                <div className={`rounded-xl p-4 flex items-center gap-3 ${
-                    phase === 'error' ? 'bg-red-50 border border-red-200' :
-                    phase === 'done' ? 'bg-green-50 border border-green-200' :
-                    'bg-indigo-50 border border-indigo-200'
-                }`}>
+                <div className={`rounded-xl p-4 flex items-center gap-3 ${phase === 'error' ? 'bg-red-50 border border-red-200' :
+                        phase === 'done' ? 'bg-green-50 border border-green-200' :
+                            'bg-indigo-50 border border-indigo-200'
+                    }`}>
                     {phase === 'connecting' && <Loader2 className="h-5 w-5 text-indigo-500 animate-spin shrink-0" />}
                     {phase === 'processing' && <Loader2 className="h-5 w-5 text-indigo-500 animate-spin shrink-0" />}
                     {phase === 'evaluating' && <Loader2 className="h-5 w-5 text-violet-500 animate-spin shrink-0" />}
@@ -328,9 +374,10 @@ export default function MockTestSpeakingSession() {
                 </div>
 
                 {/* Topic Info */}
-                {(topicInfo.part1 || topicInfo.part3) && (
+                {(topicInfo.part1 || topicInfo.part2 || topicInfo.part3) && (
                     <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm text-gray-600 space-y-1">
                         {topicInfo.part1 && <p><span className="font-semibold text-gray-800">Part 1 Theme:</span> {topicInfo.part1}</p>}
+                        {topicInfo.part2 && <p><span className="font-semibold text-gray-800">Part 2 Topic:</span> {topicInfo.part2}</p>}
                         {topicInfo.part3 && <p><span className="font-semibold text-gray-800">Part 3 Theme:</span> {topicInfo.part3}</p>}
                     </div>
                 )}
@@ -345,11 +392,10 @@ export default function MockTestSpeakingSession() {
                         )}
                         {transcript.map(entry => (
                             <div key={entry.id} className={`flex ${entry.speaker === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                                    entry.speaker === 'user'
+                                <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${entry.speaker === 'user'
                                         ? 'bg-indigo-600 text-white rounded-br-sm'
                                         : 'bg-gray-100 text-gray-800 rounded-bl-sm'
-                                }`}>
+                                    }`}>
                                     <p className="text-[10px] font-semibold mb-1 opacity-70 uppercase tracking-wide">
                                         {entry.speaker === 'user' ? 'You' : 'Examiner (Sarah)'}
                                     </p>

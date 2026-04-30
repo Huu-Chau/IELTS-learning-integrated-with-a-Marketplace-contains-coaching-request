@@ -17,29 +17,22 @@ router.use(verifyToken());
 // ─── Helper: expire stale reservations (Lazy Cleanup) ────────────────────────
 // Called before every listing/reservation read so the DB stays clean
 // without needing a background cron job.
-//
-// IMPORTANT: Uses SKIP LOCKED so that if multiple requests call this
-// concurrently, each one skips rows already locked by another UPDATE.
-// This prevents the deadlock chain that caused pool exhaustion.
 async function expireStaleReservations(): Promise<void> {
     console.log('[ReservationRoutes] expireStaleReservations called');
     try {
-        // Raw query with SKIP LOCKED — concurrent callers skip each other's rows
-        // instead of waiting and deadlocking.
-        const [, meta] = await sequelize.query(
-            `UPDATE "Reservations"
-             SET status = 'expired', "updatedAt" = NOW()
-             WHERE status = 'pending'
-               AND "expiresAt" < NOW()
-             RETURNING id`,
-            { type: 'RAW' as any }
+        const expired = await Reservation.update(
+            { status: 'expired' },
+            {
+                where: {
+                    status: 'pending',
+                    expiresAt: { [Op.lt]: new Date() },
+                },
+            }
         );
-        const count = (meta as any)?.rowCount ?? 0;
-        if (count > 0) {
-            console.log('[ReservationRoutes] expireStaleReservations success', { count });
+        if (expired[0] > 0) {
+            console.log('[ReservationRoutes] expireStaleReservations success', { count: expired[0] });
         }
     } catch (error) {
-        // Non-fatal — log but don't propagate. The main request should still proceed.
         console.error('[ReservationRoutes] expireStaleReservations error', error);
     }
 }

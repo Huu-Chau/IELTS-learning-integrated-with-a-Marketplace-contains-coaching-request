@@ -17,6 +17,7 @@ import marketplaceRoutes from './routes/marketplaceRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import messageRoutes from './routes/messageRoutes';
 import reservationRoutes from './routes/reservationRoutes';
+import { teacherAvailabilityRouter } from './routes/teacherAvailabilityRoutes';
 import { startAllJobs } from './services/cronService';
 
 const app = express();
@@ -62,6 +63,8 @@ app.use('/api/messages', messageRoutes);
 console.log('[App]   ✅ /api/messages');
 app.use('/api/reservations', reservationRoutes);
 console.log('[App]   ✅ /api/reservations');
+app.use('/api/teacher-availability', teacherAvailabilityRouter);
+console.log('[App]   ✅ /api/teacher-availability');
 console.log('[App] All routes mounted successfully');
 
 // ── Background Jobs ───────────────────────────────────────────────────────────

@@ -27,10 +27,12 @@ class Reservation extends Model<
     InferCreationAttributes<Reservation, { omit: 'createdAt' | 'updatedAt' }>
 > {
     declare id: CreationOptional<number>;
-    declare listingId: number;       // FK → TeacherListings
+    declare availabilityId: number;       // FK → TeacherAvailability
+    declare listing: object;
     declare studentId: string;       // Firebase UID
     declare expiresAt: Date;
     declare status: 'pending' | 'completed' | 'expired';
+    declare fee: number;
     declare version: CreationOptional<number>; // Optimistic lock counter
     declare createdAt: CreationOptional<Date>;
     declare updatedAt: CreationOptional<Date>;
@@ -43,11 +45,15 @@ Reservation.init(
             primaryKey: true,
             autoIncrement: true,
         },
-        listingId: {
+        availabilityId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            references: { model: 'TeacherListings', key: 'id' },
+            references: { model: 'TeacherAvailabilities', key: 'id' },
             onDelete: 'CASCADE',
+        },
+        listing: {
+            type: DataTypes.JSONB,
+            allowNull: false,
         },
         studentId: {
             type: DataTypes.STRING(128),
@@ -63,6 +69,10 @@ Reservation.init(
             allowNull: false,
             defaultValue: 'pending',
         },
+        fee: {
+            type: DataTypes.DECIMAL(10, 2),
+            defaultValue: 0,
+        },
         version: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -76,6 +86,7 @@ Reservation.init(
         timestamps: true,
         // Sequelize built-in optimistic locking via version field
         version: true,
+        indexes: [{ fields: ['availabilityId', 'status'], unique: true }]
     }
 );
 

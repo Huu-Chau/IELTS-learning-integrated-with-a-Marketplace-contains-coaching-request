@@ -271,8 +271,8 @@ router.get('/orders', async (req: Request, res: Response): Promise<void> => {
                     fee: Number(order.fee ?? 0),
                     skill: order.skill,
                     message: order.message,
-                    scheduledAt: order.scheduledAt,
-                    durationMinutes: order.durationMinutes,
+                    // scheduledAt: order.scheduledAt,
+                    // durationMinutes: order.durationMinutes,
                     createdAt: order.createdAt,
                     updatedAt: order.updatedAt,
                 };

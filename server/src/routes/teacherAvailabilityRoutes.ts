@@ -25,3 +25,8 @@ teacherAvailabilityRouter.get(
     '/',
     (req, res, next) => teacherAvailabilityController.getAvailability(req, res, next),
 )
+
+teacherAvailabilityRouter.delete(
+    '/:id',
+    (req, res, next) => teacherAvailabilityController.deleteAvailability(req, res, next),
+)

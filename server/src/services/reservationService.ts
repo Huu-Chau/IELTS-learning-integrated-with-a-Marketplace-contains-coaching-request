@@ -26,16 +26,9 @@ export class ReservationService implements IReservationService {
                 },
                 transaction: t,
                 lock: t.LOCK.UPDATE,
-                include: [
-                    {
-                        model: TeacherListing,
-                        as: 'listing',
-                    },
-                ],
             });
 
             if (!reservation) {
-                await t.rollback();
                 throw new Error('Reservation not found or already completed');
             }
 
@@ -52,7 +45,6 @@ export class ReservationService implements IReservationService {
             });
 
             if (studentUpdatedCount === 0) {
-                await t.rollback();
                 throw new Error('Student not found');
             }
 
@@ -67,6 +59,7 @@ export class ReservationService implements IReservationService {
                 {
                     studentId,
                     teacherId: listing.teacherId,
+                    reservationId: reservation.id,
                     attemptId: null,
                     status: 'accepted',
                     fee: reservation.fee,

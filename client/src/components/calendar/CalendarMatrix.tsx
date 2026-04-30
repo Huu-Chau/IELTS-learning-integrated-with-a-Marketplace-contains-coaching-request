@@ -3,27 +3,31 @@ import { ChevronLeft, ChevronRight, CalendarDays, Loader2, Clock } from 'lucide-
 import { apiClient } from '@/services/apiClient';
 import { useAuth } from '@/context/AuthContext';
 
-interface TimeSlot {
-    start: string;
-    end: string;
-    available: boolean;
+export interface TeacherAvailability {
+    id: number;
+    teacherId: string;
+    date: string;       // YYYY-MM-DD
+    startTime: string;  // HH:mm
+    endTime: string;    // HH:mm
+    timezone?: string;
+    isAvailable: boolean;
 }
 
 interface CalendarMatrixProps {
     teacherId: string;
     /** Called when the student selects a slot */
-    onSlotSelected: (slot: TimeSlot) => void;
+    onSlotSelected: (slot: TeacherAvailability) => void;
     /** The currently selected slot (if any) */
-    selectedSlot?: TimeSlot | null;
+    selectedSlot?: TeacherAvailability | null;
 }
 
 const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-function formatHour(isoString: string): string {
-    const d = new Date(isoString);
-    const h = d.getHours();
-    const m = d.getMinutes();
+function formatHour(timeString: string): string {
+    const [hStr, mStr] = timeString.split(':');
+    const h = parseInt(hStr, 10);
+    const m = parseInt(mStr, 10);
     const suffix = h >= 12 ? 'PM' : 'AM';
     const hour12 = h % 12 === 0 ? 12 : h % 12;
     return `${hour12}:${m.toString().padStart(2, '0')} ${suffix}`;
@@ -37,7 +41,7 @@ function isSameDay(a: Date, b: Date): boolean {
 
 export default function CalendarMatrix({ teacherId, onSlotSelected, selectedSlot }: CalendarMatrixProps) {
     const { getIdToken } = useAuth();
-    const [slots, setSlots] = useState<TimeSlot[]>([]);
+    const [slots, setSlots] = useState<TeacherAvailability[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -54,8 +58,9 @@ export default function CalendarMatrix({ teacherId, onSlotSelected, selectedSlot
                     `/marketplace/teachers/${teacherId}/availability`,
                     token
                 );
-                setSlots(data.slots ?? []);
-                console.log('[CalendarMatrix] fetchSlots success', { count: data.slots?.length });
+                const availabilities = Array.isArray(data) ? data : (data.slots ?? []);
+                setSlots(availabilities);
+                console.log('[CalendarMatrix] fetchSlots success', { count: availabilities.length });
             } catch (err: any) {
                 console.error('[CalendarMatrix] fetchSlots error', err);
                 setError('Could not load availability. Please try again.');
@@ -79,9 +84,11 @@ export default function CalendarMatrix({ teacherId, onSlotSelected, selectedSlot
     });
 
     // Group slots by date string for fast lookup
-    const slotsByDate: Record<string, TimeSlot[]> = {};
+    const slotsByDate: Record<string, TeacherAvailability[]> = {};
     for (const slot of slots) {
-        const key = new Date(slot.start).toDateString();
+        const [y, m, d] = slot.date.split('-');
+        const dateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+        const key = dateObj.toDateString();
         if (!slotsByDate[key]) slotsByDate[key] = [];
         slotsByDate[key].push(slot);
     }
@@ -146,7 +153,7 @@ export default function CalendarMatrix({ teacherId, onSlotSelected, selectedSlot
             <div className="grid grid-cols-7 gap-1.5">
                 {weekDays.map((day) => {
                     const daySlotList = slotsByDate[day.toDateString()] ?? [];
-                    const availableCount = daySlotList.filter((s) => s.available).length;
+                    const availableCount = daySlotList.filter((s) => s.isAvailable).length;
                     const isSelected = selectedDate && isSameDay(day, selectedDate);
                     const isPast = day < today;
 
@@ -186,23 +193,23 @@ export default function CalendarMatrix({ teacherId, onSlotSelected, selectedSlot
                     </p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {daySlots.map((slot, idx) => {
-                            const isChosen = selectedSlot?.start === slot.start;
+                            const isChosen = selectedSlot?.id === slot.id;
                             return (
                                 <button
                                     key={idx}
-                                    disabled={!slot.available}
-                                    onClick={() => slot.available && onSlotSelected(slot)}
-                                    className={`py-3 px-4 rounded-xl text-sm font-semibold border transition-all ${
-                                        !slot.available
+                                    disabled={!slot.isAvailable}
+                                    onClick={() => slot.isAvailable && onSlotSelected(slot)}
+                                    className={`py-3 px-4 rounded-xl text-sm font-semibold border transition-all flex flex-col items-center justify-center gap-1 ${
+                                        !slot.isAvailable
                                             ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed line-through'
                                             : isChosen
                                             ? 'border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-200'
                                             : 'border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 text-gray-800'
                                     }`}
                                 >
-                                    {formatHour(slot.start)}
-                                    {!slot.available && (
-                                        <span className="block text-[10px] font-medium text-gray-400 mt-0.5 no-underline">Booked</span>
+                                    <span>{formatHour(slot.startTime)} - {formatHour(slot.endTime)}</span>
+                                    {!slot.isAvailable && (
+                                        <span className="block text-[10px] font-medium text-gray-400 no-underline">Booked</span>
                                     )}
                                 </button>
                             );

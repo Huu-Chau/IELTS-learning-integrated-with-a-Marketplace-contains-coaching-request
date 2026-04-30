@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Brain, CheckCircle, Loader2, AlertCircle, Receipt, Clock, Bell } from 'lucide-react';
 import { apiClient } from '@/services/apiClient';
 import { useAuth } from '@/context/AuthContext';
@@ -7,6 +7,7 @@ import type { MarketplaceListing } from '@/pages/marketplace/TeacherList';
 interface BookingCheckoutModalProps {
     listing: MarketplaceListing;
     onClose: (didComplete: boolean) => void;
+    availabilityId: number;
     scheduledAt?: string | null;
 }
 
@@ -16,8 +17,9 @@ interface Reservation {
     version: number;
 }
 
-export default function BookingCheckoutModal({ listing, onClose, scheduledAt }: BookingCheckoutModalProps) {
+export default function BookingCheckoutModal({ listing, onClose, availabilityId, scheduledAt }: BookingCheckoutModalProps) {
     const { getIdToken } = useAuth();
+    const lockPromiseRef = useRef<Promise<any> | null>(null);
     
     const [reservation, setReservation] = useState<Reservation | null>(null);
     const [walletBalance, setWalletBalance] = useState<number | null>(null);
@@ -42,11 +44,19 @@ export default function BookingCheckoutModal({ listing, onClose, scheduledAt }: 
                 const userProfile = await apiClient.get('/users/me', token);
                 if (isMounted) setWalletBalance(Number(userProfile.wallet_balance || 0));
 
+                if (!lockPromiseRef.current) {
+                    lockPromiseRef.current = apiClient.post(
+                        `/teacher-availability/${availabilityId}/book`,
+                        { listingId: listing.id },
+                        token
+                    );
+                }
+
                 // Acquire 5-minute lease
-                const resData = await apiClient.post(`/reservations/${listing.id}`, {}, token);
+                const resData = await lockPromiseRef.current;
                 
                 if (isMounted) {
-                    setReservation(resData.reservation);
+                    setReservation(resData);
                 }
             } catch (err: any) {
                 if (isMounted) {
@@ -60,7 +70,7 @@ export default function BookingCheckoutModal({ listing, onClose, scheduledAt }: 
         initCheckout();
         
         return () => { isMounted = false; };
-    }, [listing.id, getIdToken]);
+    }, [listing.id, availabilityId, getIdToken]);
 
     // 2. Countdown Timer
     useEffect(() => {

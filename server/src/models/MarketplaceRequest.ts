@@ -11,6 +11,7 @@ import sequelize from '../config/database';
 class MarketplaceRequest extends Model {
     declare id: number;
     declare studentId: string;            // Firebase UID
+    declare reservationId: number;       // FK → Reservation
     declare teacherId: string | null;     // Firebase UID (nullable for broadcast requests)
     declare attemptId: number | null;     // Optional — links to Attempts table
     declare status: 'pending' | 'accepted' | 'completed' | 'rejected';
@@ -19,8 +20,8 @@ class MarketplaceRequest extends Model {
     declare message: string | null;       // Student's message / description
     declare skill: string | null;         // e.g. 'Writing', 'Speaking'
     declare requestType: string;          // 'broadcast' | 'targeted' | 'booking'
-    declare scheduledAt: Date | null;     // The specific time-slot booked
-    declare durationMinutes: number;      // Duration of the booking
+    // declare scheduledAt: Date | null;     // The specific time-slot booked
+    // declare durationMinutes: number;      // Duration of the booking
     declare createdAt: Date;
     declare updatedAt: Date;
 }
@@ -36,6 +37,11 @@ MarketplaceRequest.init(
             type: DataTypes.STRING(128),
             allowNull: false,
             references: { model: 'Users', key: 'id' },
+        },
+        reservationId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            references: { model: 'Reservations', key: 'id' },
         },
         teacherId: {
             type: DataTypes.STRING(128),
@@ -71,15 +77,15 @@ MarketplaceRequest.init(
             allowNull: false,
             defaultValue: 'booking',
         },
-        scheduledAt: {
-            type: DataTypes.DATE,
-            allowNull: true,
-        },
-        durationMinutes: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            defaultValue: 60,
-        },
+        // scheduledAt: {
+        //     type: DataTypes.DATE,
+        //     allowNull: true,
+        // },
+        // durationMinutes: {
+        //     type: DataTypes.INTEGER,
+        //     allowNull: false,
+        //     defaultValue: 60,
+        // },
     },
     {
         sequelize,
@@ -90,10 +96,10 @@ MarketplaceRequest.init(
                 try {
                     const Notification = (await import('./Notification')).default;
                     const User = (await import('./User')).default;
-                    
+
                     const teacher = request.teacherId ? await User.findByPk(request.teacherId) : null;
                     const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}`.trim() : 'a teacher';
-                    
+
                     await Notification.create({
                         userId: request.studentId,
                         type: 'marketplace',
@@ -111,10 +117,10 @@ MarketplaceRequest.init(
                     try {
                         const Notification = (await import('./Notification')).default;
                         const User = (await import('./User')).default;
-                        
+
                         const teacher = request.teacherId ? await User.findByPk(request.teacherId) : null;
                         const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}`.trim() : 'a teacher';
-                        
+
                         const statusMessages: Record<string, { title: string; body: string }> = {
                             accepted: {
                                 title: '🎉 Request Accepted!',
@@ -129,7 +135,7 @@ MarketplaceRequest.init(
                                 body: `${teacherName} was unable to accept your request. Try another tutor.`,
                             },
                         };
-                        
+
                         const msg = statusMessages[request.status];
                         if (msg) {
                             await Notification.create({

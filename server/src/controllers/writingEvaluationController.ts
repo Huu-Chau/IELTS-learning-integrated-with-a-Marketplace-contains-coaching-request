@@ -163,14 +163,14 @@ export const startSession = async (req: Request, res: Response): Promise<void> =
     console.log('[WritingEvaluationController] startSession called', req.body);
     try {
         const { userId, book, testNumber } = req.body;
-        
+
         if (!userId || !book || testNumber === undefined) {
             res.status(400).json({ error: 'Missing required fields: userId, book, testNumber.' });
             return;
         }
 
         // Ensure WritingSession table exists (useful during dev)
-        await WritingSession.sync();
+        // await WritingSession.sync();
 
         // ── Idempotency: reuse existing in-progress session rather than creating a new orphan ──
         const existing = await WritingSession.findOne({

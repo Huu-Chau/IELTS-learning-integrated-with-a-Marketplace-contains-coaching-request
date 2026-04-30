@@ -9,6 +9,11 @@ import {
 } from 'lucide-react';
 import { apiClient } from '@/services/apiClient';
 import { useAuth } from '@/context/AuthContext';
+import { io, Socket } from 'socket.io-client';
+
+const SOCKET_URL = import.meta.env.VITE_API_URL 
+    ? import.meta.env.VITE_API_URL.replace('/api', '') 
+    : 'http://localhost:5000';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -90,7 +95,65 @@ export default function StudentMessages() {
     const [searchQuery, setSearchQuery] = useState('');
 
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
-    const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // Keep track of active conversation for socket events without stale closures
+    const activeConvIdRef = useRef<string | null>(activeConvId);
+    useEffect(() => {
+        activeConvIdRef.current = activeConvId;
+    }, [activeConvId]);
+
+    // ── Socket Connection ─────────────────────────────────────────────────────
+    useEffect(() => {
+        if (!user?.uid) return;
+
+        const socket: Socket = io(SOCKET_URL, { transports: ['websocket'] });
+
+        socket.on('connect', () => {
+            console.log('[StudentMessages] socket connected');
+            socket.emit('join_user_room', user.uid);
+        });
+
+        socket.on('new_message', (newMessage: Message) => {
+            console.log('[StudentMessages] socket new_message received', newMessage);
+
+            // 1. Update messages array if this message belongs to the active conversation
+            setMessages((prev) => {
+                // To avoid duplicate messages (if sender receives their own broadcast via socket after HTTP response)
+                if (prev.some((m) => m.id === newMessage.id)) return prev;
+
+                if (activeConvIdRef.current === newMessage.conversationId) {
+                    return [...prev, newMessage];
+                }
+                return prev;
+            });
+
+            // 2. Update conversations list
+            setConversations((prev) => {
+                const updated = prev.map((conv) => {
+                    if (conv.conversationId === newMessage.conversationId) {
+                        const isReceiver = newMessage.receiverId === user.uid;
+                        const isNotActive = activeConvIdRef.current !== newMessage.conversationId;
+                        return {
+                            ...conv,
+                            lastMessage: newMessage.content,
+                            lastAt: newMessage.sentAt,
+                            unreadCount: (isReceiver && isNotActive) ? conv.unreadCount + 1 : conv.unreadCount,
+                        };
+                    }
+                    return conv;
+                });
+
+                // Sort updated to bring the latest conversation to top
+                updated.sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
+                return updated;
+            });
+        });
+
+        return () => {
+            socket.disconnect();
+            console.log('[StudentMessages] socket disconnected');
+        };
+    }, [user?.uid]);
 
     // ── Fetch conversations ───────────────────────────────────────────────────
     const fetchConversations = useCallback(async () => {
@@ -135,12 +198,6 @@ export default function StudentMessages() {
         if (!activeConvId) return;
         setMsgsLoading(true);
         fetchMessages(activeConvId).finally(() => setMsgsLoading(false));
-
-        // Poll every 3 seconds
-        pollingRef.current = setInterval(() => fetchMessages(activeConvId), 3000);
-        return () => {
-            if (pollingRef.current) clearInterval(pollingRef.current);
-        };
     }, [activeConvId, fetchMessages]);
 
     useEffect(() => {
@@ -164,10 +221,29 @@ export default function StudentMessages() {
         setSending(true);
         try {
             const token = await getIdToken();
-            await apiClient.post(`/messages/send/${activeReceiverId}`, { content }, token);
+            const sentMsg = await apiClient.post(`/messages/send/${activeReceiverId}`, { content }, token);
             setMessageInput('');
-            if (activeConvId) await fetchMessages(activeConvId);
-            await fetchConversations();
+            
+            // Immediate update for the sender (fallback in case socket is delayed)
+            if (sentMsg && sentMsg.id) {
+                setMessages((prev) => {
+                    if (prev.some((m) => m.id === sentMsg.id)) return prev;
+                    return [...prev, sentMsg];
+                });
+                
+                // Update conversation preview immediately
+                setConversations((prev) => {
+                    const updated = prev.map((conv) => {
+                        if (conv.conversationId === sentMsg.conversationId) {
+                            return { ...conv, lastMessage: sentMsg.content, lastAt: sentMsg.sentAt };
+                        }
+                        return conv;
+                    });
+                    updated.sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
+                    return updated;
+                });
+            }
+
             console.log('[StudentMessages] handleSend success');
         } catch (err) {
             console.error('[StudentMessages] handleSend error', err);

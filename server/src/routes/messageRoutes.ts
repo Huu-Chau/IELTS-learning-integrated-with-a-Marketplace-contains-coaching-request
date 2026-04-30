@@ -149,6 +149,13 @@ router.post('/send/:receiverId', async (req: Request, res: Response): Promise<vo
             linkPath: '/messages',
         });
 
+        // Emit new message event to the receiver's room, and the sender's room
+        const io = req.app.get('io');
+        if (io) {
+            io.to(receiverId).emit('new_message', message);
+            io.to(senderId).emit('new_message', message);
+        }
+
         console.log('[MessageRoutes] POST /send/:receiverId success', { id: message.id });
         res.status(201).json(message);
     } catch (error) {

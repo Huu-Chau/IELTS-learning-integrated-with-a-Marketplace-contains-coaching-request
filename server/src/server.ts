@@ -33,6 +33,19 @@ const io = new SocketIOServer(httpServer, {
 });
 console.log('[Server] Socket.io attached');
 
+// Expose io to express routes
+app.set('io', io);
+
+// General socket connection for real-time messages/notifications
+io.on('connection', (socket) => {
+    socket.on('join_user_room', (userId: string) => {
+        if (userId) {
+            socket.join(userId);
+            console.log(`[Socket] User ${userId} joined their personal course`);
+        }
+    });
+});
+
 // Register speaking session handlers
 registerSpeakingSocketHandlers(io);
 console.log('[Server] Speaking socket handlers registered');

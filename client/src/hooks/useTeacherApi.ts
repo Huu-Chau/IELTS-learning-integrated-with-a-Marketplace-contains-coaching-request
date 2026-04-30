@@ -9,15 +9,11 @@ import { apiClient } from '@/services/apiClient';
  * Pass `null` as the endpoint to skip fetching entirely (useful when a
  * conversation ID is not yet known, for example).
  */
-export function useTeacherApi<T>(endpoint: string | null, options?: { pollingMs?: number }) {
+export function useTeacherApi<T>(endpoint: string | null) {
     const { getIdToken } = useAuth();
     const [data, setData] = useState<T | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
-    // Extract as a primitive so the useEffect dep doesn't churn on every render
-    // when the caller passes an inline `{ pollingMs: N }` object literal.
-    const pollingMs = options?.pollingMs;
 
     const fetchData = useCallback(async () => {
         // No-op: caller doesn't want to fetch yet (e.g. no conversation selected)
@@ -43,14 +39,9 @@ export function useTeacherApi<T>(endpoint: string | null, options?: { pollingMs?
 
     useEffect(() => {
         fetchData();
-        if (pollingMs) {
-            const interval = setInterval(fetchData, pollingMs);
-            return () => clearInterval(interval);
-        }
-    // pollingMs is a number primitive — safe as dep, avoids infinite re-run
-    }, [fetchData, pollingMs]);
+    }, [fetchData]);
 
-    return { data, loading, error, refetch: fetchData };
+    return { data, loading, error, refetch: fetchData, setData };
 }
 
 /**

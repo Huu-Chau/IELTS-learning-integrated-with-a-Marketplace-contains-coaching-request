@@ -15,6 +15,11 @@ import {
 } from 'lucide-react';
 import { useTeacherApi, useTeacherMutation } from '@/hooks/useTeacherApi';
 import { useAuth } from '@/context/AuthContext';
+import { io, Socket } from 'socket.io-client';
+
+const SOCKET_URL = import.meta.env.VITE_API_URL 
+    ? import.meta.env.VITE_API_URL.replace('/api', '') 
+    : 'http://localhost:5000';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -159,16 +164,74 @@ export default function TeacherMessages() {
 
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-    const { data: conversations, loading: convsLoading, refetch: refetchConversations } = useTeacherApi<Conversation[]>('/teacher/conversations');
+    const { data: conversations, loading: convsLoading, refetch: refetchConversations, setData: setConversations } = useTeacherApi<Conversation[]>('/teacher/conversations');
 
-    // Poll messages every 2 seconds when a conversation is open.
-    // Use null when no conversation is selected to avoid a spurious duplicate fetch.
-    const { data: messages, loading: msgsLoading, refetch: refetchMessages } = useTeacherApi<Message[]>(
-        activeConvId ? `/teacher/messages/${activeConvId}` : null,
-        activeConvId ? { pollingMs: 2000 } : undefined
+    const { data: messages, loading: msgsLoading, refetch: refetchMessages, setData: setMessages } = useTeacherApi<Message[]>(
+        activeConvId ? `/teacher/messages/${activeConvId}` : null
     );
 
     const { post, loading: sending } = useTeacherMutation();
+
+    // Keep track of active conversation for socket events without stale closures
+    const activeConvIdRef = useRef<string | null>(activeConvId);
+    useEffect(() => {
+        activeConvIdRef.current = activeConvId;
+    }, [activeConvId]);
+
+    // ── Socket Connection ─────────────────────────────────────────────────────
+    useEffect(() => {
+        if (!user?.uid) return;
+
+        const socket: Socket = io(SOCKET_URL, { transports: ['websocket'] });
+
+        socket.on('connect', () => {
+            console.log('[TeacherMessages] socket connected');
+            socket.emit('join_user_room', user.uid);
+        });
+
+        socket.on('new_message', (newMessage: Message) => {
+            console.log('[TeacherMessages] socket new_message received', newMessage);
+
+            // 1. Update messages array if this message belongs to the active conversation
+            setMessages((prev) => {
+                if (!prev) return prev;
+                // To avoid duplicate messages (if sender receives their own broadcast via socket after HTTP response)
+                if (prev.some((m) => m.id === newMessage.id)) return prev;
+
+                if (activeConvIdRef.current === newMessage.conversationId) {
+                    return [...prev, newMessage];
+                }
+                return prev;
+            });
+
+            // 2. Update conversations list
+            setConversations((prev) => {
+                if (!prev) return prev;
+                const updated = prev.map((conv) => {
+                    if (conv.conversationId === newMessage.conversationId) {
+                        const isReceiver = newMessage.receiverId === user.uid;
+                        const isNotActive = activeConvIdRef.current !== newMessage.conversationId;
+                        return {
+                            ...conv,
+                            lastMessage: newMessage.content,
+                            lastAt: newMessage.sentAt,
+                            unreadCount: (isReceiver && isNotActive) ? conv.unreadCount + 1 : conv.unreadCount,
+                        };
+                    }
+                    return conv;
+                });
+
+                // Sort updated to bring the latest conversation to top
+                updated.sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
+                return updated;
+            });
+        });
+
+        return () => {
+            socket.disconnect();
+            console.log('[TeacherMessages] socket disconnected');
+        };
+    }, [user?.uid, setMessages, setConversations]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -199,11 +262,30 @@ export default function TeacherMessages() {
         if (!content.trim() || !activeReceiverId) return;
         console.log('[TeacherMessages] handleSend called', { content, type });
         try {
-            await post(`/teacher/messages/${activeReceiverId}`, { content, type });
+            const sentMsg = await post(`/teacher/messages/${activeReceiverId}`, { content, type });
             setMessageInput('');
-            // Refresh both: message thread and left-panel preview (lastMessage text)
-            refetchMessages();
-            refetchConversations();
+            
+            // Immediate update for the sender (fallback in case socket is delayed)
+            if (sentMsg && sentMsg.id) {
+                setMessages((prev) => {
+                    if (!prev) return prev;
+                    if (prev.some((m) => m.id === sentMsg.id)) return prev;
+                    return [...prev, sentMsg];
+                });
+                
+                // Update conversation preview immediately
+                setConversations((prev) => {
+                    if (!prev) return prev;
+                    const updated = prev.map((conv) => {
+                        if (conv.conversationId === sentMsg.conversationId) {
+                            return { ...conv, lastMessage: sentMsg.content, lastAt: sentMsg.sentAt };
+                        }
+                        return conv;
+                    });
+                    updated.sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
+                    return updated;
+                });
+            }
         } catch (err) {
             console.error('[TeacherMessages] handleSend error', err);
         }

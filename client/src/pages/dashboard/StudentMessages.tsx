@@ -11,8 +11,8 @@ import { apiClient } from '@/services/apiClient';
 import { useAuth } from '@/context/AuthContext';
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL 
-    ? import.meta.env.VITE_API_URL.replace('/api', '') 
+const SOCKET_URL = import.meta.env.VITE_API_URL
+    ? import.meta.env.VITE_API_URL.replace('/api', '')
     : 'http://localhost:5000';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -51,8 +51,8 @@ function MessageBubble({ msg, isMine }: { msg: Message; isMine: boolean }) {
         <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} mb-3`}>
             <div
                 className={`max-w-xs lg:max-w-md rounded-2xl px-4 py-2.5 ${isMine
-                        ? 'bg-indigo-600 text-white rounded-br-sm'
-                        : 'bg-white border border-gray-100 text-gray-800 rounded-bl-sm shadow-sm'
+                    ? 'bg-indigo-600 text-white rounded-br-sm'
+                    : 'bg-white border border-gray-100 text-gray-800 rounded-bl-sm shadow-sm'
                     }`}
             >
                 {isMeetingLink ? (
@@ -78,8 +78,6 @@ function MessageBubble({ msg, isMine }: { msg: Message; isMine: boolean }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function StudentMessages() {
-    console.log('[StudentMessages] render called');
-
     const { conversationId: paramConvId } = useParams<{ conversationId?: string }>();
     const navigate = useNavigate();
     const { user, getIdToken } = useAuth();
@@ -109,12 +107,10 @@ export default function StudentMessages() {
         const socket: Socket = io(SOCKET_URL, { transports: ['websocket'] });
 
         socket.on('connect', () => {
-            console.log('[StudentMessages] socket connected');
             socket.emit('join_user_room', user.uid);
         });
 
         socket.on('new_message', (newMessage: Message) => {
-            console.log('[StudentMessages] socket new_message received', newMessage);
 
             // 1. Update messages array if this message belongs to the active conversation
             setMessages((prev) => {
@@ -151,18 +147,15 @@ export default function StudentMessages() {
 
         return () => {
             socket.disconnect();
-            console.log('[StudentMessages] socket disconnected');
         };
     }, [user?.uid]);
 
     // ── Fetch conversations ───────────────────────────────────────────────────
     const fetchConversations = useCallback(async () => {
-        console.log('[StudentMessages] fetchConversations called');
         try {
             const token = await getIdToken();
             const data = await apiClient.get('/messages/conversations', token);
             setConversations(data);
-            console.log('[StudentMessages] fetchConversations success', { count: data.length });
         } catch (err) {
             console.error('[StudentMessages] fetchConversations error', err);
         } finally {
@@ -184,7 +177,6 @@ export default function StudentMessages() {
 
     // ── Fetch messages (with polling) ─────────────────────────────────────────
     const fetchMessages = useCallback(async (convId: string) => {
-        console.log('[StudentMessages] fetchMessages called', { convId });
         try {
             const token = await getIdToken();
             const data = await apiClient.get(`/messages/${convId}`, token);
@@ -206,7 +198,6 @@ export default function StudentMessages() {
 
     // ── Select conversation ────────────────────────────────────────────────────
     const handleSelectConv = useCallback((conv: Conversation) => {
-        console.log('[StudentMessages] handleSelectConv called', { convId: conv.conversationId });
         setActiveConvId(conv.conversationId);
         setActiveReceiverId(conv.otherId);
         navigate(`/messages/${conv.conversationId}`, { replace: true });
@@ -217,20 +208,19 @@ export default function StudentMessages() {
         if (sending) return;
         const content = messageInput.trim();
         if (!content || !activeReceiverId) return;
-        console.log('[StudentMessages] handleSend called', { content });
         setSending(true);
         try {
             const token = await getIdToken();
             const sentMsg = await apiClient.post(`/messages/send/${activeReceiverId}`, { content }, token);
             setMessageInput('');
-            
+
             // Immediate update for the sender (fallback in case socket is delayed)
             if (sentMsg && sentMsg.id) {
                 setMessages((prev) => {
                     if (prev.some((m) => m.id === sentMsg.id)) return prev;
                     return [...prev, sentMsg];
                 });
-                
+
                 // Update conversation preview immediately
                 setConversations((prev) => {
                     const updated = prev.map((conv) => {
@@ -243,8 +233,6 @@ export default function StudentMessages() {
                     return updated;
                 });
             }
-
-            console.log('[StudentMessages] handleSend success');
         } catch (err) {
             console.error('[StudentMessages] handleSend error', err);
         } finally {

@@ -17,8 +17,8 @@ import { useTeacherApi, useTeacherMutation } from '@/hooks/useTeacherApi';
 import { useAuth } from '@/context/AuthContext';
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL 
-    ? import.meta.env.VITE_API_URL.replace('/api', '') 
+const SOCKET_URL = import.meta.env.VITE_API_URL
+    ? import.meta.env.VITE_API_URL.replace('/api', '')
     : 'http://localhost:5000';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -122,8 +122,8 @@ function MessageBubble({ msg, isMine }: { msg: Message; isMine: boolean }) {
         <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} mb-3`}>
             <div
                 className={`max-w-xs lg:max-w-md rounded-2xl px-4 py-2.5 ${isMine
-                        ? 'bg-indigo-600 text-white rounded-br-sm'
-                        : 'bg-white border border-gray-100 text-gray-800 rounded-bl-sm shadow-sm'
+                    ? 'bg-indigo-600 text-white rounded-br-sm'
+                    : 'bg-white border border-gray-100 text-gray-800 rounded-bl-sm shadow-sm'
                     }`}
             >
                 {isMeetingLink ? (
@@ -150,8 +150,6 @@ function MessageBubble({ msg, isMine }: { msg: Message; isMine: boolean }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function TeacherMessages() {
-    console.log('[TeacherMessages] render called');
-
     const { conversationId: paramConvId } = useParams<{ conversationId?: string }>();
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -185,12 +183,10 @@ export default function TeacherMessages() {
         const socket: Socket = io(SOCKET_URL, { transports: ['websocket'] });
 
         socket.on('connect', () => {
-            console.log('[TeacherMessages] socket connected');
             socket.emit('join_user_room', user.uid);
         });
 
         socket.on('new_message', (newMessage: Message) => {
-            console.log('[TeacherMessages] socket new_message received', newMessage);
 
             // 1. Update messages array if this message belongs to the active conversation
             setMessages((prev) => {
@@ -229,7 +225,7 @@ export default function TeacherMessages() {
 
         return () => {
             socket.disconnect();
-            console.log('[TeacherMessages] socket disconnected');
+            console.error('[TeacherMessages] socket disconnected');
         };
     }, [user?.uid, setMessages, setConversations]);
 
@@ -237,12 +233,8 @@ export default function TeacherMessages() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    // Bug #3 fix: when arriving via a direct URL (e.g. from a notification),
-    // activeConvId is seeded from the URL param but activeReceiverId is null.
-    // As soon as conversations load, resolve the receiver from the conversation list.
     useEffect(() => {
         if (paramConvId && conversations && !activeReceiverId) {
-            console.log('[TeacherMessages] resolving receiverId from URL param', { paramConvId });
             const conv = conversations.find((c) => c.conversationId === paramConvId);
             if (conv) {
                 setActiveReceiverId(conv.otherId);
@@ -251,7 +243,6 @@ export default function TeacherMessages() {
     }, [paramConvId, conversations, activeReceiverId]);
 
     const handleSelectConv = useCallback((conv: Conversation) => {
-        console.log('[TeacherMessages] handleSelectConv called', { convId: conv.conversationId });
         setActiveConvId(conv.conversationId);
         setActiveReceiverId(conv.otherId);
         navigate(`/teacher/messages/${conv.conversationId}`, { replace: true });
@@ -260,19 +251,17 @@ export default function TeacherMessages() {
     const handleSend = async (content: string, type: 'text' | 'meeting_link' = 'text') => {
         if (sending) return;
         if (!content.trim() || !activeReceiverId) return;
-        console.log('[TeacherMessages] handleSend called', { content, type });
         try {
             const sentMsg = await post(`/teacher/messages/${activeReceiverId}`, { content, type });
             setMessageInput('');
-            
-            // Immediate update for the sender (fallback in case socket is delayed)
+
             if (sentMsg && sentMsg.id) {
                 setMessages((prev) => {
                     if (!prev) return prev;
                     if (prev.some((m) => m.id === sentMsg.id)) return prev;
                     return [...prev, sentMsg];
                 });
-                
+
                 // Update conversation preview immediately
                 setConversations((prev) => {
                     if (!prev) return prev;

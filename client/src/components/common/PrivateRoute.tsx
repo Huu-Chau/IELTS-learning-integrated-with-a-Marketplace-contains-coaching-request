@@ -9,8 +9,6 @@ interface PrivateRouteProps {
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ allowedRoles }) => {
     const { user, role, loading: authLoading } = useAuth();
 
-    console.log("[PrivateRoute] Check:", { user: user?.email, role, allowedRoles, authLoading });
-
     if (authLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">

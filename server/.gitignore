@@ -7,3 +7,5 @@ postgres_data/
 uploads/
 .DS_Store
 *.log
+src/scripts/
+src/database/mock-test/

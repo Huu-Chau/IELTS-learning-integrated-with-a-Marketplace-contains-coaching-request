@@ -2,30 +2,6 @@ import { Request, Response } from 'express';
 import { requestService } from '../services/requestService';
 
 export const requestController = {
-    // POST /api/requests — Create a marketplace request
-    async create(req: Request, res: Response): Promise<void> {
-        console.log('[RequestController] create called', { studentId: req.user?.uid, type: req.body.type, skill: req.body.skill });
-        try {
-            const { type, targetTeacherId, message, skill, budget, studentName } = req.body;
-            const request = await requestService.createRequest({
-                studentId: req.user?.uid || '',
-                studentName,
-                type: type || 'broadcast',
-                targetTeacherId,
-                status: 'open',
-                message,
-                skill,
-                budget,
-                createdAt: new Date().toISOString(),
-            });
-            console.log('[RequestController] create success', { requestId: request.id, type: request.requestType });
-            res.status(201).json(request);
-        } catch (error: any) {
-            console.error('[RequestController] create error', error);
-            res.status(500).json({ error: error.message });
-        }
-    },
-
     // GET /api/requests — Get all open requests (Teacher view)
     async getOpen(req: Request, res: Response): Promise<void> {
         console.log('[RequestController] getOpen called');

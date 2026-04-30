@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { ArrowUpRight, Book, Clock, Target, Trophy, Loader2 } from 'lucide-react';
+import { ArrowUpRight, Book, Clock, Target, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { apiClient } from '@/services/apiClient';
 
@@ -31,7 +31,6 @@ export default function StudentDashboard() {
     const [profile, setProfile] = useState<any>(null);
     const [stats, setStats] = useState({
         practiceTests: 0,
-        currentLevel: 'N/A',
         studyHours: 0,
     });
     const [recentActivity, setRecentActivity] = useState<any[]>([]);
@@ -56,14 +55,6 @@ export default function StudentDashboard() {
 
                 // Compute Stats
                 const numTests = attemptsData.length;
-                let currentLevel = 'N/A';
-                
-                // Try to find the latest scored attempt
-                const scoredAttempts = attemptsData.filter((a: any) => a.score !== null && a.score !== undefined);
-                if (scoredAttempts.length > 0) {
-                    currentLevel = Number(scoredAttempts[0].score).toFixed(1);
-                }
-
                 // Rough mock for study hours: 0.5h per attempt + 1h per completed booking
                 const testHours = numTests * 0.5;
                 const classHours = paymentsData.filter((p: any) => p.status === 'Paid').length * 1.0;
@@ -71,7 +62,6 @@ export default function StudentDashboard() {
 
                 setStats({
                     practiceTests: numTests,
-                    currentLevel,
                     studyHours: totalHours,
                 });
 
@@ -145,7 +135,7 @@ export default function StudentDashboard() {
                     </div>
 
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <StatCard
                             title="Target Band"
                             value="7.5" // MOCKED
@@ -166,13 +156,6 @@ export default function StudentDashboard() {
                             label="Steady"
                             icon={Clock}
                             color="bg-orange-500"
-                        />
-                        <StatCard
-                            title="Current Level"
-                            value={stats.currentLevel}
-                            label={stats.currentLevel !== 'N/A' ? 'Current' : 'Need tests'}
-                            icon={Trophy}
-                            color="bg-green-500"
                         />
                     </div>
 

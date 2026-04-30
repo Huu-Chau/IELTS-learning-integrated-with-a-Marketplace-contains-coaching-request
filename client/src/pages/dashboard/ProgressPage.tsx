@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useAuth } from '@/context/AuthContext';
 import { apiClient } from '@/services/apiClient';
-import ResultFormModal from '@/components/progress/ResultFormModal';
 import WritingResultModal from '@/components/progress/WritingResultModal';
 import { Target, Book } from 'lucide-react';
 
@@ -11,7 +9,6 @@ export default function ProgressPage() {
     const { user, getIdToken } = useAuth();
     const [attempts, setAttempts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedWritingSessionId, setSelectedWritingSessionId] = useState<string | null>(null);
 
     useEffect(() => {
@@ -51,37 +48,6 @@ export default function ProgressPage() {
         }
     };
 
-    const handleAddResult = async (data: any) => {
-        const token = await getIdToken();
-        const payload = {
-            type: 'manual',
-            score: data.overall,
-            answers: {
-                reading: data.reading,
-                listening: data.listening,
-                writing: data.writing,
-                speaking: data.speaking,
-                date: data.date
-            }
-        };
-        await apiClient.post('/attempts', payload, token);
-        await fetchAttempts();
-    };
-
-    // Prepare chart data (group by date or just timeline of overall scores)
-    const chartData = [...attempts]
-        .map(a => {
-            const dateStr = a.type === 'manual' && a.answers?.date ? a.answers.date : a.createdAt;
-            return {
-                date: new Date(dateStr).toLocaleDateString(),
-                timestamp: new Date(dateStr).getTime(),
-                score: a.score || 0,
-                type: a.type
-            };
-        })
-        .filter(a => a.score > 0) // Don't plot in-progress or NULL scores
-        .sort((a, b) => a.timestamp - b.timestamp); // Chronological
-
     const totalTests = attempts.length;
     const averageScore = totalTests > 0 
         ? (attempts.reduce((sum, a) => sum + (a.score || 0), 0) / totalTests).toFixed(1)
@@ -90,17 +56,9 @@ export default function ProgressPage() {
     return (
         <DashboardLayout role="student">
             <div className="space-y-8">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Your Progress</h1>
-                        <p className="text-gray-500 mt-1">Track your Mock Tests and Official Exam scores over time.</p>
-                    </div>
-                    <button
-                        onClick={() => setIsModalOpen(true)}
-                        className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition"
-                    >
-                        Log Result
-                    </button>
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Your Progress</h1>
+                    <p className="text-gray-500 mt-1">Track your Mock Tests and Official Exam scores over time.</p>
                 </div>
 
                 {loading ? (
@@ -129,36 +87,6 @@ export default function ProgressPage() {
                                     <Book className="h-6 w-6 text-white" />
                                 </div>
                             </div>
-                        </div>
-
-                        {/* Chart */}
-                        <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm h-[400px]">
-                            {chartData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                        <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fill: '#6B7280' }} />
-                                        <YAxis domain={[0, 9]} ticks={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]} stroke="#9CA3AF" tick={{ fill: '#6B7280' }} />
-                                        <Tooltip
-                                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                        />
-                                        <Legend />
-                                        <Line
-                                            type="monotone"
-                                            dataKey="score"
-                                            stroke="#4F46E5"
-                                            strokeWidth={3}
-                                            dot={{ r: 4, strokeWidth: 2 }}
-                                            activeDot={{ r: 6, stroke: '#4F46E5', strokeWidth: 2, fill: '#fff' }}
-                                            name="Overall Score"
-                                        />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            ) : (
-                                <div className="h-full flex items-center justify-center text-gray-500">
-                                    No chart data available. Start by logging a result!
-                                </div>
-                            )}
                         </div>
 
                         {/* History Table */}
@@ -233,12 +161,6 @@ export default function ProgressPage() {
                     </>
                 )}
             </div>
-
-            <ResultFormModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onSubmit={handleAddResult}
-            />
 
             <WritingResultModal
                 isOpen={!!selectedWritingSessionId}

@@ -32,6 +32,15 @@ async function seedCambridgeTests(): Promise<number> {
         'cambridge_19_listening.json',
         'cambridge_20_reading.json',
         'cambridge_20_listening.json',
+        // Speaking
+        'cambridge_17_speaking.json',
+        'cambridge_18_speaking.json',
+        'cambridge_19_speaking.json',
+        'cambridge_20_speaking.json',
+        // Writing
+        'cambridge_18_writing.json',
+        'cambridge_19_writing.json',
+        'cambridge_20_writing.json',
     ];
 
     for (const filename of cambridgeFiles) {

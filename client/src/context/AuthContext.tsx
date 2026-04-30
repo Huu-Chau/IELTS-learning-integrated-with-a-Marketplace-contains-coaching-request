@@ -51,10 +51,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 try {
                     // Fetch authoritative profile from Postgres (via API)
                     // We need the ID token to be ready first, which onAuthStateChanged guarantees
-                    console.log("[AuthContext] Fetching user profile from /api/users/me...");
                     const token = await currentUser.getIdToken();
                     const userProfile = await apiClient.get('/users/me', token);
-                    console.log("[AuthContext] Profile fetched:", userProfile);
                     setRole(userProfile.role || null);
                 } catch (error) {
                     console.error("[AuthContext] Error fetching role from API:", error);

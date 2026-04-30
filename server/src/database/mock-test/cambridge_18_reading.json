@@ -24,21 +24,21 @@
                                     "question_text": "Vertical tubes are used to grow strawberries, ________ and herbs.",
                                     "answer_type": "sentence_completion",
                                     "answer_format": "NO MORE THAN TWO WORDS AND/OR A NUMBER",
-                                    "answer": "FALSE"
+                                    "answer": "lettuces"
                                 },
                                 {
                                     "question_number": 2,
                                     "question_text": "There will eventually be a daily harvest of as much as ________ in weight of fruit and vegetables.",
                                     "answer_type": "sentence_completion",
                                     "answer_format": "NO MORE THAN TWO WORDS AND/OR A NUMBER",
-                                    "answer": "FALSE"
+                                    "answer": "1,000 kg"
                                 },
                                 {
                                     "question_number": 3,
                                     "question_text": "It may be possible that the farm's produce will account for as much as 10% of the city's ________ overall.",
                                     "answer_type": "sentence_completion",
                                     "answer_format": "NO MORE THAN TWO WORDS AND/OR A NUMBER",
-                                    "answer": "NOT GIVEN"
+                                    "answer": "consumption"
                                 }
                             ]
                         },
@@ -54,28 +54,28 @@
                                     "question_text": "Intensive farming / Growth: wide range of ________ used / techniques pollute air",
                                     "answer_type": "table_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "FALSE"
+                                    "answer": "pesticides"
                                 },
                                 {
                                     "question_number": 5,
                                     "question_text": "Intensive farming / Selection: quality not good / varieties of fruit and vegetables chosen that can survive long ________",
                                     "answer_type": "table_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "NOT GIVEN"
+                                    "answer": "journeys"
                                 },
                                 {
                                     "question_number": 6,
                                     "question_text": "Intensive farming / Sale: ________ receive very little of overall income",
                                     "answer_type": "table_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "TRUE"
+                                    "answer": "producers"
                                 },
                                 {
                                     "question_number": 7,
                                     "question_text": "Aeroponic urban farming / Selection: produce chosen because of its ________",
                                     "answer_type": "table_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "TRUE"
+                                    "answer": "flavour"
                                 }
                             ]
                         },
@@ -88,42 +88,42 @@
                                     "question_text": "Urban farming can take place above or below ground.",
                                     "answer_type": "true_false_not_given",
                                     "answer_format": "TRUE / FALSE / NOT GIVEN",
-                                    "answer": "paint"
+                                    "answer": "TRUE"
                                 },
                                 {
                                     "question_number": 9,
                                     "question_text": "Some of the equipment used in aeroponic farming can be made by hand.",
                                     "answer_type": "true_false_not_given",
                                     "answer_format": "TRUE / FALSE / NOT GIVEN",
-                                    "answer": "topspin"
+                                    "answer": "NOT GIVEN"
                                 },
                                 {
                                     "question_number": 10,
                                     "question_text": "Urban farming relies more on electricity than some other types of farming.",
                                     "answer_type": "true_false_not_given",
                                     "answer_format": "TRUE / FALSE / NOT GIVEN",
-                                    "answer": "training"
+                                    "answer": "FALSE"
                                 },
                                 {
                                     "question_number": 11,
                                     "question_text": "Fruit and vegetables grown on an aeroponic urban farm are cheaper than traditionally grown organic produce.",
                                     "answer_type": "true_false_not_given",
                                     "answer_format": "TRUE / FALSE / NOT GIVEN",
-                                    "answer": "intestines"
+                                    "answer": "TRUE"
                                 },
                                 {
                                     "question_number": 12,
                                     "question_text": "Most produce can be grown on an aeroponic urban farm at any time of the year.",
                                     "answer_type": "true_false_not_given",
                                     "answer_format": "TRUE / FALSE / NOT GIVEN",
-                                    "answer": "weights"
+                                    "answer": "FALSE"
                                 },
                                 {
                                     "question_number": 13,
                                     "question_text": "Beans take longer to grow on an urban farm than other vegetables.",
                                     "answer_type": "true_false_not_given",
                                     "answer_format": "TRUE / FALSE / NOT GIVEN",
-                                    "answer": "grips"
+                                    "answer": "NOT GIVEN"
                                 }
                             ]
                         }
@@ -146,14 +146,14 @@
                                     "question_text": "bad outcomes for a forest when people focus only on its financial reward",
                                     "answer_type": "matching_paragraph",
                                     "answer_format": "Single letter: A-G",
-                                    "answer": "D"
+                                    "answer": "B"
                                 },
                                 {
                                     "question_number": 15,
                                     "question_text": "reference to the aspects of any tree that contribute to its worth",
                                     "answer_type": "matching_paragraph",
                                     "answer_format": "Single letter: A-G",
-                                    "answer": "F"
+                                    "answer": "A"
                                 },
                                 {
                                     "question_number": 16,
@@ -167,14 +167,14 @@
                                     "question_text": "examples of insects that attack trees",
                                     "answer_type": "matching_paragraph",
                                     "answer_format": "Single letter: A-G",
-                                    "answer": "A"
+                                    "answer": "E"
                                 },
                                 {
                                     "question_number": 18,
                                     "question_text": "an alternative name for trees that produce low-use wood",
                                     "answer_type": "matching_paragraph",
                                     "answer_format": "Single letter: A-G",
-                                    "answer": "F"
+                                    "answer": "B"
                                 }
                             ]
                         },
@@ -199,14 +199,14 @@
                                     "question_text": "to generate income across a number of years",
                                     "answer_type": "matching_features",
                                     "answer_format": "Single letter: A, B or C",
-                                    "answer": "B"
+                                    "answer": "C"
                                 },
                                 {
                                     "question_number": 21,
                                     "question_text": "to create a forest whose trees are close in age",
                                     "answer_type": "matching_features",
                                     "answer_format": "Single letter: A, B or C",
-                                    "answer": "D"
+                                    "answer": "C"
                                 }
                             ]
                         },
@@ -219,35 +219,35 @@
                                     "question_text": "Some dead wood is removed to avoid the possibility of ________",
                                     "answer_type": "sentence_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "C"
+                                    "answer": "fire"
                                 },
                                 {
                                     "question_number": 23,
                                     "question_text": "The ________ from the tops of cut trees can help improve soil quality.",
                                     "answer_type": "sentence_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "E"
+                                    "answer": "nutrients"
                                 },
                                 {
                                     "question_number": 24,
                                     "question_text": "Some damaged trees should be left, as their ________ provide habitats for a range of creatures.",
                                     "answer_type": "sentence_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "grain"
+                                    "answer": "cavities"
                                 },
                                 {
                                     "question_number": 25,
                                     "question_text": "Some trees that are small, such as ________, are a source of food for animals and insects.",
                                     "answer_type": "sentence_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "punishment"
+                                    "answer": "hawthorn"
                                 },
                                 {
                                     "question_number": 26,
                                     "question_text": "Any trees that are ________ should be left to grow, as they add to the variety of species in the forest.",
                                     "answer_type": "sentence_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "ransom"
+                                    "answer": "rare"
                                 }
                             ]
                         }
@@ -270,35 +270,35 @@
                                     "question_text": "a reference to the cooperation that takes place to try and minimise risk",
                                     "answer_type": "matching_paragraph",
                                     "answer_format": "Single letter: A-F",
-                                    "answer": "D"
+                                    "answer": "C"
                                 },
                                 {
                                     "question_number": 28,
                                     "question_text": "an explanation of a person's aims",
                                     "answer_type": "matching_paragraph",
                                     "answer_format": "Single letter: A-F",
-                                    "answer": "A"
+                                    "answer": "F"
                                 },
                                 {
                                     "question_number": 29,
                                     "question_text": "a description of a major collision that occurred in space",
                                     "answer_type": "matching_paragraph",
                                     "answer_format": "Single letter: A-F",
-                                    "answer": "C"
+                                    "answer": "B"
                                 },
                                 {
                                     "question_number": 30,
                                     "question_text": "a comparison between tracking objects in space and the efficiency of a transportation system",
                                     "answer_type": "matching_paragraph",
                                     "answer_format": "Single letter: A-F",
-                                    "answer": "D"
+                                    "answer": "E"
                                 },
                                 {
                                     "question_number": 31,
                                     "question_text": "a reference to efforts to classify space junk",
                                     "answer_type": "matching_paragraph",
                                     "answer_format": "Single letter: A-F",
-                                    "answer": "frequent exposure"
+                                    "answer": "B"
                                 }
                             ]
                         },
@@ -315,28 +315,28 @@
                                     "question_text": "The committee gives advice on how the ________ of space can be achieved.",
                                     "answer_type": "summary_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "different ideas"
+                                    "answer": "sustainability"
                                 },
                                 {
                                     "question_number": 33,
                                     "question_text": "The committee advises that when satellites are no longer active, any unused ________ or pressurised material that could cause",
                                     "answer_type": "summary_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "mental operation"
+                                    "answer": "fuel"
                                 },
                                 {
                                     "question_number": 34,
                                     "question_text": "________ should be removed.",
                                     "answer_type": "summary_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "additional evidence"
+                                    "answer": "explosions"
                                 },
                                 {
                                     "question_number": 35,
                                     "question_text": "Although operators of large satellite constellations accept that they have obligations as stewards of space, Holger Krag points out that the operators that become ________ are unlikely to prioritise removing their satellites from space.",
                                     "answer_type": "summary_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "short period"
+                                    "answer": "bankrupt"
                                 }
                             ]
                         },
@@ -355,35 +355,35 @@
                                     "question_text": "Knowing the exact location of space junk would help prevent any possible danger.",
                                     "answer_type": "matching_statements_to_people",
                                     "answer_format": "Single letter: A, B, C or D",
-                                    "answer": "different locations"
+                                    "answer": "C"
                                 },
                                 {
                                     "question_number": 37,
                                     "question_text": "Space should be available to everyone and should be preserved for the future.",
                                     "answer_type": "matching_statements_to_people",
                                     "answer_format": "Single letter: A, B, C or D",
-                                    "answer": "YES"
+                                    "answer": "D"
                                 },
                                 {
                                     "question_number": 38,
                                     "question_text": "A recommendation regarding satellites is widely ignored.",
                                     "answer_type": "matching_statements_to_people",
                                     "answer_format": "Single letter: A, B, C or D",
-                                    "answer": "NOT GIVEN"
+                                    "answer": "B"
                                 },
                                 {
                                     "question_number": 39,
                                     "question_text": "There is conflicting information about where some satellites are in space.",
                                     "answer_type": "matching_statements_to_people",
                                     "answer_format": "Single letter: A, B, C or D",
-                                    "answer": "NO"
+                                    "answer": "D"
                                 },
                                 {
                                     "question_number": 40,
                                     "question_text": "There is a risk we will not be able to undo the damage that occurs in space.",
                                     "answer_type": "matching_statements_to_people",
                                     "answer_format": "Single letter: A, B, C or D",
-                                    "answer": "NOT GIVEN"
+                                    "answer": "A"
                                 }
                             ]
                         }
@@ -449,56 +449,56 @@
                                     "question_text": "the ditch and henge were dug, possibly using tools made from ________",
                                     "answer_type": "note_completion",
                                     "answer_format": "NO MORE THAN TWO WORDS",
-                                    "answer": "piston"
+                                    "answer": "deer antlers"
                                 },
                                 {
                                     "question_number": 2,
                                     "question_text": "________ may have been arranged in deep pits inside the circle",
                                     "answer_type": "note_completion",
                                     "answer_format": "NO MORE THAN TWO WORDS",
-                                    "answer": "coal"
+                                    "answer": "timber posts"
                                 },
                                 {
                                     "question_number": 3,
                                     "question_text": "builders used ________ to make sledges and rollers",
                                     "answer_type": "note_completion",
                                     "answer_format": "NO MORE THAN TWO WORDS",
-                                    "answer": "workshops"
+                                    "answer": "tree trunks"
                                 },
                                 {
                                     "question_number": 4,
                                     "question_text": "________ pulled them on giant baskets",
                                     "answer_type": "note_completion",
                                     "answer_format": "NO MORE THAN TWO WORDS",
-                                    "answer": "labour"
+                                    "answer": "oxen"
                                 },
                                 {
                                     "question_number": 5,
                                     "question_text": "they were brought from Wales by ________",
                                     "answer_type": "note_completion",
                                     "answer_format": "NO MORE THAN TWO WORDS",
-                                    "answer": "quality"
+                                    "answer": "glaciers"
                                 },
                                 {
                                     "question_number": 6,
                                     "question_text": "a theory arose in the 17th century that its builders were Celtic ________",
                                     "answer_type": "note_completion",
                                     "answer_format": "NO MORE THAN TWO WORDS",
-                                    "answer": "railway"
+                                    "answer": "druids"
                                 },
                                 {
                                     "question_number": 7,
                                     "question_text": "many experts agree it has been used as a ________ site",
                                     "answer_type": "note_completion",
                                     "answer_format": "NO MORE THAN TWO WORDS",
-                                    "answer": "sanitation"
+                                    "answer": "burial ground"
                                 },
                                 {
                                     "question_number": 8,
                                     "question_text": "in the 1960s, it was suggested that it worked as a kind of ________",
                                     "answer_type": "note_completion",
                                     "answer_format": "NO MORE THAN TWO WORDS",
-                                    "answer": "NOT GIVEN"
+                                    "answer": "calendar"
                                 }
                             ]
                         },
@@ -518,14 +518,14 @@
                                     "question_text": "There is scientific proof that the bluestones stood in the same spot until approximately 1600 BCE.",
                                     "answer_type": "true_false_not_given",
                                     "answer_format": "TRUE / FALSE / NOT GIVEN",
-                                    "answer": "NOT GIVEN"
+                                    "answer": "FALSE"
                                 },
                                 {
                                     "question_number": 11,
                                     "question_text": "John Aubrey's claim about Stonehenge was supported by 20th-century findings.",
                                     "answer_type": "true_false_not_given",
                                     "answer_format": "TRUE / FALSE / NOT GIVEN",
-                                    "answer": "TRUE"
+                                    "answer": "FALSE"
                                 },
                                 {
                                     "question_number": 12,
@@ -568,7 +568,7 @@
                                         "C": "The future is unlikely to see limitations on the capabilities of AI.",
                                         "D": "Experts disagree on which specialised tasks AI will be able to perform."
                                     },
-                                    "answer": "D"
+                                    "answer": "C"
                                 },
                                 {
                                     "question_number": 15,
@@ -581,7 +581,7 @@
                                         "C": "giving information about the development of machine intelligence",
                                         "D": "indicating which aspects of humans are the most advanced"
                                     },
-                                    "answer": "F"
+                                    "answer": "A"
                                 },
                                 {
                                     "question_number": 16,
@@ -594,7 +594,7 @@
                                         "C": "to emphasise the need for cooperation",
                                         "D": "to point out the financial advantages of a course of action"
                                     },
-                                    "answer": "A"
+                                    "answer": "B"
                                 },
                                 {
                                     "question_number": 17,
@@ -607,7 +607,7 @@
                                         "C": "creating a better world for all creatures on the planet",
                                         "D": "ensuring AI is more human-friendly than we are ourselves"
                                     },
-                                    "answer": "C"
+                                    "answer": "D"
                                 },
                                 {
                                     "question_number": 18,
@@ -620,7 +620,7 @@
                                         "C": "Machines will be superior to humans in certain respects.",
                                         "D": "Many humans will oppose machines having a wider role."
                                     },
-                                    "answer": "F"
+                                    "answer": "C"
                                 },
                                 {
                                     "question_number": 19,
@@ -633,7 +633,7 @@
                                         "C": "There are a limited number of people with the knowledge to program machines.",
                                         "D": "Human shortcomings will make creating the machines we need more difficult."
                                     },
-                                    "answer": "injury"
+                                    "answer": "D"
                                 }
                             ]
                         },
@@ -646,28 +646,28 @@
                                     "question_text": "Machines with the ability to make moral decisions may prevent us from promoting the interests of our communities.",
                                     "answer_type": "yes_no_not_given",
                                     "answer_format": "YES / NO / NOT GIVEN",
-                                    "answer": "serves"
+                                    "answer": "YES"
                                 },
                                 {
                                     "question_number": 21,
                                     "question_text": "Silicon police would need to exist in large numbers in order to be effective.",
                                     "answer_type": "yes_no_not_given",
                                     "answer_format": "YES / NO / NOT GIVEN",
-                                    "answer": "excitement"
+                                    "answer": "NOT GIVEN"
                                 },
                                 {
                                     "question_number": 22,
                                     "question_text": "Many people are comfortable with the prospect of their independence being restricted by machines.",
                                     "answer_type": "yes_no_not_given",
                                     "answer_format": "YES / NO / NOT GIVEN",
-                                    "answer": "Visualization"
+                                    "answer": "NO"
                                 },
                                 {
                                     "question_number": 23,
                                     "question_text": "If we want to ensure that machines act in our best interests, we all need to work together.",
                                     "answer_type": "yes_no_not_given",
                                     "answer_format": "YES / NO / NOT GIVEN",
-                                    "answer": "B"
+                                    "answer": "YES"
                                 }
                             ]
                         },
@@ -692,7 +692,7 @@
                                     "question_text": "AI currently has a limited role in the way ________ are allocated in the health service.",
                                     "answer_type": "summary_completion_options",
                                     "answer_format": "Single letter: A-F",
-                                    "answer": "D"
+                                    "answer": "C"
                                 },
                                 {
                                     "question_number": 25,
@@ -706,7 +706,7 @@
                                     "question_text": "...not having their current level of ________ .",
                                     "answer_type": "summary_completion_options",
                                     "answer_format": "Single letter: A-F",
-                                    "answer": "F"
+                                    "answer": "E"
                                 }
                             ]
                         }
@@ -729,49 +729,49 @@
                                     "question_text": "People first referred to Leonardo da Vinci as a genius 500 years ago.",
                                     "answer_type": "true_false_not_given",
                                     "answer_format": "TRUE / FALSE / NOT GIVEN",
-                                    "answer": "unique"
+                                    "answer": "FALSE"
                                 },
                                 {
                                     "question_number": 28,
                                     "question_text": "The current climate crisis is predicted to cause more deaths than the plague.",
                                     "answer_type": "true_false_not_given",
                                     "answer_format": "TRUE / FALSE / NOT GIVEN",
-                                    "answer": "appeal"
+                                    "answer": "NOT GIVEN"
                                 },
                                 {
                                     "question_number": 29,
                                     "question_text": "Some of the challenges we face today can be compared to those of earlier times.",
                                     "answer_type": "true_false_not_given",
                                     "answer_format": "TRUE / FALSE / NOT GIVEN",
-                                    "answer": "intrigued"
+                                    "answer": "TRUE"
                                 },
                                 {
                                     "question_number": 30,
                                     "question_text": "Leonardo da Vinci's 'ideal city' was constructed in the 15th century.",
                                     "answer_type": "true_false_not_given",
                                     "answer_format": "TRUE / FALSE / NOT GIVEN",
-                                    "answer": "determined"
+                                    "answer": "FALSE"
                                 },
                                 {
                                     "question_number": 31,
                                     "question_text": "Poor town planning is a major contributor to climate change.",
                                     "answer_type": "true_false_not_given",
                                     "answer_format": "TRUE / FALSE / NOT GIVEN",
-                                    "answer": "satisfaction"
+                                    "answer": "TRUE"
                                 },
                                 {
                                     "question_number": 32,
                                     "question_text": "In Renaissance times, local people fought against the changes to Pienza and Ferrara.",
                                     "answer_type": "true_false_not_given",
                                     "answer_format": "TRUE / FALSE / NOT GIVEN",
-                                    "answer": "innovative"
+                                    "answer": "NOT GIVEN"
                                 },
                                 {
                                     "question_number": 33,
                                     "question_text": "Leonardo da Vinci kept a neat, organised record of his designs.",
                                     "answer_type": "true_false_not_given",
                                     "answer_format": "TRUE / FALSE / NOT GIVEN",
-                                    "answer": "YES"
+                                    "answer": "FALSE"
                                 }
                             ]
                         },
@@ -788,49 +788,49 @@
                                     "question_text": "This was to provide better ________ for trade and a less polluted environment.",
                                     "answer_type": "summary_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "NOT GIVEN"
+                                    "answer": "transport"
                                 },
                                 {
                                     "question_number": 35,
                                     "question_text": "They included features that can be seen in some tower blocks today, such as ________ on the exterior of a building.",
                                     "answer_type": "summary_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "YES"
+                                    "answer": "staircases"
                                 },
                                 {
                                     "question_number": 36,
                                     "question_text": "His expertise in ________ was evident in his plans for artificial canals within his ideal city.",
                                     "answer_type": "summary_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "NOT GIVEN"
+                                    "answer": "engineering"
                                 },
                                 {
                                     "question_number": 37,
                                     "question_text": "The design of many cities in Italy today follows this ________ .",
                                     "answer_type": "summary_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "NO"
+                                    "answer": "rule"
                                 },
                                 {
                                     "question_number": 38,
                                     "question_text": "While some cities from ________ times have aspects that can also be found in Leonardo's designs, his ideas weren't put into practice until long after his death.",
                                     "answer_type": "summary_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "C"
+                                    "answer": "Roman"
                                 },
                                 {
                                     "question_number": 39,
                                     "question_text": "________ is one example of a city that was redesigned in the 19th century in the way that Leonardo had envisaged.",
                                     "answer_type": "summary_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "B"
+                                    "answer": "Paris"
                                 },
                                 {
                                     "question_number": 40,
                                     "question_text": "His ideas are also relevant to today's world, where building ________ no longer seems to be the best approach.",
                                     "answer_type": "summary_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "D"
+                                    "answer": "outwards"
                                 }
                             ]
                         }
@@ -860,28 +860,28 @@
                                     "question_text": "an explanation of the industrial processes that create potential raw materials for concrete",
                                     "answer_type": "matching_paragraph",
                                     "answer_format": "Single letter: A-H",
-                                    "answer": "TRUE"
+                                    "answer": "G"
                                 },
                                 {
                                     "question_number": 2,
                                     "question_text": "a reference to the various locations where high-rise wooden buildings can be found",
                                     "answer_type": "matching_paragraph",
                                     "answer_format": "Single letter: A-H",
-                                    "answer": "TRUE"
+                                    "answer": "D"
                                 },
                                 {
                                     "question_number": 3,
                                     "question_text": "an indication of how widely available the raw materials of concrete are",
                                     "answer_type": "matching_paragraph",
                                     "answer_format": "Single letter: A-H",
-                                    "answer": "FALSE"
+                                    "answer": "C"
                                 },
                                 {
                                     "question_number": 4,
                                     "question_text": "the belief that more high-rise wooden buildings are needed before wood can be regarded as a viable construction material",
                                     "answer_type": "matching_paragraph",
                                     "answer_format": "Single letter: A-H",
-                                    "answer": "FALSE"
+                                    "answer": "F"
                                 }
                             ],
                             "questions_range": "1-4"
@@ -899,28 +899,28 @@
                                     "question_text": "current environmental concerns are encouraging ________ to use wood in modern construction projects",
                                     "answer_type": "summary_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "NOT GIVEN"
+                                    "answer": "architects"
                                 },
                                 {
                                     "question_number": 6,
                                     "question_text": "as ________ in the atmosphere enters wood, it increases in size",
                                     "answer_type": "summary_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "TRUE"
+                                    "answer": "moisture"
                                 },
                                 {
                                     "question_number": 7,
                                     "question_text": "________ of solid wood are glued together to create building blocks",
                                     "answer_type": "summary_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "NOT GIVEN"
+                                    "answer": "layers"
                                 },
                                 {
                                     "question_number": 8,
                                     "question_text": "wooden buildings are an improvement on those made of concrete and steel in terms of the ________ with which they can be constructed",
                                     "answer_type": "summary_completion",
                                     "answer_format": "ONE WORD ONLY",
-                                    "answer": "environment"
+                                    "answer": "speed"
                                 }
                             ],
                             "questions_range": "5-8"
@@ -940,35 +940,35 @@
                                     "question_text": "The environmental advantage of cement alternatives may not be as great as initially assumed.",
                                     "answer_type": "matching",
                                     "answer_format": "Single letter: A, B, C or D",
-                                    "answer": "equipment"
+                                    "answer": "C"
                                 },
                                 {
                                     "question_number": 10,
                                     "question_text": "It would be hard to create a construction alternative to concrete that offers so many comparable benefits.",
                                     "answer_type": "matching",
                                     "answer_format": "Single letter: A, B, C or D",
-                                    "answer": "boundaries"
+                                    "answer": "A"
                                 },
                                 {
                                     "question_number": 11,
                                     "question_text": "Worries about the environment have led to increased interest in wood as a construction material.",
                                     "answer_type": "matching",
                                     "answer_format": "Single letter: A, B, C or D",
-                                    "answer": "platforms"
+                                    "answer": "B"
                                 },
                                 {
                                     "question_number": 12,
                                     "question_text": "Expense has been a factor in the negative response to the development of new cements.",
                                     "answer_type": "matching",
                                     "answer_format": "Single letter: A, B, C or D",
-                                    "answer": "injuries"
+                                    "answer": "D"
                                 },
                                 {
                                     "question_number": 13,
                                     "question_text": "The environmental damage caused by concrete is due to it being produced in large quantities.",
                                     "answer_type": "matching",
                                     "answer_format": "Single letter: A, B, C or D",
-                                    "answer": "confidence"
+                                    "answer": "A"
                                 }
                             ],
                             "questions_range": "9-13"
@@ -1002,7 +1002,7 @@
                                     "question_text": "Paragraph A",
                                     "answer_type": "heading_matching",
                                     "answer_format": "Single Roman numeral: i-viii",
-                                    "answer": "vi"
+                                    "answer": "iii"
                                 },
                                 {
                                     "question_number": 15,
@@ -1016,21 +1016,21 @@
                                     "question_text": "Paragraph C",
                                     "answer_type": "heading_matching",
                                     "answer_format": "Single Roman numeral: i-viii",
-                                    "answer": "iii"
+                                    "answer": "vi"
                                 },
                                 {
                                     "question_number": 17,
                                     "question_text": "Paragraph D",
                                     "answer_type": "heading_matching",
                                     "answer_format": "Single Roman numeral: i-viii",
-                                    "answer": "ix"
+                                    "answer": "v"
                                 },
                                 {
                                     "question_number": 18,
                                     "question_text": "Paragraph E",
                                     "answer_type": "heading_matching",
                                     "answer_format": "Single Roman numeral: i-viii",
-                                    "answer": "ii"
+                                    "answer": "vii"
                                 },
                                 {
                                     "question_number": 19,
@@ -1044,7 +1044,7 @@
                                     "question_text": "Paragraph G",
                                     "answer_type": "heading_matching",
                                     "answer_format": "Single Roman numeral: i-viii",
-                                    "answer": "C"
+                                    "answer": "iv"
                                 }
                             ],
                             "questions_range": "14-20"
@@ -1077,7 +1077,7 @@
                                         "C": "needed several attempts to achieve a competitive model.",
                                         "D": "sought the advice of experienced people in the car industry."
                                     },
-                                    "answer": "B"
+                                    "answer": "C"
                                 },
                                 {
                                     "question_number": 23,
@@ -1090,7 +1090,7 @@
                                         "C": "employed an additional worker.",
                                         "D": "abandoned their earlier designs."
                                     },
-                                    "answer": "birds"
+                                    "answer": "B"
                                 }
                             ],
                             "questions_range": "21-23"
@@ -1108,21 +1108,21 @@
                                     "question_text": "A later version of the Model E raised its ________, while keeping its emissions extremely low.",
                                     "answer_type": "summary_completion",
                                     "answer_format": "ONE WORD AND/OR A NUMBER",
-                                    "answer": "pollution"
+                                    "answer": "speed"
                                 },
                                 {
                                     "question_number": 25,
                                     "question_text": "Under ________ cars were produced before the company went out of business.",
                                     "answer_type": "summary_completion",
                                     "answer_format": "ONE WORD AND/OR A NUMBER",
-                                    "answer": "climate"
+                                    "answer": "50"
                                 },
                                 {
                                     "question_number": 26,
                                     "question_text": "they satisfy California's ________ emissions laws",
                                     "answer_type": "summary_completion",
                                     "answer_format": "ONE WORD AND/OR A NUMBER",
-                                    "answer": "soil"
+                                    "answer": "emissions"
                                 }
                             ],
                             "questions_range": "24-26"
@@ -1151,7 +1151,7 @@
                                         "C": "how unsuitable Shakespeare is for most teenagers.",
                                         "D": "how weaker students can disrupt their classmates' learning."
                                     },
-                                    "answer": "C"
+                                    "answer": "B"
                                 },
                                 {
                                     "question_number": 28,
@@ -1164,7 +1164,7 @@
                                         "C": "It is relatively simple to implement.",
                                         "D": "It works better in some schools than others."
                                     },
-                                    "answer": "D"
+                                    "answer": "A"
                                 },
                                 {
                                     "question_number": 29,
@@ -1177,7 +1177,7 @@
                                         "C": "students not achieving their full potential",
                                         "D": "students not being aware of their limitations"
                                     },
-                                    "answer": "B"
+                                    "answer": "C"
                                 },
                                 {
                                     "question_number": 30,
@@ -1219,21 +1219,21 @@
                                     "question_text": "there is very little indication that streaming leads to ________",
                                     "answer_type": "summary_completion_options",
                                     "answer_format": "Single letter: A-I",
-                                    "answer": "D"
+                                    "answer": "H"
                                 },
                                 {
                                     "question_number": 32,
                                     "question_text": "the most significant impact is on those students placed in the ________",
                                     "answer_type": "summary_completion_options",
                                     "answer_format": "Single letter: A-I",
-                                    "answer": "B"
+                                    "answer": "D"
                                 },
                                 {
                                     "question_number": 33,
                                     "question_text": "especially where a large proportion of them have ________",
                                     "answer_type": "summary_completion_options",
                                     "answer_format": "Single letter: A-I",
-                                    "answer": "A"
+                                    "answer": "F"
                                 },
                                 {
                                     "question_number": 34,
@@ -1247,7 +1247,7 @@
                                     "question_text": "teachers tend to have ________ of students in streamed groups",
                                     "answer_type": "summary_completion_options",
                                     "answer_format": "Single letter: A-I",
-                                    "answer": "A"
+                                    "answer": "B"
                                 }
                             ],
                             "questions_range": "31-35"
@@ -1261,35 +1261,35 @@
                                     "question_text": "The Vygotsky model of education supports the concept of a mixed-ability class.",
                                     "answer_type": "yes_no_not_given",
                                     "answer_format": "YES / NO / NOT GIVEN",
-                                    "answer": "C"
+                                    "answer": "NO"
                                 },
                                 {
                                     "question_number": 37,
                                     "question_text": "Some teachers are uncertain about allowing students to take on MKO roles in the classroom.",
                                     "answer_type": "yes_no_not_given",
                                     "answer_format": "YES / NO / NOT GIVEN",
-                                    "answer": "B"
+                                    "answer": "NOT GIVEN"
                                 },
                                 {
                                     "question_number": 38,
                                     "question_text": "It can be rewarding to teach knowledge which you have only recently acquired.",
                                     "answer_type": "yes_no_not_given",
                                     "answer_format": "YES / NO / NOT GIVEN",
-                                    "answer": "E"
+                                    "answer": "YES"
                                 },
                                 {
                                     "question_number": 39,
                                     "question_text": "The priority should be to ensure that the highest-achieving students attain their goals.",
                                     "answer_type": "yes_no_not_given",
                                     "answer_format": "YES / NO / NOT GIVEN",
-                                    "answer": "C"
+                                    "answer": "NO"
                                 },
                                 {
                                     "question_number": 40,
                                     "question_text": "Taking part in collaborative outdoor activities with teachers and classmates can improve student outcomes in the classroom.",
                                     "answer_type": "yes_no_not_given",
                                     "answer_format": "YES / NO / NOT GIVEN",
-                                    "answer": "D"
+                                    "answer": "NOT GIVEN"
                                 }
                             ],
                             "questions_range": "36-40"

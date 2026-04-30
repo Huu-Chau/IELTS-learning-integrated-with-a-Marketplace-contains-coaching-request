@@ -4,6 +4,8 @@ import MarketplaceRequest from '../models/MarketplaceRequest';
 import User from '../models/User';
 import Notification from '../models/Notification';
 import sequelize from '../config/database';
+import Reservation from '../models/Reservation';
+import TeacherAvailability from '../models/TeacherAvailability';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TASK 1: Auto-Complete Sessions & Release Funds (runs daily at 02:00 AM)
@@ -15,11 +17,23 @@ async function autoCompleteSessions() {
     try {
         const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24h ago
 
+        const cutoffStr = cutoff.toISOString();
+
         const overdueRequests = await MarketplaceRequest.findAll({
             where: {
                 status: 'accepted',
-                scheduledAt: { [Op.lt]: cutoff },
+                [Op.and]: sequelize.literal(`("Reservation->TeacherAvailability"."date"::text || 'T' || "Reservation->TeacherAvailability"."endTime" || ':00+07:00')::timestamptz < '${cutoffStr}'`)
             },
+            include: [
+                {
+                    model: Reservation,
+                    required: true,
+                    include: [{
+                        model: TeacherAvailability,
+                        required: true
+                    }]
+                }
+            ]
         });
 
         if (overdueRequests.length === 0) {
@@ -86,8 +100,21 @@ async function autoRejectStaleRequests() {
         const staleRequests = await MarketplaceRequest.findAll({
             where: {
                 status: 'pending',
-                createdAt: { [Op.lt]: cutoff },
+                [Op.or]: [
+                    { createdAt: { [Op.lt]: cutoff } },
+                    sequelize.literal(`("Reservation->TeacherAvailability"."date"::text || 'T' || "Reservation->TeacherAvailability"."startTime" || ':00+07:00')::timestamptz < NOW()`)
+                ]
             },
+            include: [
+                {
+                    model: Reservation,
+                    required: true,
+                    include: [{
+                        model: TeacherAvailability,
+                        required: true
+                    }]
+                }
+            ]
         });
 
         if (staleRequests.length === 0) {
@@ -138,15 +165,28 @@ async function sendSessionReminders() {
         const in23h = new Date(now.getTime() + 23 * 60 * 60 * 1000);
         const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
+        const in23hStr = in23h.toISOString();
+        const in24hStr = in24h.toISOString();
+
         const upcomingSessions = await MarketplaceRequest.findAll({
             where: {
                 status: 'accepted',
-                scheduledAt: { [Op.between]: [in23h, in24h] },
+                [Op.and]: sequelize.literal(`("Reservation->TeacherAvailability"."date"::text || 'T' || "Reservation->TeacherAvailability"."startTime" || ':00+07:00')::timestamptz BETWEEN '${in23hStr}' AND '${in24hStr}'`)
             },
+            include: [
+                {
+                    model: Reservation,
+                    required: true,
+                    include: [{
+                        model: TeacherAvailability,
+                        required: true
+                    }]
+                }
+            ]
         });
 
         if (upcomingSessions.length === 0) {
-            console.log('[CronService] sendSessionReminders: no upcoming sessions');
+            console.log('[CronService] sendSessionReminders: no sessions found');
             return;
         }
 

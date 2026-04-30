@@ -7,23 +7,6 @@ services:
       - ielts-network
     env_file:
       - .env
-    environment:
-      # Override DB_HOST from .env so postgres is reachable inside Docker network
-      DB_HOST: postgres
-      # Point the AI controllers at the Ollama instance running on the host Mac.
-      # host.docker.internal resolves to the Docker host's loopback address.
-      OLLAMA_HOST: http://host.docker.internal:11434
-      # Allow any origin so advisors on the same WiFi can connect via socket.io
-      CLIENT_ORIGIN: "*"
-      # MinIO connection (container-to-container via Docker network)
-      MINIO_ENDPOINT: minio
-      MINIO_PORT: "9000"
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-      MINIO_BUCKET: ielts-audio
-      MINIO_USE_SSL: "false"
-      STORAGE_PROVIDER: minio
-      MINIO_PUBLIC_ENDPOINT: "http://localhost:9000"
     extra_hosts:
       # Required on Linux hosts; Docker Desktop for Mac has this built-in.
       - "host.docker.internal:host-gateway"
@@ -43,6 +26,29 @@ services:
       - postgres
       - minio
     command: sh -c "npm install && npm run dev"
+
+  cron:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    networks:
+      - ielts-network
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    restart: unless-stopped
+    tty: true
+    depends_on:
+      - postgres
+      - minio-init
+    links:
+      - postgres
+      - minio
+    command: sh -c "npm install && npm run dev:cron"
 
   postgres:
     image: 'postgres:13'

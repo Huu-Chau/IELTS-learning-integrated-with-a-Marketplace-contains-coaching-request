@@ -113,7 +113,6 @@ Follow this structure strictly:
 
 ### Part 1 - Introduction (4-5 minutes)
 Theme: "${topic.part1Theme}"
-Start IMMEDIATELY with the first question below. Do NOT ask the candidate's name or make small talk — the test has already begun.
 Ask these questions one at a time:
 ${topic.part1Questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
 
@@ -332,9 +331,7 @@ function registerSpeakingHandlers(socket: Socket): void {
             }
 
             const systemPrompt = buildSystemPrompt(topic);
-            // Build the opening greeting that goes directly to Part 1's first question
-            const firstQuestion = topic.part1Questions[0] || 'Tell me about yourself.';
-            const greeting = `Good afternoon. I'm Sarah, your examiner today. Let's begin Part 1. The theme is ${topic.part1Theme}. ${firstQuestion}`;
+            const greeting = 'Good afternoon. My name is Sarah. I will be your examiner today. Could you please tell me your full name?';
 
             const session: SpeakingSession = {
                 topic,
@@ -348,12 +345,9 @@ function registerSpeakingHandlers(socket: Socket): void {
             };
             sessions.set(socket.id, session);
 
+            // Send topic info and greeting text
             socket.emit('speaking:ready', {
-                topicInfo: {
-                    part1: topic.part1Theme,
-                    part2: topic.part2Card?.split('\n')[0] || undefined, // First line is the topic title
-                    part3: topic.part3Theme,
-                },
+                topicInfo: { part1: topic.part1Theme, part3: topic.part3Theme },
                 greeting,
             });
 
@@ -398,8 +392,6 @@ function registerSpeakingHandlers(socket: Socket): void {
 
             if (!sttResult.text) {
                 socket.emit('speaking:transcript', { speaker: 'user', text: '[No speech detected]' });
-                // Reset client back to ready so the mic isn't stuck in processing
-                socket.emit('speaking:processing', { status: 'ready' });
                 return;
             }
 

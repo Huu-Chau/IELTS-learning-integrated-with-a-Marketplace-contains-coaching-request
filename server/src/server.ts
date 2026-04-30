@@ -8,7 +8,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { registerSpeakingSocketHandlers } from './controllers/speakingSessionController';
 // Model imports — ensure all tables are created/synced on startup
 import './models/Reservation';
-import './models/TeacherListing';
+
 dotenv.config();
 
 const PORT = process.env.PORT || 5000;
@@ -40,13 +40,13 @@ console.log('[Server] Speaking socket handlers registered');
 // Connect to Postgres, sync all model-defined tables, then start the server
 console.log('[Server] Connecting to PostgreSQL...');
 sequelize.authenticate()
-    // .then(() => {
-    //     console.log('[Server] ✅ PostgreSQL connected successfully.');
-    //     // Sync all Sequelize models — creates missing tables and alters existing
-    //     // columns to match the model definition. Safe for development/thesis use.
-    //     console.log('[Server] Syncing database schema (alter: true)...');
-    //     return sequelize.sync({ alter: true });
-    // })
+    .then(() => {
+        console.log('[Server] ✅ PostgreSQL connected successfully.');
+        // Sync all Sequelize models — creates missing tables and alters existing
+        // columns to match the model definition. Safe for development/thesis use.
+        console.log('[Server] Syncing database schema (alter: true)...');
+        return sequelize.sync({ alter: true });
+    })
     .then(() => {
         console.log('[Server] ✅ Database schema synced successfully.');
         httpServer.listen(PORT, () => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-    Plus, Mic, Trash2, Edit2, Eye, EyeOff, Loader2, Volume2
+    Plus, Search, Mic, Trash2, Edit2, Eye, EyeOff, Loader2, Volume2
 } from 'lucide-react';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
@@ -32,6 +32,7 @@ export default function ManageVocabulary() {
     const { user } = useAuth();
     const [vocabularies, setVocabularies] = useState<Vocabulary[]>([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Modal states
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -206,7 +207,7 @@ export default function ManageVocabulary() {
             alert('Text-to-speech is not supported in your browser.');
             return;
         }
-
+        
         // Cancel any ongoing speech
         window.speechSynthesis.cancel();
 
@@ -214,7 +215,7 @@ export default function ManageVocabulary() {
         utterance.lang = 'en-US';
         utterance.rate = 0.9; // Slightly slower for language learning
         utterance.pitch = 1.0;
-
+        
         // Ensure voices are loaded before picking one, though default en-US is usually fine
         const voices = window.speechSynthesis.getVoices();
         const enUSVoice = voices.find(v => v.lang === 'en-US' && v.name.includes('Google'));
@@ -224,6 +225,12 @@ export default function ManageVocabulary() {
 
         window.speechSynthesis.speak(utterance);
     };
+
+    const filteredVocabularies = vocabularies.filter(v =>
+        v.word.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        v.englishMeaning?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        v.vietnameseMeaning?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     // ── Render ───────────────────────────────────────────────────────────────
     return (
@@ -248,6 +255,21 @@ export default function ManageVocabulary() {
                         <Plus className="w-5 h-5" /> Add New Word
                     </button>
                 </div>
+
+                {/* Toolbar */}
+                <div className="flex items-center gap-3 bg-white p-2 border border-gray-100 rounded-2xl shadow-sm">
+                    <div className="flex-1 flex items-center gap-3 px-3 py-1.5 focus-within:ring-2 ring-indigo-100 rounded-xl transition-all">
+                        <Search className="w-5 h-5 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search your vocabulary..."
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            className="w-full bg-transparent border-none focus:outline-none text-sm text-gray-700"
+                        />
+                    </div>
+                </div>
+
                 {/* Table */}
                 <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
@@ -271,14 +293,14 @@ export default function ManageVocabulary() {
                                             Loading vocabulary...
                                         </td>
                                     </tr>
-                                ) : vocabularies.length === 0 ? (
+                                ) : filteredVocabularies.length === 0 ? (
                                     <tr>
                                         <td colSpan={7} className="px-5 py-12 text-center text-gray-400">
                                             No words found. Add one to get started!
                                         </td>
                                     </tr>
                                 ) : (
-                                    vocabularies.map((vocab, idx) => {
+                                    filteredVocabularies.map((vocab, idx) => {
                                         const isRevealed = revealedIds.has(vocab.id);
                                         const isSpeaking = speakingWordId === vocab.id;
                                         const accuracy = accuracyScores[vocab.id];

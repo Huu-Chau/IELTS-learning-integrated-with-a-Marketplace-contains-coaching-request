@@ -168,15 +168,6 @@ export default function MockTestWritingSession() {
             .catch(err => console.error('[MockTestWritingSession] startSession error', err));
     }, [testData, user, bookNum, testNumber, sessionId]);
 
-    // Timer is managed by useTestDraft hook
-    useEffect(() => {
-        if (timerExpired && statuses[activeTask] !== 'evaluating' && statuses[activeTask] !== 'done' && testData) {
-            console.log('[MockTestWritingSession] Timer expired — auto-submitting active task');
-            handleSubmit();
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [timerExpired]);
-
     const activeTaskData = testData?.tasks?.find(t => t.task_number === activeTask);
 
     const essay = essays[activeTask];
@@ -265,13 +256,12 @@ export default function MockTestWritingSession() {
                 }
             }
             setStatuses(s => ({ ...s, [activeTask]: 'done' }));
-            clearDraft(); // ── Wipe saved draft on successful submit
         } catch (err) {
             console.error('Submit error:', err);
             setErrorMsgs(e => ({ ...e, [activeTask]: 'Evaluation failed. Make sure Ollama is running.' }));
             setStatuses(s => ({ ...s, [activeTask]: 'error' }));
         }
-    }, [essays, activeTask, part, activeTaskData, clearDraft]);
+    }, [essays, activeTask, part, activeTaskData]);
 
     const feedback = feedbacks[activeTask];
     const errorMsg = errorMsgs[activeTask];

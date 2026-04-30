@@ -21,7 +21,7 @@ import { BookOpen, ArrowLeft, Loader2, Clock, AlertCircle, Send } from 'lucide-r
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { QuestionSectionCard } from '@/components/practice/questions';
 import MockTestResults, { GradeResult } from './MockTestResults';
-import type { ReadingBook, ReadingTest, ReadingPassage } from '@/types/questionTypes';
+import type { ReadingBook, ReadingTest, ReadingPassage, AnswerMap } from '@/types/questionTypes';
 import { useTestDraft } from '@/hooks/useTestDraft';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -101,7 +101,7 @@ export default function MockTestReadingSession() {
     const [gradeResult, setGradeResult] = useState<GradeResult | null>(null);
 
     // ── Draft persistence: answers + timer survive page refresh ───────────────
-    const { answers, setAnswers, secondsLeft, timerExpired, clearDraft } = useTestDraft({
+    const { answers, setAnswers, secondsLeft, clearDraft } = useTestDraft({
         skill: 'reading',
         setId,
         testNumber,
@@ -138,13 +138,6 @@ export default function MockTestReadingSession() {
     }, [setId, testNumber]);
 
     // Timer is managed by useTestDraft hook (secondsLeft)
-    useEffect(() => {
-        if (timerExpired && !submitting && !gradeResult && test) {
-            console.log('[MockTestReadingSession] Timer expired — auto-submitting');
-            handleSubmit();
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [timerExpired]);
 
     const formatTimer = (s: number) =>
         `${Math.floor(s / 60).toString().padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;

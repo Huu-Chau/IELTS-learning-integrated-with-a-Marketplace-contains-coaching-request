@@ -45,10 +45,11 @@ function MessageBubble({ msg, isMine }: { msg: Message; isMine: boolean }) {
     return (
         <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} mb-3`}>
             <div
-                className={`max-w-xs lg:max-w-md rounded-2xl px-4 py-2.5 ${isMine
+                className={`max-w-xs lg:max-w-md rounded-2xl px-4 py-2.5 ${
+                    isMine
                         ? 'bg-indigo-600 text-white rounded-br-sm'
                         : 'bg-white border border-gray-100 text-gray-800 rounded-bl-sm shadow-sm'
-                    }`}
+                }`}
             >
                 {isMeetingLink ? (
                     <a
@@ -240,8 +241,9 @@ export default function StudentMessages() {
                                     key={conv.conversationId}
                                     id={`conv-${conv.conversationId}`}
                                     onClick={() => handleSelectConv(conv)}
-                                    className={`w-full text-left px-4 py-3.5 flex items-start gap-3 hover:bg-gray-50 transition-colors border-b border-gray-50 ${activeConvId === conv.conversationId ? 'bg-indigo-50 border-l-2 border-l-indigo-500' : ''
-                                        }`}
+                                    className={`w-full text-left px-4 py-3.5 flex items-start gap-3 hover:bg-gray-50 transition-colors border-b border-gray-50 ${
+                                        activeConvId === conv.conversationId ? 'bg-indigo-50 border-l-2 border-l-indigo-500' : ''
+                                    }`}
                                 >
                                     <div className="h-10 w-10 rounded-full bg-gradient-to-br from-violet-200 to-indigo-200 flex items-center justify-center text-sm font-bold text-indigo-700 flex-shrink-0">
                                         {conv.otherUser.name[0]?.toUpperCase() ?? 'T'}

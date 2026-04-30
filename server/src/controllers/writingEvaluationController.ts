@@ -163,27 +163,16 @@ export const startSession = async (req: Request, res: Response): Promise<void> =
     console.log('[WritingEvaluationController] startSession called', req.body);
     try {
         const { userId, book, testNumber } = req.body;
-
+        
         if (!userId || !book || testNumber === undefined) {
             res.status(400).json({ error: 'Missing required fields: userId, book, testNumber.' });
             return;
         }
 
-        // Ensure WritingSession table exists (useful during dev)
-        // await WritingSession.sync();
-
-        // ── Idempotency: reuse existing in-progress session rather than creating a new orphan ──
-        const existing = await WritingSession.findOne({
-            where: { userId, book, testNumber: String(testNumber), status: 'in-progress' },
-        });
-
-        if (existing) {
-            console.log('[WritingEvaluationController] startSession reusing existing in-progress session', { sessionId: existing.id });
-            res.json({ sessionId: existing.id });
-            return;
-        }
-
         const sessionId = uuidv4();
+        
+        // Ensure WritingSession table exists (useful during dev)
+        await WritingSession.sync();
 
         const session = await WritingSession.create({
             id: sessionId,
@@ -350,10 +339,8 @@ export const getSessionsByUser = async (req: Request, res: Response): Promise<vo
     console.log('[WritingEvaluationController] getSessionsByUser called', { userId });
 
     try {
-        // Only return completed sessions — in-progress sessions are abandoned/orphaned
-        // and have no score or feedback to display.
         const sessions = await WritingSession.findAll({
-            where: { userId, status: 'completed' },
+            where: { userId },
             order: [['createdAt', 'DESC']],
         });
 

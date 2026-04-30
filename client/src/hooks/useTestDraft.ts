@@ -22,7 +22,7 @@
  *   });
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface UseTestDraftOptions {
     skill: 'writing' | 'reading' | 'listening';
@@ -33,7 +33,7 @@ interface UseTestDraftOptions {
 
 interface DraftShape {
     answers: Record<string, string>;
-    secondsLeft: number;
+    startedAt: number; // Date.now() when the test was first started
 }
 
 interface UseTestDraftReturn {
@@ -53,76 +53,59 @@ export function useTestDraft({
     const storageKey = `ielts_draft_${skill}_${setId}_${testNumber}`;
 
     // ── Restore or initialize draft ────────────────────────────────────────────
-    const getInitialState = useCallback((): DraftShape => {
+    const getInitialState = (): { answers: Record<string, string>; secondsLeft: number } => {
         try {
             const raw = sessionStorage.getItem(storageKey);
             if (raw) {
-                const draft = JSON.parse(raw);
-                
-                // Backwards compatibility with old drafts that used startedAt
-                if (draft.startedAt && draft.secondsLeft === undefined) {
-                    const elapsed = Math.floor((Date.now() - draft.startedAt) / 1000);
-                    const remaining = Math.max(totalSeconds - elapsed, 0);
-                    return { answers: draft.answers || {}, secondsLeft: remaining };
-                }
-
-                return { 
-                    answers: draft.answers || {}, 
-                    secondsLeft: draft.secondsLeft ?? totalSeconds 
-                };
+                const draft: DraftShape = JSON.parse(raw);
+                // Compute remaining seconds based on real elapsed wall-clock time
+                const elapsed = Math.floor((Date.now() - draft.startedAt) / 1000);
+                const remaining = Math.max(totalSeconds - elapsed, 0);
+                console.log(`[useTestDraft] Restored draft for ${storageKey}`, {
+                    answerCount: Object.keys(draft.answers).length,
+                    secondsLeft: remaining,
+                });
+                return { answers: draft.answers, secondsLeft: remaining };
             }
         } catch {
             // Corrupt sessionStorage — ignore and start fresh
             sessionStorage.removeItem(storageKey);
         }
 
-        // No existing draft
-        const newDraft: DraftShape = { answers: {}, secondsLeft: totalSeconds };
+        // No existing draft — record start time now
+        const newDraft: DraftShape = { answers: {}, startedAt: Date.now() };
         sessionStorage.setItem(storageKey, JSON.stringify(newDraft));
-        return newDraft;
-    }, [storageKey, totalSeconds]);
+        console.log(`[useTestDraft] New draft started for ${storageKey}`);
+        return { answers: {}, secondsLeft: totalSeconds };
+    };
 
-    // Use a ref to prevent double-initialization in StrictMode
-    const initializedRef = useRef(false);
-    
-    const [answers, setAnswers] = useState<Record<string, string>>({});
-    const [secondsLeft, setSecondsLeft] = useState(totalSeconds);
-    const [timerExpired, setTimerExpired] = useState(false);
+    const initial = getInitialState();
+    const [answers, setAnswers] = useState<Record<string, string>>(initial.answers);
+    const [secondsLeft, setSecondsLeft] = useState(initial.secondsLeft);
+    const [timerExpired, setTimerExpired] = useState(initial.secondsLeft <= 0);
 
-    // ── Handle storageKey changes (e.g. user navigates to next test) ─────────
+
+
+    // ── Persist answers whenever they change ───────────────────────────────────
     useEffect(() => {
-        const initial = getInitialState();
-        setAnswers(initial.answers);
-        setSecondsLeft(initial.secondsLeft);
-        setTimerExpired(initial.secondsLeft <= 0);
-        initializedRef.current = true;
-    }, [getInitialState]);
-
-    // ── Persist answers and timer whenever they change ───────────────────────
-    useEffect(() => {
-        if (!initializedRef.current) return;
-        
         try {
+            const raw = sessionStorage.getItem(storageKey);
+            const existing: DraftShape = raw ? JSON.parse(raw) : { startedAt: Date.now() };
             sessionStorage.setItem(storageKey, JSON.stringify({
+                startedAt: existing.startedAt,
                 answers,
-                secondsLeft
             }));
         } catch {
             /* ignore storage errors */
         }
-    }, [answers, secondsLeft, storageKey]);
+    }, [answers, storageKey]);
 
     // ── Countdown timer ────────────────────────────────────────────────────────
     useEffect(() => {
-        if (!initializedRef.current) return;
-        
         if (secondsLeft <= 0) {
             setTimerExpired(true);
             return;
         }
-
-        // Reset expired state if secondsLeft somehow increases
-        setTimerExpired(false);
 
         const interval = setInterval(() => {
             setSecondsLeft(prev => {
@@ -136,7 +119,7 @@ export function useTestDraft({
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [storageKey, initializedRef.current]); // Re-run when storageKey or initialization changes
+    }, []); // Only run once — secondsLeft is restored from storage
 
     // ── Clear draft (call on successful submit) ────────────────────────────────
     const clearDraft = useCallback(() => {

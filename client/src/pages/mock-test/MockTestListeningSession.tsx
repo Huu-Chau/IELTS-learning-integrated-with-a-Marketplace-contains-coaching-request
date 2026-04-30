@@ -23,6 +23,7 @@ import AudioPlayer from '@/components/practice/AudioPlayer';
 import { QuestionSectionCard } from '@/components/practice/questions';
 import MockTestResults, { GradeResult } from './MockTestResults';
 import type { ListeningBook, ListeningTest, ListeningPart, SubSection, AnswerMap } from '@/types/questionTypes';
+import { useTestDraft } from '@/hooks/useTestDraft';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 const API_BASE = (import.meta.env.VITE_API_URL as string || 'http://localhost:5000/api').replace(/\/api$/, '');
@@ -81,10 +82,16 @@ export default function MockTestListeningSession() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activePart, setActivePart] = useState(1);
-    const [answers, setAnswers] = useState<AnswerMap>({});
-    const [timer, setTimer] = useState(2400); // 40 min countdown
     const [submitting, setSubmitting] = useState(false);
     const [gradeResult, setGradeResult] = useState<GradeResult | null>(null);
+
+    // ── Draft persistence: answers + timer survive page refresh ───────────────
+    const { answers, setAnswers, secondsLeft, clearDraft } = useTestDraft({
+        skill: 'listening',
+        setId,
+        testNumber,
+        totalSeconds: 2400, // 40 min
+    });
 
     // Track total elapsed time for results display
     const startTimeRef = useRef(Date.now());
@@ -116,17 +123,10 @@ export default function MockTestListeningSession() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [setId, testNumber]);
 
-    // ── Timer ─────────────────────────────────────────────────────────────────
-    useEffect(() => {
-        if (gradeResult) return; // stop timer after submission
-        const interval = setInterval(() => {
-            setTimer(prev => Math.max(0, prev - 1));
-        }, 1000);
-        return () => clearInterval(interval);
-    }, [gradeResult]);
+    // Timer is managed by useTestDraft hook (secondsLeft)
 
     const formatTimer = (s: number) =>
-        `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+        `${Math.floor(s / 60).toString().padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
     // ── Answer handler ────────────────────────────────────────────────────────
     const handleAnswer = (questionNumber: number | string, value: string) => {
@@ -154,6 +154,7 @@ export default function MockTestListeningSession() {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const result: GradeResult = await response.json();
             console.log('[MockTestListeningSession] handleSubmit success', { bandScore: result.bandScore });
+            clearDraft(); // ── Wipe saved draft on successful submit
             setGradeResult(result);
         } catch (err) {
             console.error('[MockTestListeningSession] handleSubmit error', err);
@@ -175,9 +176,9 @@ export default function MockTestListeningSession() {
                 timeSpent={timeSpent}
                 onBack={() => navigate('/mock-test/listening')}
                 onRetake={() => {
+                    clearDraft();
                     setGradeResult(null);
                     setAnswers({});
-                    setTimer(2400);
                     setActivePart(1);
                     startTimeRef.current = Date.now();
                 }}
@@ -236,9 +237,10 @@ export default function MockTestListeningSession() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full">
+                        <div className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full
+                            ${secondsLeft < 300 ? 'text-red-600 bg-red-50' : secondsLeft < 600 ? 'text-amber-600 bg-amber-50' : 'text-gray-500 bg-gray-100'}`}>
                             <Clock className="h-3 w-3" />
-                            <span className="font-mono">{formatTimer(timer)}</span>
+                            <span className="font-mono">{formatTimer(secondsLeft)}</span>
                         </div>
                         <button
                             onClick={handleSubmit}

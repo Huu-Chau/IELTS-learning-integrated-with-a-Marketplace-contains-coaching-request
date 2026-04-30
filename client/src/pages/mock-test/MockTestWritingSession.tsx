@@ -17,6 +17,7 @@ import {
     AlertTriangle, CheckCircle, Timer,
 } from 'lucide-react';
 import DashboardLayout from '@/layouts/DashboardLayout';
+import { useTestDraft } from '@/hooks/useTestDraft';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type WritingPart = 'part1' | 'part2';
@@ -68,6 +69,34 @@ export default function MockTestWritingSession() {
 
     const [activeTask, setActiveTask] = useState<1 | 2>(1);
 
+    // ── Draft persistence: essays + timer survive page refresh ───────────────
+    // Essays are stored as { '1': '...task1 text...', '2': '...task2 text...' }
+    const { answers: essayMap, setAnswers: setEssayMap, secondsLeft, timerExpired, clearDraft } = useTestDraft({
+        skill: 'writing',
+        setId,
+        testNumber,
+        totalSeconds: 3600, // 60 min
+    });
+
+    // Typed convenience helpers so the rest of the component keeps using
+    // essays[1] / essays[2] notation without changes.
+    const essays: Record<1 | 2, string> = {
+        1: essayMap['1'] ?? '',
+        2: essayMap['2'] ?? '',
+    };
+    const setEssays = (updater: ((prev: Record<1 | 2, string>) => Record<1 | 2, string>) | Record<1 | 2, string>) => {
+        const next = typeof updater === 'function' ? updater(essays) : updater;
+        setEssayMap({ '1': next[1], '2': next[2] });
+    };
+
+    const timerMins = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
+    const timerSecs = (secondsLeft % 60).toString().padStart(2, '0');
+    const timerColor = secondsLeft <= 300
+        ? 'text-red-600 bg-red-50 border-red-200'
+        : secondsLeft <= 600
+            ? 'text-amber-600 bg-amber-50 border-amber-200'
+            : 'text-gray-600 bg-gray-50 border-gray-200';
+
     // Test Data State
     const [testData, setTestData] = useState<WritingTest | null>(null);
     const [isLoadingData, setIsLoadingData] = useState(true);
@@ -75,8 +104,7 @@ export default function MockTestWritingSession() {
 
     const { user } = useAuth();
 
-    // Per-task state
-    const [essays, setEssays] = useState<Record<1 | 2, string>>({ 1: '', 2: '' });
+    // Per-task state (evaluation status — these don't need to persist)
     const [statuses, setStatuses] = useState<Record<1 | 2, EvalStatus>>({ 1: 'ready', 2: 'ready' });
     const [feedbacks, setFeedbacks] = useState<Record<1 | 2, string>>({ 1: '', 2: '' });
     const [errorMsgs, setErrorMsgs] = useState<Record<1 | 2, string>>({ 1: '', 2: '' });
@@ -242,17 +270,6 @@ export default function MockTestWritingSession() {
     return (
         <DashboardLayout role="student">
             <div className="max-w-7xl mx-auto space-y-6">
-                {/* ── Violet exam banner ─── */}
-                <div className="bg-violet-600 text-white px-5 py-2.5 flex items-center justify-between text-sm font-medium rounded-xl shadow-sm">
-                    <div className="flex items-center gap-2">
-                        <Timer className="h-4 w-4 shrink-0" />
-                        <span>IELTS Mock Test — Writing Module</span>
-                    </div>
-                    <span className="bg-violet-500 px-3 py-0.5 rounded-full text-xs font-semibold tracking-wide shrink-0">
-                        ~60 min
-                    </span>
-                </div>
-
                 {/* ── Back ─── */}
                 <button
                     onClick={() => navigate('/mock-test/writing')}
@@ -262,15 +279,25 @@ export default function MockTestWritingSession() {
                 </button>
 
                 {/* ── Header ─── */}
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center shrink-0">
-                        <FileText className="h-5 w-5 text-rose-500" />
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center shrink-0">
+                            <FileText className="h-5 w-5 text-rose-500" />
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-bold text-gray-800">
+                                {setName} — Writing Test {testNumber}
+                            </h1>
+                            <p className="text-xs text-rose-500 font-medium">Task 1 (150w) + Task 2 (250w) · AI Evaluated</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="text-xl font-bold text-gray-800">
-                            {setName} — Writing Test {testNumber}
-                        </h1>
-                        <p className="text-xs text-rose-500 font-medium">Task 1 (150w) + Task 2 (250w) · AI Evaluated</p>
+
+                    {/* ── Live Countdown Timer ─── */}
+                    <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-mono font-bold text-lg transition-colors shrink-0 ${timerColor}`}>
+                        <Timer className="h-4 w-4 shrink-0" />
+                        <span>
+                            {timerExpired ? 'Time\'s up!' : `${timerMins}:${timerSecs}`}
+                        </span>
                     </div>
                 </div>
 

@@ -22,6 +22,7 @@ import DashboardLayout from '@/layouts/DashboardLayout';
 import { QuestionSectionCard } from '@/components/practice/questions';
 import MockTestResults, { GradeResult } from './MockTestResults';
 import type { ReadingBook, ReadingTest, ReadingPassage, AnswerMap } from '@/types/questionTypes';
+import { useTestDraft } from '@/hooks/useTestDraft';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 const API_BASE = (import.meta.env.VITE_API_URL as string || 'http://localhost:5000/api').replace(/\/api$/, '');
@@ -96,10 +97,16 @@ export default function MockTestReadingSession() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activePassage, setActivePassage] = useState(1);
-    const [answers, setAnswers] = useState<AnswerMap>({});
-    const [timer, setTimer] = useState(3600); // 60 min
     const [submitting, setSubmitting] = useState(false);
     const [gradeResult, setGradeResult] = useState<GradeResult | null>(null);
+
+    // ── Draft persistence: answers + timer survive page refresh ───────────────
+    const { answers, setAnswers, secondsLeft, clearDraft } = useTestDraft({
+        skill: 'reading',
+        setId,
+        testNumber,
+        totalSeconds: 3600, // 60 min
+    });
 
     // Track total elapsed time for results display
     const startTimeRef = useRef(Date.now());
@@ -130,15 +137,10 @@ export default function MockTestReadingSession() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [setId, testNumber]);
 
-    // ── Timer ─────────────────────────────────────────────────────────────────
-    useEffect(() => {
-        if (gradeResult) return; // stop timer after submission
-        const interval = setInterval(() => setTimer(p => Math.max(0, p - 1)), 1000);
-        return () => clearInterval(interval);
-    }, [gradeResult]);
+    // Timer is managed by useTestDraft hook (secondsLeft)
 
     const formatTimer = (s: number) =>
-        `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+        `${Math.floor(s / 60).toString().padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
     // ── Answer handler ────────────────────────────────────────────────────────
     const handleAnswer = (questionNumber: number | string, value: string) => {
@@ -166,6 +168,7 @@ export default function MockTestReadingSession() {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const result: GradeResult = await response.json();
             console.log('[MockTestReadingSession] handleSubmit success', { bandScore: result.bandScore });
+            clearDraft(); // ── Wipe saved draft on successful submit
             setGradeResult(result);
         } catch (err) {
             console.error('[MockTestReadingSession] handleSubmit error', err);
@@ -187,9 +190,9 @@ export default function MockTestReadingSession() {
                 timeSpent={timeSpent}
                 onBack={() => navigate('/mock-test/reading')}
                 onRetake={() => {
+                    clearDraft();
                     setGradeResult(null);
                     setAnswers({});
-                    setTimer(3600);
                     setActivePassage(1);
                     startTimeRef.current = Date.now();
                 }}
@@ -258,9 +261,9 @@ export default function MockTestReadingSession() {
 
                     <div className="flex items-center gap-3">
                         <div className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full
-                            ${timer < 300 ? 'text-red-600 bg-red-50' : 'text-gray-500 bg-gray-100'}`}>
+                            ${secondsLeft < 300 ? 'text-red-600 bg-red-50' : secondsLeft < 600 ? 'text-amber-600 bg-amber-50' : 'text-gray-500 bg-gray-100'}`}>
                             <Clock className="h-3 w-3" />
-                            <span className="font-mono">{formatTimer(timer)}</span>
+                            <span className="font-mono">{formatTimer(secondsLeft)}</span>
                         </div>
                         <button
                             onClick={handleSubmit}

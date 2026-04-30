@@ -1,5 +1,6 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../config/database';
+import Reservation from './Reservation';
 
 /**
  * MarketplaceRequest model - manages student-teacher review requests.
@@ -155,5 +156,7 @@ MarketplaceRequest.init(
         }
     }
 );
+
+MarketplaceRequest.belongsTo(Reservation, { foreignKey: 'reservationId' });
 
 export default MarketplaceRequest;

@@ -6,6 +6,7 @@ import {
     CreationOptional,
 } from 'sequelize';
 import sequelize from '../config/database';
+import TeacherAvailability from './TeacherAvailability';
 
 /**
  * Reservation model — implements a 5-minute "soft lock" on a coaching slot.
@@ -89,5 +90,7 @@ Reservation.init(
         indexes: [{ fields: ['availabilityId', 'status'], unique: true }]
     }
 );
+
+Reservation.belongsTo(TeacherAvailability, { foreignKey: 'availabilityId' });
 
 export default Reservation;

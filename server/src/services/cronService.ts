@@ -221,6 +221,49 @@ async function sendSessionReminders() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// TASK 4: Expire Abandoned Reservations (runs every minute)
+// Finds reservations that are pending and have passed their expiresAt time,
+// marks them as expired, and frees up the teacher availability slot.
+// ─────────────────────────────────────────────────────────────────────────────
+async function expireReservations() {
+    console.log('[CronService] expireReservations called');
+    try {
+        await sequelize.transaction(async (t) => {
+            const expiredReservations = await Reservation.findAll({
+                where: {
+                    status: 'pending',
+                    expiresAt: { [Op.lt]: new Date() },
+                },
+                transaction: t,
+                lock: true,
+                skipLocked: true
+            });
+
+            if (expiredReservations.length === 0) {
+                return; // Nothing to expire
+            }
+
+            for (const reservation of expiredReservations) {
+                // Mark reservation as expired
+                await reservation.update({ status: 'expired' }, { transaction: t });
+
+                // Free up the availability slot
+                await TeacherAvailability.update(
+                    { isAvailable: true },
+                    { where: { id: reservation.availabilityId }, transaction: t }
+                );
+
+                console.log('[CronService] expireReservations: expired reservation', { id: reservation.id });
+            }
+
+            console.log('[CronService] expireReservations success', { count: expiredReservations.length });
+        });
+    } catch (error) {
+        console.error('[CronService] expireReservations error', error);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PUBLIC: Start all cron jobs
 // ─────────────────────────────────────────────────────────────────────────────
 export function startAllJobs() {
@@ -241,8 +284,13 @@ export function startAllJobs() {
         timezone: 'Asia/Ho_Chi_Minh',
     });
 
-    console.log('[CronService] startAllJobs success — 3 jobs registered');
+    // Every minute — expire abandoned reservations
+    cron.schedule('* * * * *', expireReservations, {
+        timezone: 'Asia/Ho_Chi_Minh',
+    });
+
+    console.log('[CronService] startAllJobs success — 4 jobs registered');
 }
 
 // Export for manual testing via scripts
-export { autoCompleteSessions, autoRejectStaleRequests, sendSessionReminders };
+export { autoCompleteSessions, autoRejectStaleRequests, sendSessionReminders, expireReservations };

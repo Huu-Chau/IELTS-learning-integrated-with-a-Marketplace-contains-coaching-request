@@ -44,10 +44,8 @@ services:
     tty: true
     depends_on:
       - postgres
-      - minio-init
     links:
       - postgres
-      - minio
     command: sh -c "npm install && npm run dev:cron"
 
   postgres:

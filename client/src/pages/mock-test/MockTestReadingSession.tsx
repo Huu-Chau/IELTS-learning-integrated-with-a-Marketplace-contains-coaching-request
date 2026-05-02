@@ -23,8 +23,9 @@ import { QuestionSectionCard } from '@/components/practice/questions';
 import MockTestResults, { GradeResult } from './MockTestResults';
 import type { ReadingBook, ReadingTest, ReadingPassage } from '@/types/questionTypes';
 import { useTestDraft } from '@/hooks/useTestDraft';
+import { useAuth } from '@/context/AuthContext';
 
-// ─── Config ──────────────────────────────────────────────────────────────────
+// ─── Utility ──────────────────────────────────────────────────────────────────
 const API_BASE = (import.meta.env.VITE_API_URL as string || 'http://localhost:5000/api').replace(/\/api$/, '');
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -83,8 +84,7 @@ function normalizePassageText(raw: string | string[] | undefined): string[] {
 export default function MockTestReadingSession() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-
-    console.log('[MockTestReadingSession] render called');
+    const { user, getIdToken } = useAuth();
 
     const setId = searchParams.get('setId') ?? 'cambridge-20';
     const testNumber = parseInt(searchParams.get('test') ?? '1', 10);
@@ -108,8 +108,9 @@ export default function MockTestReadingSession() {
         totalSeconds: 3600, // 60 min
     });
 
-    // Track total elapsed time for results display
+    // Track total elapsed time — frozen at submission
     const startTimeRef = useRef(Date.now());
+    const [timeSpent, setTimeSpent] = useState(0);
 
     // ── Fetch ─────────────────────────────────────────────────────────────────
     useEffect(() => {
@@ -143,7 +144,7 @@ export default function MockTestReadingSession() {
             console.log('[MockTestReadingSession] Timer expired — auto-submitting');
             handleSubmit();
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [timerExpired]);
 
     const formatTimer = (s: number) =>
@@ -176,7 +177,26 @@ export default function MockTestReadingSession() {
             const result: GradeResult = await response.json();
             console.log('[MockTestReadingSession] handleSubmit success', { bandScore: result.bandScore });
             clearDraft(); // ── Wipe saved draft on successful submit
+            setTimeSpent(Math.round((Date.now() - startTimeRef.current) / 1000));
             setGradeResult(result);
+
+            if (user && getIdToken) {
+                const token = await getIdToken();
+                await fetch(`${API_BASE}/api/attempts`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        type: 'reading',
+                        testId: `reading-${setId}-${testNumber}`,
+                        score: result.bandScore,
+                        answers: answers,
+                        feedback: `Completed Reading Test ${testNumber} from ${setName}.`
+                    })
+                }).catch(e => console.error('[MockTestReadingSession] Failed to save attempt', e));
+            }
         } catch (err) {
             console.error('[MockTestReadingSession] handleSubmit error', err);
             setError('Failed to grade your test. Please try again.');
@@ -187,7 +207,6 @@ export default function MockTestReadingSession() {
 
     // ── Show results if graded ────────────────────────────────────────────────
     if (gradeResult) {
-        const timeSpent = Math.round((Date.now() - startTimeRef.current) / 1000);
         return (
             <MockTestResults
                 skill="Reading"
@@ -357,21 +376,15 @@ export default function MockTestReadingSession() {
 
                                         {/* Paragraphs */}
                                         {(() => {
-                                            const rawText = currentPassage.passage_text || currentPassage.text;
                                             const paragraphs = normalizePassageText(
-                                                rawText as string | string[] | undefined
+                                                currentPassage.passage_text as string | string[] | undefined
                                             );
                                             return paragraphs.length > 0 ? (
                                                 <div className="space-y-4">
                                                     {paragraphs.map((para, idx) => (
-                                                        <div key={idx} className="flex gap-3">
-                                                            <span className="shrink-0 w-5 h-5 mt-0.5 rounded bg-gray-100 text-gray-500 text-[10px] font-bold flex items-center justify-center">
-                                                                {String.fromCharCode(65 + idx)}
-                                                            </span>
-                                                            <p className="text-sm text-gray-700 leading-7 text-justify">
-                                                                {para}
-                                                            </p>
-                                                        </div>
+                                                        <p key={idx} className="text-sm text-gray-700 leading-7 text-justify">
+                                                            {para}
+                                                        </p>
                                                     ))}
                                                 </div>
                                             ) : (

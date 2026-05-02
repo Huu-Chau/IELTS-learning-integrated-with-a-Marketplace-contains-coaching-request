@@ -53,8 +53,6 @@ function DonutChart({
     unanswered: number;
     total: number;
 }) {
-    console.log('[DonutChart] render', { correct, wrong, unanswered, total });
-
     const size = 160;
     const strokeWidth = 14;
     const radius = (size - strokeWidth) / 2;
@@ -155,8 +153,6 @@ export default function MockTestResults({
     onBack,
     onRetake,
 }: MockTestResultsProps) {
-    console.log('[MockTestResults] render called', { skill, bandScore: gradeResult.bandScore });
-
     const { correct, wrong, unanswered, total, bandScore, results } = gradeResult;
 
     return (

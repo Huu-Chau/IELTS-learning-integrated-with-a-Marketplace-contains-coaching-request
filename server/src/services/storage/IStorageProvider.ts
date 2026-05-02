@@ -41,6 +41,8 @@ export interface IStorageProvider {
      */
     getFileStream(filename: string): Promise<Readable>;
 
+
+
     /**
      * Delete a file from the storage backend.
      *

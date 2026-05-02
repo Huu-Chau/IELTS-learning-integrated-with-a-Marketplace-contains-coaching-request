@@ -7,8 +7,6 @@
 import type { QuestionComponentProps } from '@/types/questionTypes';
 
 export default function SummaryCompletion({ subSection, answers, onAnswer }: QuestionComponentProps) {
-    console.log('[SummaryCompletion] render called', { qCount: subSection.questions.length });
-
     const content = subSection.content as Record<string, unknown> | undefined;
     const title = (content?.title as string) ?? '';
     const summary = (content?.summary as string) ?? '';
@@ -18,24 +16,53 @@ export default function SummaryCompletion({ subSection, answers, onAnswer }: Que
     const textToRender = summary || sentences.join('\n');
 
     if (!textToRender) {
-        // Fallback: just render questions with inline inputs
+        // Fallback: render individual sentences with inline blanks
         return (
-            <div className="space-y-2">
-                {subSection.questions.map(q => (
-                    <div key={q.question_number} className="flex items-center gap-2 text-sm">
-                        <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] rounded-md bg-gray-100 text-gray-500 text-xs font-bold shrink-0">
-                            {q.question_number}
-                        </span>
-                        <span className="text-gray-700 flex-1">{q.question_text}</span>
-                        <input
-                            type="text"
-                            value={answers[String(q.question_number)] ?? ''}
-                            placeholder="___"
-                            onChange={(e) => onAnswer(q.question_number, e.target.value)}
-                            className="w-28 border-b-2 border-gray-300 focus:border-gray-900 bg-transparent outline-none text-sm font-semibold text-gray-800 px-1 py-0.5 text-center transition-colors"
-                        />
-                    </div>
-                ))}
+            <div className="space-y-4">
+                {subSection.questions.map(q => {
+                    const qn = q.question_number;
+                    const val = answers[String(qn)] ?? '';
+
+                    // Split the question text on the blank (e.g., "________" or "...")
+                    const parts = (q.question_text || '').split(/(_{2,}|\.{3,})/g);
+
+                    return (
+                        <div key={qn} className="flex items-start gap-3 text-sm leading-relaxed">
+                            <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] rounded-md bg-gray-100 text-gray-500 text-xs font-bold shrink-0 mt-0.5">
+                                {qn}
+                            </span>
+                            <span className="text-gray-700">
+                                {parts.map((part, i) => {
+                                    if (part.match(/_{2,}|\.{3,}/)) {
+                                        return (
+                                            <span key={i} className="inline-flex items-center gap-0.5 mx-0.5">
+                                                <input
+                                                    type="text"
+                                                    value={val}
+                                                    placeholder="___"
+                                                    onChange={(e) => onAnswer(qn, e.target.value)}
+                                                    className="inline-block min-w-[80px] border-b-2 border-gray-300 focus:border-gray-900 bg-transparent outline-none text-sm font-semibold text-gray-800 px-1 py-0.5 text-center transition-colors"
+                                                />
+                                            </span>
+                                        );
+                                    }
+                                    return <span key={i}>{part}</span>;
+                                })}
+                                {parts.length === 1 && (
+                                    <span className="inline-flex items-center gap-0.5 ml-2">
+                                        <input
+                                            type="text"
+                                            value={val}
+                                            placeholder="___"
+                                            onChange={(e) => onAnswer(qn, e.target.value)}
+                                            className="inline-block min-w-[80px] border-b-2 border-gray-300 focus:border-gray-900 bg-transparent outline-none text-sm font-semibold text-gray-800 px-1 py-0.5 text-center transition-colors"
+                                        />
+                                    </span>
+                                )}
+                            </span>
+                        </div>
+                    );
+                })}
             </div>
         );
     }

@@ -15,14 +15,12 @@ export default function MockTestListening() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        console.log('[MockTestListening] fetchSets called');
         fetch(`${API_BASE}/api/cambridge-tests/sets/listening`)
             .then(r => {
                 if (!r.ok) throw new Error(`HTTP ${r.status}`);
                 return r.json();
             })
             .then(data => {
-                console.log('[MockTestListening] fetchSets success', { count: data.sets?.length });
                 setTestSets(data.sets || []);
             })
             .catch(err => {

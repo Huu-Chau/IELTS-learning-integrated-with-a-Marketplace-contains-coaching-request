@@ -34,6 +34,7 @@ export interface SubSection {
 // ── Listening ────────────────────────────────────────────────────────────────
 export interface ListeningPart {
     part: number;
+    audio_key?: string;
     audioUrl?: string;
     questions_range: string;
     instructions?: string;
@@ -62,7 +63,6 @@ export interface ReadingPassage {
     questions_range?: string;
     time_suggested?: string;
     /** Passage text — stored as a raw string in DB (split by double newlines into paragraphs) */
-    text?: string | string[];
     passage_text?: string | string[];
     sub_sections: SubSection[];
 }

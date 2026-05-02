@@ -7,8 +7,6 @@
 import type { QuestionComponentProps } from '@/types/questionTypes';
 
 export default function MatchingSentenceEndings({ subSection, answers, onAnswer }: QuestionComponentProps) {
-    console.log('[MatchingSentenceEndings] render called', { qCount: subSection.questions.length });
-
     const opts = subSection.options ?? {};
 
     return (

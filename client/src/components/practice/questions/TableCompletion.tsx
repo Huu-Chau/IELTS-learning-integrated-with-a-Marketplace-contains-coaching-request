@@ -51,16 +51,133 @@ function renderCellContent(
 }
 
 export default function TableCompletion({ subSection, answers, onAnswer }: QuestionComponentProps) {
-    console.log('[TableCompletion] render called', { qCount: subSection.questions.length });
 
     const content = subSection.content as Record<string, unknown> | undefined;
     if (!content?.table) {
+        // Try to parse the reading-style "Row / Col: Content" format
+        const rowSet = new Set<string>();
+        const colSet = new Set<string>();
+        const cellData: Record<string, Record<string, { qn: number | string, text: string }[]>> = {};
+
+        let isDynamicTable = false;
+
+        subSection.questions.forEach(q => {
+            const text = q.question_text || '';
+            const match = text.match(/^([^/]+?)\s*\/\s*([^:]+?):\s*(.*)$/);
+            if (match) {
+                isDynamicTable = true;
+                const row = match[1].trim();
+                const col = match[2].trim();
+                const contentText = match[3].trim();
+
+                rowSet.add(row);
+                colSet.add(col);
+
+                if (!cellData[row]) cellData[row] = {};
+                if (!cellData[row][col]) cellData[row][col] = [];
+                cellData[row][col].push({ qn: q.question_number, text: contentText });
+            }
+        });
+
+        if (isDynamicTable) {
+            const rows = Array.from(rowSet);
+            const cols = Array.from(colSet);
+            const tableTitle = content?.title ? String(content.title) : '';
+
+            return (
+                <div className="overflow-x-auto bg-white rounded-xl border border-gray-200">
+                    <table className="w-full text-sm">
+                        <thead>
+                            {tableTitle && (
+                                <tr className="bg-gray-50">
+                                    <th colSpan={cols.length + 1} className="p-3 border-b border-gray-200 text-center">
+                                        <span className="text-sm font-bold text-gray-800">{tableTitle}</span>
+                                    </th>
+                                </tr>
+                            )}
+                            <tr className="bg-white">
+                                <th className="px-4 py-3 text-left font-semibold text-gray-800 border-b border-r border-gray-200 w-1/4">
+                                    {/* Empty top-left cell */}
+                                </th>
+                                {cols.map((col, i) => (
+                                    <th key={i} className="px-4 py-3 text-left font-semibold text-gray-800 border-b border-r border-gray-200 last:border-r-0">
+                                        {col}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows.map((row, ri) => (
+                                <tr key={ri} className="border-b border-gray-200 last:border-b-0 bg-white hover:bg-gray-50/50 transition-colors">
+                                    <td className="px-4 py-4 font-bold text-gray-800 border-r border-gray-200 w-1/4 align-top">
+                                        {row}
+                                    </td>
+                                    {cols.map((col, ci) => {
+                                        const questionsInCell = cellData[row]?.[col] || [];
+                                        
+                                        // We assume the first question's text contains all the bullets for the cell
+                                        const bullets = questionsInCell.length > 0 
+                                            ? questionsInCell[0].text.split(/\s*\/\s*/)
+                                            : [];
+
+                                        let qIndex = 0;
+
+                                        return (
+                                            <td key={ci} className="px-4 py-4 text-gray-700 align-top border-r border-gray-200 last:border-r-0">
+                                                {bullets.length > 0 ? (
+                                                    <ul className="list-disc pl-4 space-y-3">
+                                                        {bullets.map((bullet, bi) => {
+                                                            const parts = bullet.split(/(_{2,}|\.{3,})/g);
+                                                            return (
+                                                                <li key={bi} className="leading-[1.8] text-[13px] text-gray-600">
+                                                                    {parts.map((part, pIndex) => {
+                                                                        if (part.match(/_{2,}|\.{3,}/)) {
+                                                                            const q = questionsInCell[qIndex] || questionsInCell[questionsInCell.length - 1];
+                                                                            if (q) qIndex++;
+                                                                            const qn = q?.qn;
+                                                                            const val = qn ? answers[String(qn)] ?? '' : '';
+
+                                                                            return (
+                                                                                <span key={pIndex} className="inline-flex items-center gap-1.5 mx-1">
+                                                                                    {qn && (
+                                                                                        <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] rounded bg-[#e6f4ea] text-[#1e8e3e] text-xs font-bold shadow-sm">
+                                                                                            {qn}
+                                                                                        </span>
+                                                                                    )}
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        value={val}
+                                                                                        placeholder="___"
+                                                                                        onChange={(e) => qn && onAnswer(qn, e.target.value)}
+                                                                                        className="inline-block min-w-[80px] max-w-[140px] border-b-2 border-gray-300 focus:border-[#1e8e3e] bg-transparent outline-none text-sm font-semibold text-[#1e8e3e] px-1 py-0.5 text-center transition-colors"
+                                                                                    />
+                                                                                </span>
+                                                                            );
+                                                                        }
+                                                                        return <span key={pIndex}>{part}</span>;
+                                                                    })}
+                                                                </li>
+                                                            );
+                                                        })}
+                                                    </ul>
+                                                ) : null}
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            );
+        }
+
         // Fallback: just show inputs for each question
         return (
-            <div className="space-y-2">
+            <div className="space-y-4">
                 {subSection.questions.map(q => (
-                    <div key={q.question_number} className="flex items-center gap-2 text-sm">
-                        <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] rounded-md bg-gray-100 text-gray-500 text-xs font-bold shrink-0">
+                    <div key={q.question_number} className="flex items-center gap-3 text-sm">
+                        <span className="inline-flex items-center justify-center min-w-[24px] h-[24px] rounded-full bg-gray-100 text-gray-500 text-xs font-bold shrink-0">
                             {q.question_number}
                         </span>
                         <span className="text-gray-700 flex-1">{q.question_text}</span>
@@ -104,12 +221,12 @@ export default function TableCompletion({ subSection, answers, onAnswer }: Quest
                             {table.columns.map((col, ci) => {
                                 // Match the column title to the object key defensively
                                 let cellKey = col.toLowerCase().replace(/ /g, '_');
-                                
+
                                 // If the exact cellKey doesn't exist, search for a partial match
                                 if (!(cellKey in row)) {
                                     const rowKeys = Object.keys(row);
                                     const foundKey = rowKeys.find(k => cellKey.includes(k) || k.includes(cellKey));
-                                    
+
                                     if (foundKey) {
                                         cellKey = foundKey;
                                     } else {

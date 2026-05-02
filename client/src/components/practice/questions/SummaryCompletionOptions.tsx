@@ -7,8 +7,6 @@
 import type { QuestionComponentProps } from '@/types/questionTypes';
 
 export default function SummaryCompletionOptions({ subSection, answers, onAnswer }: QuestionComponentProps) {
-    console.log('[SummaryCompletionOptions] render called', { qCount: subSection.questions.length });
-
     const content = subSection.content as Record<string, unknown> | undefined;
     const title = (content?.title as string) ?? '';
     const summary = (content?.summary as string) ?? '';

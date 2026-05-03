@@ -9,6 +9,7 @@ import User from '../models/User';
 import TeacherAvailability from '../models/TeacherAvailability';
 import { NotificationService } from '../services/notificationService';
 import { CreateNotificationPayload, NotificationType } from '../types/notification';
+import sequelize from '../config/database';
 
 const notificationService = new NotificationService();
 
@@ -411,21 +412,22 @@ router.get('/transactions', async (req: Request, res: Response): Promise<void> =
  * POST /api/teacher/withdraw
  * Simulate a withdrawal request. Deducts from wallet_balance and records a notification.
  * Body: { amount: number }
- * TODO: Need to handle TOCTOU race condition
  */
 router.post('/withdraw', async (req: Request, res: Response): Promise<void> => {
     console.log('[TeacherRoutes] POST /withdraw called', { uid: req.user?.uid, body: req.body });
+    const teacherId = req.user!.uid;
+    const { amount } = req.body;
+
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+        res.status(400).json({ error: 'A valid positive amount is required' });
+        return;
+    }
+    const t = await sequelize.transaction();
+
     try {
-        const teacherId = req.user!.uid;
-        const { amount } = req.body;
-
-        if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-            res.status(400).json({ error: 'A valid positive amount is required' });
-            return;
-        }
-
-        const teacher = await User.findByPk(teacherId);
+        const teacher = await User.findByPk(teacherId, { lock: t.LOCK.UPDATE, transaction: t });
         if (!teacher) {
+            await t.rollback();
             res.status(404).json({ error: 'Teacher not found' });
             return;
         }
@@ -434,12 +436,13 @@ router.post('/withdraw', async (req: Request, res: Response): Promise<void> => {
         const withdrawAmount = Number(amount);
 
         if (withdrawAmount > currentBalance) {
+            await t.rollback();
             res.status(400).json({ error: 'Withdrawal amount exceeds wallet balance' });
             return;
         }
 
         // Deduct from wallet
-        await teacher.update({ wallet_balance: currentBalance - withdrawAmount });
+        await teacher.update({ wallet_balance: currentBalance - withdrawAmount }, { transaction: t });
 
         // Create a system notification for the teacher
         // TODO: Will change to Event Driven to create notification 
@@ -452,9 +455,12 @@ router.post('/withdraw', async (req: Request, res: Response): Promise<void> => {
         );
         await notificationService.createNotification(payload);
 
+        await t.commit();
+
         console.log('[TeacherRoutes] POST /withdraw success', { newBalance: currentBalance - withdrawAmount });
         res.json({ success: true, newBalance: currentBalance - withdrawAmount });
     } catch (error) {
+        await t.rollback();
         console.error('[TeacherRoutes] POST /withdraw error', error);
         res.status(500).json({ error: 'Failed to process withdrawal' });
     }

@@ -74,12 +74,15 @@ Attempt.init(
         tableName: 'Attempts',
         hooks: {
             afterCreate: async (attempt) => {
-                console.log("🚀 ~ Attempt ~ afterCreate ~ attempt:", attempt.toJSON())
-                await queueService.publish<IAttemptAttributes>(
-                    new QueueMessage<IAttemptAttributes>(attempt.toJSON<IAttemptAttributes>()),
-                    QueueTopic.ATTEMPT_CREATED,
-                );
-                console.log("✅ Attempt created and message published to Kafka");
+                try {
+                    await queueService.publish<IAttemptAttributes>(
+                        new QueueMessage<IAttemptAttributes>(attempt.toJSON<IAttemptAttributes>()),
+                        QueueTopic.ATTEMPT_CREATED,
+                    );
+                    console.log("✅ Attempt created and message published to Kafka");
+                } catch (err) {
+                    console.error('[Attempt Hook] afterCreate publish error', err);
+                }
             }
         }
     }

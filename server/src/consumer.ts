@@ -4,6 +4,8 @@ import { KafkaService } from './services/queue/KafkaService';
 import { IQueueProvider } from './services/queue/IQueueProvider';
 import './models/Notification';
 import { NotificationOnAttemptCreatedConsumer } from './consumers/notification-on-attempt-created';
+import { NotificationOnMarketplaceRequestCreatedConsumer } from './consumers/notification-on-marketplace-request-created';
+import { NotificationOnMarketplaceRequestStatusUpdatedConsumer } from './consumers/notification-on-marketplace-request-status-updated';
 import { INotificationService, NotificationService } from './services/notificationService';
 
 const queueService: IQueueProvider = new KafkaService();
@@ -39,9 +41,14 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 sequelize.authenticate()
     .then(async () => {
         console.log('[Consumer] ✅ Database connected successfully.');
-        const notificationOnAttemptCreatedConsumer = new NotificationOnAttemptCreatedConsumer(queueService, notificationService);
-        await notificationOnAttemptCreatedConsumer.consume();
-        console.log('[Consumer] 🚀 Background worker is running and listening for jobs.');
+        const consumers = [
+            new NotificationOnAttemptCreatedConsumer(queueService, notificationService),
+            new NotificationOnMarketplaceRequestCreatedConsumer(queueService, notificationService),
+            new NotificationOnMarketplaceRequestStatusUpdatedConsumer(queueService, notificationService)
+        ];
+
+        await Promise.all(consumers.map(consumer => consumer.consume()));
+        console.log('[Consumer] 🚀 All background workers are running and listening for jobs.');
     })
     .catch((err: Error) => {
         console.error('[Consumer] ❌ Worker startup failed:', err.message);

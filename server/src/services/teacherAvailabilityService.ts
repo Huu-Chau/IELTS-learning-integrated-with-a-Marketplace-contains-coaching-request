@@ -62,6 +62,18 @@ export class TeacherAvailabilityService implements ITeacherAvailabilityService {
                 throw new Error('Listing not found');
             }
 
+            // Cross-teacher validation: Ensure slot belongs to the listing's teacher
+            const availability = await TeacherAvailability.findOne({
+                where: { id: availabilityId },
+                transaction: t
+            });
+            if (!availability) {
+                throw new Error('Availability not found');
+            }
+            if (availability.teacherId !== listing.teacherId) {
+                throw new Error('Availability does not belong to this listing');
+            }
+
             // lock availability to prevent race condition when student book same slot
             const [updatedCount] = await TeacherAvailability.update({
                 isAvailable: false,
@@ -71,7 +83,30 @@ export class TeacherAvailabilityService implements ITeacherAvailabilityService {
             });
 
             if (updatedCount === 0) {
-                throw new Error('Availability not found or already booked');
+                // The slot is already marked isAvailable: false. Let's see who owns the lock.
+                const existingReservation = await Reservation.findOne({
+                    where: { availabilityId, status: 'pending' },
+                    transaction: t
+                });
+
+                if (existingReservation) {
+                    if (existingReservation.studentId === studentId && existingReservation.expiresAt > new Date()) {
+                        // RESUME BOOKING: The current student owns the lock and it is still valid.
+                        await t.commit();
+                        return existingReservation;
+                    }
+                    
+                    if (existingReservation.expiresAt <= new Date()) {
+                        // GHOST LOCK CLEANUP: The reservation expired but the cron job hasn't cleaned it up yet.
+                        // We can steal this slot and give it to the new student.
+                        await existingReservation.update({ status: 'expired' }, { transaction: t });
+                        // Proceed to create a new reservation below
+                    } else {
+                        throw new Error('Availability already booked by another student');
+                    }
+                } else {
+                    throw new Error('Availability not found or already booked');
+                }
             }
 
             // create reservation with 5 minutes expiration time

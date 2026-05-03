@@ -39,7 +39,6 @@ export default function PaymentModal({
     if (!isOpen) return null;
 
     const handlePayment = async () => {
-        console.log('[PaymentModal] handlePayment called', { listingId, teacherId, amount });
         setIsProcessing(true);
         setError(null);
 

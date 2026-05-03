@@ -68,35 +68,12 @@ router.get('/listings', async (req: Request, res: Response): Promise<void> => {
                     attributes: ['id', 'firstName', 'lastName', 'email'],
                 });
 
-                // Check if this listing has an active (non-expired) reservation
-                const activeReservation = await Reservation.findOne({
-                    where: {
-                        'listing.id': listing.id,
-                        status: 'pending',
-                        expiresAt: { [Op.gt]: new Date() },
-                    },
-                    attributes: ['studentId', 'expiresAt'],
-                });
-
-                // Check if there's a completed booking for this listing
-                const completedBooking = await Reservation.findOne({
-                    where: {
-                        'listing.id': listing.id,
-                        status: 'completed',
-                    },
-                });
-
-                let reservationStatus: 'available' | 'pending' | 'booked' = 'available';
-                let isOwnReservation = false;
-                let reservationExpiresAt: Date | null = null;
-
-                if (completedBooking) {
-                    reservationStatus = 'booked';
-                } else if (activeReservation) {
-                    reservationStatus = 'pending';
-                    isOwnReservation = activeReservation.studentId === currentUserId;
-                    reservationExpiresAt = activeReservation.expiresAt;
-                }
+                // Listings are catalog items; slots handle the actual time locks.
+                // We hardcode this to 'available' so the frontend button stays active,
+                // allowing the student to open the CalendarMatrix to pick a slot.
+                const reservationStatus: 'available' | 'pending' | 'booked' = 'available';
+                const isOwnReservation = false;
+                const reservationExpiresAt: Date | null = null;
 
                 return {
                     id: listing.id,
@@ -198,7 +175,6 @@ router.get('/listings/:id', async (req: Request, res: Response): Promise<void> =
  * If no attemptId is provided, a placeholder value of 0 is used (for general consultations).
  */
 router.post('/requests', async (req: Request, res: Response): Promise<void> => {
-    console.log('[MarketplaceRoutes] POST /requests called', { uid: req.user?.uid, body: req.body });
     try {
         const studentId = req.user!.uid;
         const { listingId, teacherId, message, attemptId } = req.body;

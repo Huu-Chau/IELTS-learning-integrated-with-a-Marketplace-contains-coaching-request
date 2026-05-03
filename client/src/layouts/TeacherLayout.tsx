@@ -15,7 +15,6 @@ import {
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useAuth } from '@/context/AuthContext';
-import { apiClient } from '@/services/apiClient';
 
 function cn(...inputs: (string | undefined | null | false)[]) {
     return twMerge(clsx(inputs));
@@ -50,7 +49,7 @@ export default function TeacherLayout({ children, unreadMessages = 0, unreadNoti
     const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, logout, getIdToken } = useAuth();
+    const { user, logout } = useAuth();
 
     // Auto open/close when window crosses the lg breakpoint
     useEffect(() => {

@@ -5,6 +5,7 @@ import { PayForReservationPayload } from '../types/reservation';
 import User from '../models/User';
 import MarketplaceRequest from '../models/MarketplaceRequest';
 import TeacherListing from '../models/TeacherListing';
+import { MarketplaceRequestStatus, MarketplaceRequestType } from '../types/marketplace-request';
 
 export interface IReservationService {
     payForReservation(payload: PayForReservationPayload): Promise<MarketplaceRequest>;
@@ -61,12 +62,12 @@ export class ReservationService implements IReservationService {
                     teacherId: listing.teacherId,
                     reservationId: reservation.id,
                     attemptId: null,
-                    status: 'accepted',
+                    status: MarketplaceRequestStatus.ACCEPTED,
                     fee: reservation.fee,
                     skill: listing.skills?.[0] ?? null,
                     message: `Coaching session booked via marketplace reservation #${reservation.id}`,
                     feedbackPath: null,
-                    requestType: 'booking',
+                    requestType: MarketplaceRequestType.BOOKING,
                 },
                 { transaction: t }
             );

@@ -87,7 +87,24 @@ Reservation.init(
         timestamps: true,
         // Sequelize built-in optimistic locking via version field
         version: true,
-        indexes: [{ fields: ['availabilityId', 'status'], unique: true }]
+        indexes: [
+            // Only one active (pending) reservation per slot at a time
+            {
+                fields: ['availabilityId'],
+                unique: true,
+                where: { status: 'pending' },
+                name: 'reservations_availability_id_pending_unique',
+            },
+            // Only one completed booking per slot (a slot is booked once)
+            {
+                fields: ['availabilityId'],
+                unique: true,
+                where: { status: 'completed' },
+                name: 'reservations_availability_id_completed_unique',
+            },
+            // Note: 'expired' rows are intentionally NOT unique-constrained
+            // because a slot can be abandoned and re-booked multiple times.
+        ]
     }
 );
 

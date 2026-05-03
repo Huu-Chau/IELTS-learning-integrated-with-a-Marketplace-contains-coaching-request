@@ -142,6 +142,45 @@ export class TeacherAvailabilityService implements ITeacherAvailabilityService {
             where: condition,
         });
 
+        const availabilityIds = availabilities.map(a => a.id);
+
+        // --- LAZY CLEANUP ON READ ---
+        // Instantly sweep expired locks for these specific slots so the UI reflects true availability
+        try {
+            const staleReservations = await Reservation.findAll({
+                where: {
+                    status: 'pending',
+                    expiresAt: { [Op.lt]: new Date() },
+                    availabilityId: { [Op.in]: availabilityIds }
+                }
+            });
+            
+            if (staleReservations.length > 0) {
+                const staleIds = staleReservations.map(r => r.id);
+                const staleAvailabilityIds = staleReservations.map(r => r.availabilityId);
+                
+                await Reservation.update(
+                    { status: 'expired' },
+                    { where: { id: { [Op.in]: staleIds } } }
+                );
+                
+                await TeacherAvailability.update(
+                    { isAvailable: true },
+                    { where: { id: { [Op.in]: staleAvailabilityIds } } }
+                );
+                
+                // Mutate the local instances so we return fresh data immediately
+                for (const avail of availabilities) {
+                    if (staleAvailabilityIds.includes(avail.id as number)) {
+                        avail.isAvailable = true;
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('[TeacherAvailabilityService] Error during lazy cleanup on read', err);
+        }
+        // -----------------------------
+
         // 1. Fetch any pending reservations the current student has for these slots
         let reservedAvailabilityIds = new Set<number>();
         if (studentId) {

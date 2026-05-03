@@ -1,10 +1,11 @@
-import { DataTypes, Model } from 'sequelize';
+import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../config/database';
 import Reservation from './Reservation';
-import { NotificationService } from '../services/notificationService';
-import { CreateNotificationPayload, NotificationType } from '../types/notification';
+import { KafkaService } from '../services/queue/KafkaService';
+import { IQueueProvider } from '../services/queue/IQueueProvider';
+import { QueueMessage, QueueTopic } from '../types/queue';
 
-const notificationService = new NotificationService();
+const queueService: IQueueProvider = new KafkaService();
 
 /**
  * MarketplaceRequest model - manages student-teacher review requests.
@@ -13,10 +14,27 @@ const notificationService = new NotificationService();
  * Unified model that replaces both the old Firestore-based request system
  * and serves the new marketplace booking flow.
  */
-class MarketplaceRequest extends Model {
+export interface IMarketplaceRequestAttributes {
+    id: number;
+    studentId: string;
+    reservationId?: number;
+    teacherId: string | null;
+    attemptId: number | null;
+    status: 'pending' | 'accepted' | 'completed' | 'rejected';
+    feedbackPath: string | null;
+    fee: number;
+    message: string | null;
+    skill: string | null;
+    requestType: string;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+export interface IMarketplaceRequestCreationAttributes extends Optional<IMarketplaceRequestAttributes, 'id' | 'status' | 'requestType'> { }
+
+class MarketplaceRequest extends Model<IMarketplaceRequestAttributes, IMarketplaceRequestCreationAttributes> implements IMarketplaceRequestAttributes {
     declare id: number;
     declare studentId: string;            // Firebase UID
-    declare reservationId: number;       // FK → Reservation
+    declare reservationId?: number;       // FK → Reservation
     declare teacherId: string | null;     // Firebase UID (nullable for broadcast requests)
     declare attemptId: number | null;     // Optional — links to Attempts table
     declare status: 'pending' | 'accepted' | 'completed' | 'rejected';
@@ -25,8 +43,6 @@ class MarketplaceRequest extends Model {
     declare message: string | null;       // Student's message / description
     declare skill: string | null;         // e.g. 'Writing', 'Speaking'
     declare requestType: string;          // 'broadcast' | 'targeted' | 'booking'
-    // declare scheduledAt: Date | null;     // The specific time-slot booked
-    // declare durationMinutes: number;      // Duration of the booking
     declare createdAt: Date;
     declare updatedAt: Date;
 }
@@ -45,7 +61,7 @@ MarketplaceRequest.init(
         },
         reservationId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             references: { model: 'Reservations', key: 'id' },
         },
         teacherId: {
@@ -82,15 +98,6 @@ MarketplaceRequest.init(
             allowNull: false,
             defaultValue: 'booking',
         },
-        // scheduledAt: {
-        //     type: DataTypes.DATE,
-        //     allowNull: true,
-        // },
-        // durationMinutes: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     defaultValue: 60,
-        // },
     },
     {
         sequelize,
@@ -98,65 +105,29 @@ MarketplaceRequest.init(
         tableName: 'MarketplaceRequests',
         hooks: {
             afterCreate: async (request) => {
-                // TODO: Will change to Event Driven to create notification
                 try {
-                    const User = (await import('./User')).default;
-
-                    const teacher = request.teacherId ? await User.findByPk(request.teacherId) : null;
-                    const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}`.trim() : 'a teacher';
-                    const payload = new CreateNotificationPayload(
-                        request.studentId,
-                        NotificationType.MARKETPLACE,
-                        'Review Request Pending',
-                        `Your expert review request is waiting. We'll notify you when ${teacherName} responds.`,
-                        '/my-requests',
-                        false,
+                    await queueService.publish<IMarketplaceRequestAttributes>(
+                        new QueueMessage<IMarketplaceRequestAttributes>(request.toJSON<IMarketplaceRequestAttributes>()),
+                        QueueTopic.MARKETPLACE_REQUEST_CREATED,
                     );
-                    await notificationService.createNotification(payload);
-
+                    console.log("✅ MarketplaceRequest created and message published to Kafka");
                 } catch (err) {
-                    console.error('[MarketplaceRequest Hook] afterCreate error', err);
+                    console.error('[MarketplaceRequest Hook] afterCreate publish error', err);
                 }
             },
             afterUpdate: async (request, options) => {
-                // TODO: Will change to Event Driven to create notification
-                if (request.changed('status')) {
-                    try {
-                        const User = (await import('./User')).default;
+                if (!request.changed('status')) {
+                    return;
+                }
 
-                        const teacher = request.teacherId ? await User.findByPk(request.teacherId) : null;
-                        const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}`.trim() : 'a teacher';
-
-                        const statusMessages: Record<string, { title: string; body: string }> = {
-                            accepted: {
-                                title: '🎉 Request Accepted!',
-                                body: `${teacherName} has accepted your review request. Check your requests page.`,
-                            },
-                            completed: {
-                                title: '✅ Review Completed',
-                                body: `${teacherName} has completed your IELTS review. Your feedback is ready!`,
-                            },
-                            rejected: {
-                                title: 'Request Declined',
-                                body: `${teacherName} was unable to accept your request. Try another tutor.`,
-                            },
-                        };
-
-                        const msg = statusMessages[request.status];
-                        if (msg) {
-                            const payload = new CreateNotificationPayload(
-                                request.studentId,
-                                NotificationType.MARKETPLACE,
-                                msg.title,
-                                msg.body,
-                                '/my-requests',
-                                false,
-                            );
-                            await notificationService.createNotification(payload);
-                        }
-                    } catch (err) {
-                        console.error('[MarketplaceRequest Hook] afterUpdate error', err);
-                    }
+                try {
+                    await queueService.publish<IMarketplaceRequestAttributes>(
+                        new QueueMessage<IMarketplaceRequestAttributes>(request.toJSON<IMarketplaceRequestAttributes>()),
+                        QueueTopic.MARKETPLACE_REQUEST_STATUS_UPDATED,
+                    );
+                    console.log("✅ MarketplaceRequest status updated and message published to Kafka");
+                } catch (err) {
+                    console.error('[MarketplaceRequest Hook] afterUpdate publish error', err);
                 }
             }
         }

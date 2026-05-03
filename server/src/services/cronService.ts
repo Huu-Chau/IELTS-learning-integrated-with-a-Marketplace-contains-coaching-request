@@ -2,11 +2,13 @@ import cron from 'node-cron';
 import { Op } from 'sequelize';
 import MarketplaceRequest from '../models/MarketplaceRequest';
 import User from '../models/User';
-import Notification from '../models/Notification';
 import sequelize from '../config/database';
 import Reservation from '../models/Reservation';
 import TeacherAvailability from '../models/TeacherAvailability';
+import { NotificationService } from '../services/notificationService';
+import { CreateNotificationPayload, NotificationType } from '../types/notification';
 
+const notificationService = new NotificationService();
 // ─────────────────────────────────────────────────────────────────────────────
 // TASK 1: Auto-Complete Sessions & Release Funds (runs daily at 02:00 AM)
 // Finds accepted bookings whose scheduledAt is more than 24 hours in the past
@@ -59,24 +61,26 @@ async function autoCompleteSessions() {
                 }
 
                 // Notify teacher
-                await Notification.create({
-                    userId: teacherId,
-                    type: 'payment',
-                    title: '💸 Session Completed & Funds Released!',
-                    body: `Your session has been auto-completed. ${Number(req.fee)} 🧠 has been added to your wallet balance.`,
-                    linkPath: '/teacher/payments',
-                    isRead: false,
-                }, { transaction: t });
+                const teacherPayload = new CreateNotificationPayload(
+                    teacherId,
+                    NotificationType.PAYMENT,
+                    '💸 Session Completed & Funds Released!',
+                    `Your session has been auto-completed. ${Number(req.fee)} 🧠 has been added to your wallet balance.`,
+                    '/teacher/payments',
+                );
 
                 // Notify student
-                await Notification.create({
-                    userId: req.studentId,
-                    type: 'order',
-                    title: '✅ Session Marked Complete',
-                    body: `Your coaching session has been marked as complete. We hope it was helpful!`,
-                    linkPath: '/my-requests',
-                    isRead: false,
-                }, { transaction: t });
+                const studentPayload = new CreateNotificationPayload(
+                    req.studentId,
+                    NotificationType.ORDER,
+                    '✅ Session Marked Complete',
+                    `Your coaching session has been marked as complete. We hope it was helpful!`,
+                    '/my-requests',
+                );
+                await Promise.all([
+                    notificationService.createNotification(teacherPayload),
+                    notificationService.createNotification(studentPayload)
+                ]);
             });
 
             console.log('[CronService] autoCompleteSessions: completed request', { id: req.id });
@@ -134,14 +138,14 @@ async function autoRejectStaleRequests() {
                 }
 
                 // Notify student
-                await Notification.create({
-                    userId: req.studentId,
-                    type: 'order',
-                    title: '🔄 Booking Auto-Cancelled & Refunded',
-                    body: `Your tutor did not respond within 48 hours. ${Number(req.fee)} 🧠 has been refunded to your wallet.`,
-                    linkPath: '/payments',
-                    isRead: false,
-                }, { transaction: t });
+                const payload = new CreateNotificationPayload(
+                    req.studentId,
+                    NotificationType.ORDER,
+                    '🔄 Booking Auto-Cancelled & Refunded',
+                    `Your tutor did not respond within 48 hours. ${Number(req.fee)} 🧠 has been refunded to your wallet.`,
+                    '/payments',
+                );
+                await notificationService.createNotification(payload);
             });
 
             console.log('[CronService] autoRejectStaleRequests: rejected request', { id: req.id });
@@ -191,27 +195,31 @@ async function sendSessionReminders() {
         }
 
         for (const req of upcomingSessions) {
+            // TODO: Will change to Event Driven to create notification
+            const promises = [];
             // Notify student
-            await Notification.create({
-                userId: req.studentId,
-                type: 'order',
-                title: '⏰ Session Reminder — Tomorrow!',
-                body: `Your coaching session starts in approximately 24 hours. Make sure you're prepared!`,
-                linkPath: '/my-requests',
-                isRead: false,
-            });
+            const studentPayload = new CreateNotificationPayload(
+                req.studentId,
+                NotificationType.ORDER,
+                '⏰ Session Reminder — Tomorrow!',
+                `Your coaching session starts in approximately 24 hours. Make sure you're prepared!`,
+                '/my-requests',
+            );
+            promises.push(notificationService.createNotification(studentPayload));
 
             // Notify teacher
             if (req.teacherId) {
-                await Notification.create({
-                    userId: req.teacherId,
-                    type: 'order',
-                    title: '⏰ Upcoming Session Tomorrow',
-                    body: `You have a coaching session scheduled in approximately 24 hours. Please be ready!`,
-                    linkPath: '/teacher/marketplace',
-                    isRead: false,
-                });
+                const teacherPayload = new CreateNotificationPayload(
+                    req.teacherId,
+                    NotificationType.ORDER,
+                    '⏰ Upcoming Session Tomorrow',
+                    `You have a coaching session scheduled in approximately 24 hours. Please be ready!`,
+                    '/teacher/marketplace',
+                );
+                promises.push(notificationService.createNotification(teacherPayload));
             }
+
+            await Promise.all(promises);
         }
 
         console.log('[CronService] sendSessionReminders success', { count: upcomingSessions.length });

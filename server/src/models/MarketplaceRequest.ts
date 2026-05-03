@@ -1,6 +1,10 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../config/database';
 import Reservation from './Reservation';
+import { NotificationService } from '../services/notificationService';
+import { CreateNotificationPayload, NotificationType } from '../types/notification';
+
+const notificationService = new NotificationService();
 
 /**
  * MarketplaceRequest model - manages student-teacher review requests.
@@ -94,29 +98,30 @@ MarketplaceRequest.init(
         tableName: 'MarketplaceRequests',
         hooks: {
             afterCreate: async (request) => {
+                // TODO: Will change to Event Driven to create notification
                 try {
-                    const Notification = (await import('./Notification')).default;
                     const User = (await import('./User')).default;
 
                     const teacher = request.teacherId ? await User.findByPk(request.teacherId) : null;
                     const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}`.trim() : 'a teacher';
+                    const payload = new CreateNotificationPayload(
+                        request.studentId,
+                        NotificationType.MARKETPLACE,
+                        'Review Request Pending',
+                        `Your expert review request is waiting. We'll notify you when ${teacherName} responds.`,
+                        '/my-requests',
+                        false,
+                    );
+                    await notificationService.createNotification(payload);
 
-                    await Notification.create({
-                        userId: request.studentId,
-                        type: 'marketplace',
-                        title: 'Review Request Pending',
-                        body: `Your expert review request is waiting. We'll notify you when ${teacherName} responds.`,
-                        linkPath: '/my-requests',
-                        isRead: true // Don't trigger unread badge for creating your own request
-                    });
                 } catch (err) {
                     console.error('[MarketplaceRequest Hook] afterCreate error', err);
                 }
             },
             afterUpdate: async (request, options) => {
+                // TODO: Will change to Event Driven to create notification
                 if (request.changed('status')) {
                     try {
-                        const Notification = (await import('./Notification')).default;
                         const User = (await import('./User')).default;
 
                         const teacher = request.teacherId ? await User.findByPk(request.teacherId) : null;
@@ -139,14 +144,15 @@ MarketplaceRequest.init(
 
                         const msg = statusMessages[request.status];
                         if (msg) {
-                            await Notification.create({
-                                userId: request.studentId,
-                                type: 'marketplace',
-                                title: msg.title,
-                                body: msg.body,
-                                linkPath: '/my-requests',
-                                isRead: false // Trigger unread badge
-                            });
+                            const payload = new CreateNotificationPayload(
+                                request.studentId,
+                                NotificationType.MARKETPLACE,
+                                msg.title,
+                                msg.body,
+                                '/my-requests',
+                                false,
+                            );
+                            await notificationService.createNotification(payload);
                         }
                     } catch (err) {
                         console.error('[MarketplaceRequest Hook] afterUpdate error', err);

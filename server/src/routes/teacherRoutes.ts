@@ -7,6 +7,10 @@ import Notification from '../models/Notification';
 import MarketplaceRequest from '../models/MarketplaceRequest';
 import User from '../models/User';
 import TeacherAvailability from '../models/TeacherAvailability';
+import { NotificationService } from '../services/notificationService';
+import { CreateNotificationPayload, NotificationType } from '../types/notification';
+
+const notificationService = new NotificationService();
 
 const router = Router();
 
@@ -307,18 +311,19 @@ router.patch('/orders/:id', async (req: Request, res: Response): Promise<void> =
         await order.update({ status, feedbackPath });
 
         // Notify student on status change
+        // TODO: Will change to Event Driven to create notification and message
         const teacher = await User.findByPk(req.user!.uid, { attributes: ['firstName', 'lastName'] });
         const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}`.trim() : 'Your teacher';
+        let notificationPayload: CreateNotificationPayload | undefined;
 
         if (status === 'accepted') {
-            await Notification.create({
-                userId: order.studentId,
-                type: 'order',
-                title: '🎉 Request Accepted!',
-                body: `${teacherName} has accepted your review request. Check your marketplace requests.`,
-                linkPath: '/my-requests',
-            });
-
+            notificationPayload = new CreateNotificationPayload(
+                order.studentId,
+                NotificationType.ORDER,
+                '🎉 Request Accepted!',
+                `${teacherName} has accepted your review request. Check your marketplace requests.`,
+                '/my-requests',
+            );
             // ── Seed a conversation message so chat inbox is never empty ──
             const conversationId = buildConversationId(req.user!.uid, order.studentId);
             const skillLabel = order.skill ? `IELTS ${order.skill}` : 'your session';
@@ -331,13 +336,17 @@ router.patch('/orders/:id', async (req: Request, res: Response): Promise<void> =
             });
             console.log('[TeacherRoutes] seeded conversation message', { conversationId });
         } else if (status === 'rejected') {
-            await Notification.create({
-                userId: order.studentId,
-                type: 'order',
-                title: 'Request Declined',
-                body: `${teacherName} was unable to accept your request. You can browse other tutors in the marketplace.`,
-                linkPath: '/marketplace',
-            });
+            notificationPayload = new CreateNotificationPayload(
+                order.studentId,
+                NotificationType.ORDER,
+                'Request Declined',
+                `${teacherName} was unable to accept your request. You can browse other tutors in the marketplace.`,
+                '/marketplace',
+            );
+        }
+
+        if (notificationPayload) {
+            await notificationService.createNotification(notificationPayload);
         }
 
         console.log('[TeacherRoutes] PATCH /orders/:id success', { id: order.id, status });
@@ -402,6 +411,7 @@ router.get('/transactions', async (req: Request, res: Response): Promise<void> =
  * POST /api/teacher/withdraw
  * Simulate a withdrawal request. Deducts from wallet_balance and records a notification.
  * Body: { amount: number }
+ * TODO: Need to handle TOCTOU race condition
  */
 router.post('/withdraw', async (req: Request, res: Response): Promise<void> => {
     console.log('[TeacherRoutes] POST /withdraw called', { uid: req.user?.uid, body: req.body });
@@ -432,13 +442,15 @@ router.post('/withdraw', async (req: Request, res: Response): Promise<void> => {
         await teacher.update({ wallet_balance: currentBalance - withdrawAmount });
 
         // Create a system notification for the teacher
-        await Notification.create({
-            userId: teacherId,
-            type: 'payment',
-            title: 'Withdrawal Requested',
-            body: `Your withdrawal of ${withdrawAmount.toLocaleString('vi-VN')} Brain Credits has been submitted. Processing takes 1–3 business days.`,
-            linkPath: '/teacher/payments',
-        });
+        // TODO: Will change to Event Driven to create notification 
+        const payload = new CreateNotificationPayload(
+            teacherId,
+            NotificationType.PAYMENT,
+            'Withdrawal Requested',
+            `Your withdrawal of ${withdrawAmount.toLocaleString('vi-VN')} Brain Credits has been submitted. Processing takes 1–3 business days.`,
+            '/teacher/payments',
+        );
+        await notificationService.createNotification(payload);
 
         console.log('[TeacherRoutes] POST /withdraw success', { newBalance: currentBalance - withdrawAmount });
         res.json({ success: true, newBalance: currentBalance - withdrawAmount });
@@ -491,6 +503,7 @@ router.get('/conversations', async (req: Request, res: Response): Promise<void> 
             }
         }
 
+        // TODO: Find by ids instead of findByPk in a loop
         const conversations = await Promise.all(
             Array.from(convMap.values()).map(async (conv) => {
                 const otherUser = await User.findByPk(conv.otherId, {
@@ -565,14 +578,6 @@ router.post('/messages/:receiverId', async (req: Request, res: Response): Promis
             receiverId,
             content,
             type,
-        });
-
-        await Notification.create({
-            userId: receiverId,
-            type: 'message',
-            title: 'New message',
-            body: content.length > 60 ? content.slice(0, 57) + '...' : content,
-            linkPath: '/teacher/messages',
         });
 
         // Emit new message event to the receiver's room, and the sender's room

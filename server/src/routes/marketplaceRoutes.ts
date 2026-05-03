@@ -8,6 +8,10 @@ import User from '../models/User';
 import Reservation from '../models/Reservation';
 import { GetAvailabilityParams } from '../types/availability';
 import { TeacherAvailabilityService, ITeacherAvailabilityService } from '../services/teacherAvailabilityService';
+import { NotificationService } from '../services/notificationService';
+import { CreateNotificationPayload, NotificationType } from '../types/notification';
+
+const notificationService = new NotificationService();
 
 const router = Router();
 // ─── All routes require authentication ────────────────────────────────────────
@@ -261,26 +265,28 @@ router.post('/requests', async (req: Request, res: Response): Promise<void> => {
         });
 
         // ── Fire notifications to both parties ──────────────────────────
-
+        // TODO: Will change to Event Driven to create notification
         // 1. Student: payment / booking confirmation
-        await Notification.create({
-            userId: studentId,
-            type: 'payment',
-            title: '✅ Booking Confirmed!',
-            body: `Your payment of ${amountFormatted} VND for "${serviceLabel}" has been received. Waiting for tutor confirmation.`,
-            linkPath: '/payments',
-            isRead: false,
-        });
+        const studentPayload = new CreateNotificationPayload(
+            request.studentId,
+            NotificationType.PAYMENT,
+            '✅ Booking Confirmed!',
+            `Your payment of ${amountFormatted} VND for "${serviceLabel}" has been received. Waiting for tutor confirmation.`,
+            '/payments',
+        );
 
         // 2. Teacher: new order alert
-        await Notification.create({
-            userId: teacherId,
-            type: 'order',
-            title: '🛎️ New Booking Request',
-            body: `${studentName} has booked your "${serviceLabel}" service for ${amountFormatted} VND. Please review and accept.`,
-            linkPath: '/teacher/marketplace',
-            isRead: false,
-        });
+        const teacherPayload = new CreateNotificationPayload(
+            teacherId,
+            NotificationType.ORDER,
+            '🛎️ New Booking Request',
+            `${studentName} has booked your "${serviceLabel}" service for ${amountFormatted} VND. Please review and accept.`,
+            '/teacher/marketplace',
+        );
+        await Promise.all([
+            notificationService.createNotification(studentPayload),
+            notificationService.createNotification(teacherPayload),
+        ]);
 
         console.log('[MarketplaceRoutes] POST /requests success', { id: request.id, fee: request.fee });
         res.status(201).json({

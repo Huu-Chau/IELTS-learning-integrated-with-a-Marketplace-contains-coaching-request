@@ -1,5 +1,9 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../config/database';
+import { CreateNotificationPayload, NotificationType } from '../types/notification';
+import { NotificationService } from '../services/notificationService';
+
+const notificationService = new NotificationService();
 
 /**
  * Attempt model - stores IELTS test results.
@@ -55,19 +59,18 @@ Attempt.init(
         tableName: 'Attempts',
         hooks: {
             afterCreate: async (attempt) => {
+                // TODO: Will change to Event Driven to create notification
                 try {
-                    const Notification = (await import('./Notification')).default;
                     const typeLabel = attempt.type.charAt(0).toUpperCase() + attempt.type.slice(1);
                     const scoreStr = attempt.score ? ` · Band ${attempt.score.toFixed(1)}` : '';
-                    
-                    await Notification.create({
-                        userId: attempt.userId,
-                        type: 'attempt',
-                        title: `${typeLabel} Test Completed${scoreStr}`,
-                        body: `Your ${attempt.type} mock test result has been saved to your progress.`,
-                        linkPath: '/progress',
-                        isRead: false
-                    });
+                    const payload = new CreateNotificationPayload(
+                        attempt.userId,
+                        NotificationType.ATTEMPT,
+                        `${typeLabel} Test Completed${scoreStr}`,
+                        `Your ${attempt.type} mock test result has been saved to your progress.`,
+                        '/progress',
+                    );
+                    await notificationService.createNotification(payload);
                 } catch (err) {
                     console.error('[Attempt Hook] Failed to create notification:', err);
                 }

@@ -15,7 +15,6 @@ import {
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useAuth } from '@/context/AuthContext';
-import { apiClient } from '@/services/apiClient';
 
 function cn(...inputs: (string | undefined | null | false)[]) {
     return twMerge(clsx(inputs));
@@ -50,7 +49,7 @@ export default function TeacherLayout({ children, unreadMessages = 0, unreadNoti
     const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, logout, getIdToken } = useAuth();
+    const { user, logout } = useAuth();
 
     // Auto open/close when window crosses the lg breakpoint
     useEffect(() => {
@@ -59,33 +58,9 @@ export default function TeacherLayout({ children, unreadMessages = 0, unreadNoti
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // Self-fetch live unread counts on mount so the bell dot is always accurate
-    const [liveUnreadNotifications, setLiveUnreadNotifications] = useState(unreadNotifications);
-    const [liveUnreadMessages, setLiveUnreadMessages] = useState(unreadMessages);
-
-    useEffect(() => {
-        if (!user) return;
-        async function fetchStats() {
-            try {
-                console.log('[TeacherLayout] fetchStats called');
-                const token = await getIdToken();
-                const stats = await apiClient.get('/teacher/stats', token);
-                setLiveUnreadNotifications(stats.unreadNotifications ?? 0);
-                setLiveUnreadMessages(stats.unreadMessages ?? 0);
-                console.log('[TeacherLayout] fetchStats success', { stats });
-            } catch (err) {
-                console.error('[TeacherLayout] fetchStats error', err);
-            }
-        }
-        fetchStats();
-        // Refresh every 30 s
-        const interval = setInterval(fetchStats, 30000);
-        return () => clearInterval(interval);
-    }, [user, getIdToken]);
-
     const badgeCounts: Record<string, number> = {
-        unreadMessages: liveUnreadMessages,
-        unreadNotifications: liveUnreadNotifications,
+        unreadMessages,
+        unreadNotifications,
     };
 
     const handleLogout = async () => {
@@ -222,7 +197,7 @@ export default function TeacherLayout({ children, unreadMessages = 0, unreadNoti
                             className="relative p-2 text-gray-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-indigo-50"
                         >
                             <Bell className="h-5 w-5" />
-                            {liveUnreadNotifications > 0 && (
+                            {unreadNotifications > 0 && (
                                 <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full border-2 border-white" />
                             )}
                         </Link>

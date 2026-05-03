@@ -3,7 +3,7 @@ import { IQueueProvider } from "./IQueueProvider";
 import { QueueMessage } from "../../types/queue";
 import kafkaConfig from '../../config/kafka';
 
-export class KafkaProvider implements IQueueProvider {
+export class KafkaService implements IQueueProvider {
     private kafka: Kafka;
     private producer: Producer;
     private producerConnectPromise: Promise<void> | null = null;
@@ -13,6 +13,11 @@ export class KafkaProvider implements IQueueProvider {
         this.kafka = new Kafka({
             clientId: kafkaConfig.clientId,
             brokers: kafkaConfig.brokers,
+            connectionTimeout: 3000,
+            retry: {
+                initialRetryTime: 100,
+                retries: 8
+            }
         });
         this.producer = this.kafka.producer();
     }
@@ -35,6 +40,7 @@ export class KafkaProvider implements IQueueProvider {
         if (!this.producerConnectPromise) {
             this.producerConnectPromise = this.producer.connect().catch((err: any) => {
                 this.producerConnectPromise = null;
+                console.log('[KafkaService] Failed to connect to Kafka:', err);
                 throw err;
             });
         }
@@ -47,7 +53,7 @@ export class KafkaProvider implements IQueueProvider {
         await consumer.subscribe({ topic, fromBeginning: kafkaConfig.fromBeginning });
     }
 
-    async publish(message: QueueMessage<any>, topic: string): Promise<void> {
+    async publish<T>(message: QueueMessage<T>, topic: string): Promise<void> {
         try {
             await this.ensureProducerConnected();
             await this.producer.send({
@@ -55,12 +61,12 @@ export class KafkaProvider implements IQueueProvider {
                 messages: [{ value: JSON.stringify(message) }],
             });
         } catch (error) {
-            console.error('Failed to send Kafka message:', error);
+            console.error('[KafkaService] Failed to send Kafka message:', error);
             throw error;
         }
     }
 
-    async consume(topic: string, domain: string, handler: (message: QueueMessage<any>) => Promise<void>): Promise<void> {
+    async consume<T>(topic: string, domain: string, handler: (message: QueueMessage<T>) => Promise<void>): Promise<void> {
         const consumer = this.getConsumer(topic, domain);
 
         await this.ensureConsumerConnected(consumer, topic);
@@ -71,13 +77,29 @@ export class KafkaProvider implements IQueueProvider {
                     return;
                 }
                 try {
-                    const parsedMessage: QueueMessage<any> = JSON.parse(message.value.toString());
+                    const parsedMessage: QueueMessage<T> = JSON.parse(message.value.toString());
                     await handler(parsedMessage);
                 } catch (error) {
-                    console.error('Error processing Kafka message:', error);
+                    console.error('[KafkaService] Error processing Kafka message:', error);
                 }
             },
         });
     }
 
+    async disconnect(): Promise<void> {
+        try {
+            const disconnectPromises: Promise<void>[] = [];
+            if (this.producerConnectPromise) {
+                disconnectPromises.push(this.producer.disconnect());
+            }
+            for (const consumer of this.consumerMapper.values()) {
+                disconnectPromises.push(consumer.disconnect());
+            }
+            await Promise.all(disconnectPromises);
+            console.log('[KafkaService] ✅ Disconnected from Kafka successfully');
+        } catch (error) {
+            console.error('[KafkaService] ❌ Error during disconnect:', error);
+            throw error;
+        }
+    }
 }

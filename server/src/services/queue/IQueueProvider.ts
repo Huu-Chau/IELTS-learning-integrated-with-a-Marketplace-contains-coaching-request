@@ -1,10 +1,11 @@
 import { QueueMessage } from '../../types/queue';
 
 export interface IQueueProvider {
-    publish(
-        message: QueueMessage<any>,
+    publish<T>(
+        message: QueueMessage<T>,
         topic: string,
         routingKey?: string,
     ): Promise<void>;
-    consume(topic: string, domain: string, handler: (message: QueueMessage<any>) => Promise<void>): Promise<void>;
+    consume<T>(topic: string, domain: string, handler: (message: QueueMessage<T>) => Promise<void>): Promise<void>;
+    disconnect?(): Promise<void>;
 }

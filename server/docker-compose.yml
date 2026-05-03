@@ -45,9 +45,29 @@ services:
     tty: true
     depends_on:
       - postgres
-    links:
-      - postgres
     command: sh -c "npm install && npm run dev:cron"
+
+  consumer:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    networks:
+      - ielts-network
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    restart: unless-stopped
+    tty: true
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_started
+    command: sh -c "npm install && npm run dev:consumer"
 
   postgres:
     image: 'postgres:13'
@@ -100,6 +120,8 @@ services:
   # ── Kafka ──
   kafka:
     image: confluentinc/cp-kafka:7.6.1
+    networks:
+      - ielts-network
     ports:
       - "29092:29092"
     environment:
@@ -127,6 +149,8 @@ services:
   # ── Kafka UI ──
   kafka-ui:
     image: provectuslabs/kafka-ui:v0.7.2
+    networks:
+      - ielts-network
     environment:
       KAFKA_CLUSTERS_0_NAME: local-kafka
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092

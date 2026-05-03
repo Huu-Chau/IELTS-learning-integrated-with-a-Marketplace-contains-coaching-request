@@ -8,6 +8,7 @@
     "start": "node dist/server.js",
     "dev": "nodemon src/server.ts",
     "dev:cron": "nodemon src/cron.ts",
+    "dev:consumer": "nodemon src/consumer.ts",
     "build": "tsc",
     "postbuild": "mkdir -p dist/database/practice && (ls src/database/practice/*.json >/dev/null 2>&1 && cp src/database/practice/*.json dist/database/practice/ || true)",
     "migration:generate": "sequelize-cli migration:generate --name",

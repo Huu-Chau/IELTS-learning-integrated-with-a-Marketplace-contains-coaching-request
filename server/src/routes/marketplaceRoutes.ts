@@ -266,28 +266,7 @@ router.post('/requests', async (req: Request, res: Response): Promise<void> => {
         });
 
         // ── Fire notifications to both parties ──────────────────────────
-        // TODO: Will change to Event Driven to create notification
-        // 1. Student: payment / booking confirmation
-        const studentPayload = new CreateNotificationPayload(
-            request.studentId,
-            NotificationType.PAYMENT,
-            '✅ Booking Confirmed!',
-            `Your payment of ${amountFormatted} VND for "${serviceLabel}" has been received. Waiting for tutor confirmation.`,
-            '/payments',
-        );
-
-        // 2. Teacher: new order alert
-        const teacherPayload = new CreateNotificationPayload(
-            teacherId,
-            NotificationType.ORDER,
-            '🛎️ New Booking Request',
-            `${studentName} has booked your "${serviceLabel}" service for ${amountFormatted} VND. Please review and accept.`,
-            '/teacher/marketplace',
-        );
-        await Promise.all([
-            notificationService.createNotification(studentPayload),
-            notificationService.createNotification(teacherPayload),
-        ]);
+        // (Handled automatically by Event-Driven Kafka consumer on afterCreate hook)
 
         console.log('[MarketplaceRoutes] POST /requests success', { id: request.id, fee: request.fee });
         res.status(201).json({

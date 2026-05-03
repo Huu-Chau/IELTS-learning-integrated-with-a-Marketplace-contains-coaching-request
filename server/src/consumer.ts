@@ -1,4 +1,6 @@
 import dotenv from 'dotenv';
+dotenv.config();
+
 import sequelize from './config/database';
 import { KafkaService } from './services/queue/KafkaService';
 import { IQueueProvider } from './services/queue/IQueueProvider';
@@ -7,14 +9,16 @@ import {
     NotificationOnAttemptCreatedConsumer,
     NotificationOnMarketplaceRequestCreatedConsumer,
     NotificationOnMarketplaceRequestStatusUpdatedConsumer,
-    NotificationOnWritingSessionStatusUpdatedConsumer
+    NotificationOnWritingSessionStatusUpdatedConsumer,
+    MessageOnMarketplaceRequestStatusUpdatedConsumer,
 } from './consumers';
 import { INotificationService, NotificationService } from './services/notificationService';
+import { IMessageService, MessageService } from './services/messageService';
 
 const queueService: IQueueProvider = new KafkaService();
 const notificationService: INotificationService = new NotificationService();
+const messageService: IMessageService = new MessageService();
 
-dotenv.config();
 
 console.log('[Consumer] Starting standalone consumer process...');
 
@@ -49,6 +53,7 @@ sequelize.authenticate()
             new NotificationOnMarketplaceRequestCreatedConsumer(queueService, notificationService),
             new NotificationOnMarketplaceRequestStatusUpdatedConsumer(queueService, notificationService),
             new NotificationOnWritingSessionStatusUpdatedConsumer(queueService, notificationService),
+            new MessageOnMarketplaceRequestStatusUpdatedConsumer(queueService, messageService),
         ];
 
         await Promise.all(consumers.map(consumer => consumer.consume()));

@@ -10,18 +10,16 @@ import TeacherAvailability from '../models/TeacherAvailability';
 import { NotificationService } from '../services/notificationService';
 import { CreateNotificationPayload, NotificationType } from '../types/notification';
 import sequelize from '../config/database';
+import { CreateMessagePayload } from '../types/message';
+import { IMessageService, MessageService } from '../services/messageService';
 
 const notificationService = new NotificationService();
+const messageService: IMessageService = new MessageService();
 
 const router = Router();
 
 // ─── Middleware: all routes require a valid token ─────────────────────────────
 router.use(verifyToken());
-
-// ─── Helper: build a stable conversationId from two UIDs ─────────────────────
-function buildConversationId(uid1: string, uid2: string): string {
-    return [uid1, uid2].sort().join('_');
-}
 
 // =============================================================================
 // DASHBOARD STATS
@@ -311,45 +309,6 @@ router.patch('/orders/:id', async (req: Request, res: Response): Promise<void> =
         const { status, feedbackPath } = req.body;
         await order.update({ status, feedbackPath });
 
-        // Notify student on status change
-        // TODO: Will change to Event Driven to create notification and message
-        const teacher = await User.findByPk(req.user!.uid, { attributes: ['firstName', 'lastName'] });
-        const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}`.trim() : 'Your teacher';
-        let notificationPayload: CreateNotificationPayload | undefined;
-
-        if (status === 'accepted') {
-            notificationPayload = new CreateNotificationPayload(
-                order.studentId,
-                NotificationType.ORDER,
-                '🎉 Request Accepted!',
-                `${teacherName} has accepted your review request. Check your marketplace requests.`,
-                '/my-requests',
-            );
-            // ── Seed a conversation message so chat inbox is never empty ──
-            const conversationId = buildConversationId(req.user!.uid, order.studentId);
-            const skillLabel = order.skill ? `IELTS ${order.skill}` : 'your session';
-            await Message.create({
-                conversationId,
-                senderId: req.user!.uid,
-                receiverId: order.studentId,
-                content: `Hi! I've accepted your request for ${skillLabel}. Feel free to ask me any questions or share your speaking recording here.`,
-                type: 'text',
-            });
-            console.log('[TeacherRoutes] seeded conversation message', { conversationId });
-        } else if (status === 'rejected') {
-            notificationPayload = new CreateNotificationPayload(
-                order.studentId,
-                NotificationType.ORDER,
-                'Request Declined',
-                `${teacherName} was unable to accept your request. You can browse other tutors in the marketplace.`,
-                '/marketplace',
-            );
-        }
-
-        if (notificationPayload) {
-            await notificationService.createNotification(notificationPayload);
-        }
-
         console.log('[TeacherRoutes] PATCH /orders/:id success', { id: order.id, status });
         res.json(order);
     } catch (error) {
@@ -576,15 +535,16 @@ router.post('/messages/:receiverId', async (req: Request, res: Response): Promis
             return;
         }
 
-        const conversationId = buildConversationId(senderId, receiverId);
+        const conversationId = MessageService.buildConversationId(senderId, receiverId);
 
-        const message = await Message.create({
+        const payload = new CreateMessagePayload(
             conversationId,
             senderId,
             receiverId,
             content,
             type,
-        });
+        );
+        const message = await messageService.createMessage(payload);
 
         // Emit new message event to the receiver's room, and the sender's room
         const io = req.app.get('io');

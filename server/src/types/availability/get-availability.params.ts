@@ -3,5 +3,6 @@ export class GetAvailabilityParams {
         readonly teacherId: string,
         readonly from?: Date,
         readonly to?: Date,
+        readonly studentId?: string,
     ) { }
 }

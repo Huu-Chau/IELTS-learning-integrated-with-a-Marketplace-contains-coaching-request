@@ -51,11 +51,10 @@ function ReservationBadge({ status, isOwn, expiresAt }: StatusBadgeProps) {
             : `In checkout${mins !== null ? ` (${mins}:${String(secs).padStart(2, '0')})` : ''}`;
 
         return (
-            <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
-                isOwn
+            <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${isOwn
                     ? 'bg-amber-100 text-amber-700'
                     : 'bg-orange-100 text-orange-600'
-            }`}>
+                }`}>
                 <Lock className="h-3 w-3" />
                 {label}
             </span>
@@ -84,7 +83,7 @@ export default function TeacherCard({ listing, onReserved }: TeacherCardProps) {
     // Derived booleans for clarity
     const isAvailable = listing.reservationStatus === 'available';
     const isPendingByOther = listing.reservationStatus === 'pending' && !listing.isOwnReservation;
-    const isBooked = listing.reservationStatus === 'booked';
+    const isBooked = false;
     const canBook = isAvailable; // only allow new bookings when slot is free
 
     const handleBookClick = () => {
@@ -100,13 +99,12 @@ export default function TeacherCard({ listing, onReserved }: TeacherCardProps) {
     };
 
     return (
-        <div className={`bg-white rounded-xl border shadow-sm transition-all duration-200 overflow-hidden flex flex-col ${
-            isBooked
+        <div className={`bg-white rounded-xl border shadow-sm transition-all duration-200 overflow-hidden flex flex-col ${isBooked
                 ? 'border-gray-200 opacity-60'
                 : isPendingByOther
                     ? 'border-orange-200'
                     : 'border-gray-200 hover:shadow-md hover:-translate-y-0.5'
-        }`}>
+            }`}>
 
             {/* Conflict alert banner */}
             {showConflictAlert && (
@@ -193,13 +191,12 @@ export default function TeacherCard({ listing, onReserved }: TeacherCardProps) {
                     id={`book-listing-${listing.id}`}
                     onClick={handleBookClick}
                     disabled={isBooked}
-                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                        isBooked
+                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${isBooked
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             : isPendingByOther
                                 ? 'bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100'
                                 : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-200'
-                    }`}
+                        }`}
                 >
                     {isBooked ? 'Sold Out' : isPendingByOther ? 'Notify Me' : listing.isOwnReservation ? 'Continue Booking' : 'Book Now'}
                 </button>

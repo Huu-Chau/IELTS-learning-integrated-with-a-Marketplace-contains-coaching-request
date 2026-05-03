@@ -10,7 +10,7 @@ export interface TeacherAvailability {
     startTime: string;  // HH:mm
     endTime: string;    // HH:mm
     timezone?: string;
-    isAvailable: boolean;
+    reservationStatus: 'available' | 'pending' | 'booked';
 }
 
 interface CalendarMatrixProps {
@@ -153,7 +153,7 @@ export default function CalendarMatrix({ teacherId, onSlotSelected, selectedSlot
             <div className="grid grid-cols-7 gap-1.5">
                 {weekDays.map((day) => {
                     const daySlotList = slotsByDate[day.toDateString()] ?? [];
-                    const availableCount = daySlotList.filter((s) => s.isAvailable).length;
+                    const availableCount = daySlotList.filter((s) => s.reservationStatus !== 'booked').length;
                     const isSelected = selectedDate && isSameDay(day, selectedDate);
                     const isPast = day < today;
 
@@ -162,13 +162,12 @@ export default function CalendarMatrix({ teacherId, onSlotSelected, selectedSlot
                             key={day.toISOString()}
                             onClick={() => !isPast && setSelectedDate(day)}
                             disabled={isPast || availableCount === 0}
-                            className={`flex flex-col items-center py-3 px-1 rounded-xl border transition-all text-center ${
-                                isSelected
-                                    ? 'border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-200'
-                                    : isPast || availableCount === 0
+                            className={`flex flex-col items-center py-3 px-1 rounded-xl border transition-all text-center ${isSelected
+                                ? 'border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                                : isPast || availableCount === 0
                                     ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
                                     : 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50 text-gray-700'
-                            }`}
+                                }`}
                         >
                             <span className="text-[11px] font-medium uppercase tracking-wide">
                                 {DAY_SHORT[day.getDay()]}
@@ -194,22 +193,28 @@ export default function CalendarMatrix({ teacherId, onSlotSelected, selectedSlot
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {daySlots.map((slot, idx) => {
                             const isChosen = selectedSlot?.id === slot.id;
+                            const isBooked = slot.reservationStatus === 'booked';
+                            const isPending = slot.reservationStatus === 'pending';
+
                             return (
                                 <button
                                     key={idx}
-                                    disabled={!slot.isAvailable}
-                                    onClick={() => slot.isAvailable && onSlotSelected(slot)}
+                                    disabled={isBooked}
+                                    onClick={() => !isBooked && onSlotSelected(slot)}
                                     className={`py-3 px-4 rounded-xl text-sm font-semibold border transition-all flex flex-col items-center justify-center gap-1 ${
-                                        !slot.isAvailable
+                                        isBooked
                                             ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed line-through'
                                             : isChosen
-                                            ? 'border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-200'
-                                            : 'border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 text-gray-800'
-                                    }`}
+                                                ? 'border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                                                : 'border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 text-gray-800'
+                                        }`}
                                 >
                                     <span>{formatHour(slot.startTime)} - {formatHour(slot.endTime)}</span>
-                                    {!slot.isAvailable && (
+                                    {isBooked && (
                                         <span className="block text-[10px] font-medium text-gray-400 no-underline">Booked</span>
+                                    )}
+                                    {isPending && (
+                                        <span className="block text-[10px] font-bold text-amber-500 no-underline uppercase tracking-wider">Resume</span>
                                     )}
                                 </button>
                             );

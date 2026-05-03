@@ -405,7 +405,8 @@ router.get('/teachers/:uid/availability', async (req: Request, res: Response): P
         const getAvailabilityParams = new GetAvailabilityParams(
             teacherId,
             now,
-            next14Days
+            next14Days,
+            req.user?.uid
         );
 
         const availability = await teacherAvailabilityService.getAvailability(getAvailabilityParams);

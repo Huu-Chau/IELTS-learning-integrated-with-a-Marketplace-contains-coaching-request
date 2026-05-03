@@ -10,6 +10,7 @@ import { GetAvailabilityParams } from '../types/availability';
 import { TeacherAvailabilityService, ITeacherAvailabilityService } from '../services/teacherAvailabilityService';
 import { NotificationService } from '../services/notificationService';
 import { CreateNotificationPayload, NotificationType } from '../types/notification';
+import { MarketplaceRequestStatus } from '../types/marketplace-request';
 
 const notificationService = new NotificationService();
 
@@ -257,7 +258,7 @@ router.post('/requests', async (req: Request, res: Response): Promise<void> => {
             studentId,
             teacherId,
             attemptId: attemptId || null,
-            status: 'pending',
+            status: MarketplaceRequestStatus.PENDING,
             fee: Number(listing.pricePerHour),
             message: message || null,
             skill: primarySkill,

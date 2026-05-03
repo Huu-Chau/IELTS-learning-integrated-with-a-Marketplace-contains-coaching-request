@@ -1,5 +1,6 @@
 import { Op } from 'sequelize';
 import MarketplaceRequest from '../models/MarketplaceRequest';
+import { MarketplaceRequestStatus, MarketplaceRequestType } from '../types/marketplace-request';
 
 /**
  * Request service — now powered by PostgreSQL/Sequelize.
@@ -13,7 +14,7 @@ import MarketplaceRequest from '../models/MarketplaceRequest';
 export interface LegacyRequestPayload {
     studentId: string;
     studentName?: string;
-    type: 'broadcast' | 'targeted';
+    type: MarketplaceRequestType;
     targetTeacherId?: string;
     status: string;
     message: string;
@@ -47,11 +48,11 @@ export const requestService = {
                 studentId: data.studentId,
                 teacherId: data.targetTeacherId || null,
                 attemptId: null,
-                status: 'pending',
+                status: MarketplaceRequestStatus.PENDING,
                 message: data.message || null,
                 skill: data.skill || null,
                 fee: data.budget || 0,
-                requestType: data.type || 'broadcast',
+                requestType: data.type || MarketplaceRequestType.BROADCAST,
             });
 
             const result: RequestResult = {

@@ -7,6 +7,7 @@ import Reservation from '../models/Reservation';
 import TeacherAvailability from '../models/TeacherAvailability';
 import { NotificationService } from '../services/notificationService';
 import { CreateNotificationPayload, NotificationType } from '../types/notification';
+import { MarketplaceRequestStatus } from '../types/marketplace-request';
 
 const notificationService = new NotificationService();
 // ─────────────────────────────────────────────────────────────────────────────
@@ -52,7 +53,7 @@ async function autoCompleteSessions() {
 
             await sequelize.transaction(async (t) => {
                 // Mark request as completed
-                await req.update({ status: 'completed' }, { transaction: t });
+                await req.update({ status: MarketplaceRequestStatus.COMPLETED }, { transaction: t });
 
                 // Credit teacher's wallet
                 const teacher = await User.findByPk(teacherId, { transaction: t });
@@ -129,7 +130,7 @@ async function autoRejectStaleRequests() {
         for (const req of staleRequests) {
             await sequelize.transaction(async (t) => {
                 // Reject the request
-                await req.update({ status: 'rejected' }, { transaction: t });
+                await req.update({ status: MarketplaceRequestStatus.REJECTED }, { transaction: t });
 
                 // Refund the student's wallet
                 const student = await User.findByPk(req.studentId, { transaction: t });

@@ -4,6 +4,7 @@ import Reservation from './Reservation';
 import { KafkaService } from '../services/queue/KafkaService';
 import { IQueueProvider } from '../services/queue/IQueueProvider';
 import { QueueMessage, QueueTopic } from '../types/queue';
+import { MarketplaceRequestStatus, MarketplaceRequestType } from '../types/marketplace-request';
 
 const queueService: IQueueProvider = new KafkaService();
 
@@ -20,12 +21,12 @@ export interface IMarketplaceRequestAttributes {
     reservationId?: number;
     teacherId: string | null;
     attemptId: number | null;
-    status: 'pending' | 'accepted' | 'completed' | 'rejected';
+    status: MarketplaceRequestStatus;
     feedbackPath: string | null;
     fee: number;
     message: string | null;
     skill: string | null;
-    requestType: string;
+    requestType: MarketplaceRequestType;
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -37,12 +38,12 @@ class MarketplaceRequest extends Model<IMarketplaceRequestAttributes, IMarketpla
     declare reservationId?: number;       // FK → Reservation
     declare teacherId: string | null;     // Firebase UID (nullable for broadcast requests)
     declare attemptId: number | null;     // Optional — links to Attempts table
-    declare status: 'pending' | 'accepted' | 'completed' | 'rejected';
+    declare status: MarketplaceRequestStatus;
     declare feedbackPath: string | null;
     declare fee: number;
     declare message: string | null;       // Student's message / description
     declare skill: string | null;         // e.g. 'Writing', 'Speaking'
-    declare requestType: string;          // 'broadcast' | 'targeted' | 'booking'
+    declare requestType: MarketplaceRequestType;
     declare createdAt: Date;
     declare updatedAt: Date;
 }
@@ -76,7 +77,7 @@ MarketplaceRequest.init(
         status: {
             type: DataTypes.STRING,
             allowNull: false,
-            defaultValue: 'pending',
+            defaultValue: MarketplaceRequestStatus.PENDING,
         },
         feedbackPath: {
             type: DataTypes.STRING,
@@ -96,7 +97,7 @@ MarketplaceRequest.init(
         requestType: {
             type: DataTypes.STRING(50),
             allowNull: false,
-            defaultValue: 'booking',
+            defaultValue: MarketplaceRequestType.BOOKING,
         },
     },
     {

@@ -3,16 +3,14 @@ import { Op } from 'sequelize';
 import { verifyToken } from '../middleware/authMiddleware';
 import Message from '../models/Message';
 import User from '../models/User';
+import { IMessageService, MessageService } from '../services/messageService';
+import { CreateMessagePayload } from '../types/message';
 
 const router = Router();
+const messageService: IMessageService = new MessageService();
 
 // ─── All routes require authentication ────────────────────────────────────────
 router.use(verifyToken());
-
-// ── Helper: build a stable conversationId from two UIDs ──────────────────────
-function buildConversationId(uid1: string, uid2: string): string {
-    return [uid1, uid2].sort().join('_');
-}
 
 /**
  * GET /api/messages/conversations
@@ -130,15 +128,16 @@ router.post('/send/:receiverId', async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        const conversationId = buildConversationId(senderId, receiverId);
+        const conversationId = MessageService.buildConversationId(senderId, receiverId);
 
-        const message = await Message.create({
+        const payload = new CreateMessagePayload(
             conversationId,
             senderId,
             receiverId,
             content,
             type,
-        });
+        );
+        const message = await messageService.createMessage(payload);
 
         // Emit new message event to the receiver's room, and the sender's room
         const io = req.app.get('io');

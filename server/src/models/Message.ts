@@ -1,5 +1,6 @@
 import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
 import sequelize from '../config/database';
+import { MessageType } from '../types/message';
 
 /**
  * Message model - a single chat message in a conversation between a student and a teacher.
@@ -14,7 +15,7 @@ class Message extends Model<
     declare senderId: string;       // Firebase UID of the sender
     declare receiverId: string;     // Firebase UID of the receiver
     declare content: string;        // text message or special payload like "meet:https://..."
-    declare type: CreationOptional<'text' | 'meeting_link'>; // message type
+    declare type: CreationOptional<MessageType>; // message type
     declare isRead: CreationOptional<boolean>;
     declare sentAt: CreationOptional<Date>;
 }
@@ -45,7 +46,7 @@ Message.init(
         type: {
             type: DataTypes.STRING(20),
             allowNull: false,
-            defaultValue: 'text',
+            defaultValue: MessageType.TEXT,
         },
         isRead: {
             type: DataTypes.BOOLEAN,

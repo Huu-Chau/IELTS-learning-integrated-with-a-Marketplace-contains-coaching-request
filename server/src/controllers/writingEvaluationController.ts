@@ -15,14 +15,13 @@ import { EssaySubmission, WritingPart } from '../types/ai-types';
 import { getRandomPart1Task, getRandomPart2Task } from '../services/writingQuestionBank';
 import { storageProvider } from '../services/storage/StorageService';
 import WritingSession from '../models/WritingSession';
-import { NotificationService } from '../services/notificationService';
-import { CreateNotificationPayload, NotificationType } from '../types/notification';
+
+import { WritingSessionStatus } from '../types/writing-session';
 
 // ─── Configuration ─────────────────────────────────────────────────────────
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
 const MODEL_NAME = 'gemma3:12b';
-const notificationService = new NotificationService();
 // ─── System Prompt ──────────────────────────────────────────────────────────
 
 function buildSystemPrompt(): string {
@@ -175,7 +174,7 @@ export const startSession = async (req: Request, res: Response): Promise<void> =
 
         // ── Idempotency: reuse existing in-progress session rather than creating a new orphan ──
         const existing = await WritingSession.findOne({
-            where: { userId, book, testNumber: String(testNumber), status: 'in-progress' },
+            where: { userId, book, testNumber: String(testNumber), status: WritingSessionStatus.IN_PROGRESS },
         });
 
         if (existing) {
@@ -191,7 +190,7 @@ export const startSession = async (req: Request, res: Response): Promise<void> =
             userId,
             book,
             testNumber,
-            status: 'in-progress',
+            status: WritingSessionStatus.IN_PROGRESS,
         });
 
         console.log('[WritingEvaluationController] startSession success', { sessionId });
@@ -300,24 +299,8 @@ export const evaluateEssay = async (req: Request, res: Response): Promise<void> 
                     const rawScore = (sessionRec.task1Band + sessionRec.task2Band * 2) / 3;
                     // Round to nearest 0.5
                     sessionRec.overallBand = Math.round(rawScore * 2) / 2;
-                    sessionRec.status = 'completed';
+                    sessionRec.status = WritingSessionStatus.COMPLETED;
                     sessionRec.endTime = new Date();
-
-                    // Create System Notification
-                    // TODO: Will change to Event Driven to create notification
-                    try {
-                        const payload = new CreateNotificationPayload(
-                            userId,
-                            NotificationType.SYSTEM,
-                            'Writing Evaluation Complete 🎉',
-                            `Your IELTS Writing mock test for ${sessionRec.book} Test ${sessionRec.testNumber} has been fully evaluated. Click here to view your band score and detailed feedback!`,
-                            '/progress',  // Could link directly to details if UI supports opening modal via URL
-                        )
-                        await notificationService.createNotification(payload);
-                        console.log(`[WritingEvaluationController] Notification created for user ${userId}`);
-                    } catch (notifErr) {
-                        console.error('[WritingEvaluationController] Failed to create notification:', notifErr);
-                    }
                 }
 
                 await sessionRec.save();
@@ -356,7 +339,7 @@ export const getSessionsByUser = async (req: Request, res: Response): Promise<vo
         // Only return completed sessions — in-progress sessions are abandoned/orphaned
         // and have no score or feedback to display.
         const sessions = await WritingSession.findAll({
-            where: { userId, status: 'completed' },
+            where: { userId, status: WritingSessionStatus.COMPLETED },
             order: [['createdAt', 'DESC']],
         });
 

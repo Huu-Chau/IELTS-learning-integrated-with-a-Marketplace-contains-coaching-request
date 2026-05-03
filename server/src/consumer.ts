@@ -3,9 +3,12 @@ import sequelize from './config/database';
 import { KafkaService } from './services/queue/KafkaService';
 import { IQueueProvider } from './services/queue/IQueueProvider';
 import './models/Notification';
-import { NotificationOnAttemptCreatedConsumer } from './consumers/notification-on-attempt-created';
-import { NotificationOnMarketplaceRequestCreatedConsumer } from './consumers/notification-on-marketplace-request-created';
-import { NotificationOnMarketplaceRequestStatusUpdatedConsumer } from './consumers/notification-on-marketplace-request-status-updated';
+import {
+    NotificationOnAttemptCreatedConsumer,
+    NotificationOnMarketplaceRequestCreatedConsumer,
+    NotificationOnMarketplaceRequestStatusUpdatedConsumer,
+    NotificationOnWritingSessionStatusUpdatedConsumer
+} from './consumers';
 import { INotificationService, NotificationService } from './services/notificationService';
 
 const queueService: IQueueProvider = new KafkaService();
@@ -44,7 +47,8 @@ sequelize.authenticate()
         const consumers = [
             new NotificationOnAttemptCreatedConsumer(queueService, notificationService),
             new NotificationOnMarketplaceRequestCreatedConsumer(queueService, notificationService),
-            new NotificationOnMarketplaceRequestStatusUpdatedConsumer(queueService, notificationService)
+            new NotificationOnMarketplaceRequestStatusUpdatedConsumer(queueService, notificationService),
+            new NotificationOnWritingSessionStatusUpdatedConsumer(queueService, notificationService),
         ];
 
         await Promise.all(consumers.map(consumer => consumer.consume()));

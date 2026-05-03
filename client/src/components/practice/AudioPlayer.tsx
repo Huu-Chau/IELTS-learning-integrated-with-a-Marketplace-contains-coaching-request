@@ -13,8 +13,6 @@ interface AudioPlayerProps {
 }
 
 export default function AudioPlayer({ src, title }: AudioPlayerProps) {
-    console.log('[AudioPlayer] render called', { src, title });
-
     const audioRef = useRef<HTMLAudioElement>(null);
     const seekBarRef = useRef<HTMLDivElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -23,11 +21,11 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
     const [speed, setSpeed] = useState(1);
     const [volume, setVolume] = useState(1);
     const [showVolume, setShowVolume] = useState(false);
-    
+
     // Blob state for local seeking
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
     const [isLoadingAudio, setIsLoadingAudio] = useState(false);
-    
+
     // Flag to prevent onTimeUpdate from overwriting a user seek
     const isSeeking = useRef(false);
 
@@ -68,7 +66,6 @@ export default function AudioPlayer({ src, title }: AudioPlayerProps) {
     }, [src]);
 
     const togglePlay = () => {
-        console.log('[AudioPlayer] togglePlay called', { wasPlaying: isPlaying });
         if (!audioRef.current) return;
         if (isPlaying) {
             audioRef.current.pause();

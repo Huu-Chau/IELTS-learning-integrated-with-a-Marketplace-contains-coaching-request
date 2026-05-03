@@ -15,13 +15,12 @@ export default function MockTestSpeaking() {
 
     useEffect(() => {
         let isMounted = true;
-        
+
         async function fetchTestSets() {
             setLoading(true);
             try {
-                console.log('[MockTestSpeaking] fetchTestSets called');
                 const data = await apiClient.get('/cambridge-tests/sets/SPEAKING');
-                
+
                 if (isMounted) {
                     // Inject the frontend session path
                     const configuredSets: MockTestSet[] = (data.sets || []).map((set: any) => ({
@@ -31,14 +30,10 @@ export default function MockTestSpeaking() {
                             sessionPath: `/mock-test/speaking/session?setId=${set.id}&test=${test.testNumber}`
                         }))
                     }));
-                    
-                    console.log('[MockTestSpeaking] fetchTestSets success', { 
-                        setsFetched: configuredSets.length 
-                    });
+
                     setTestSets(configuredSets);
                 }
             } catch (err: any) {
-                console.error('[MockTestSpeaking] fetchTestSets error', err);
                 if (isMounted) setError(err.message || 'Failed to load test sets.');
             } finally {
                 if (isMounted) setLoading(false);

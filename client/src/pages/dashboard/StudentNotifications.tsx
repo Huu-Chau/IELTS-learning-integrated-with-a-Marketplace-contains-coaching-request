@@ -62,8 +62,6 @@ function timeAgo(dateStr: string): string {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function StudentNotifications() {
-    console.log('[StudentNotifications] render called');
-
     const { getIdToken } = useAuth();
     const [data, setData] = useState<NotificationsResponse | null>(null);
     const [loading, setLoading] = useState(true);
@@ -90,13 +88,11 @@ export default function StudentNotifications() {
     const unreadCount = data?.unreadCount ?? 0;
 
     const handleMarkAllRead = async () => {
-        console.log('[StudentNotifications] handleMarkAllRead called');
         setMarking(true);
         try {
             const token = await getIdToken();
             await apiClient.patch('/notifications/read-all', {}, token);
             await fetchNotifications();
-            console.log('[StudentNotifications] handleMarkAllRead success');
         } catch (err) {
             console.error('[StudentNotifications] handleMarkAllRead error', err);
         } finally {
@@ -164,9 +160,8 @@ export default function StudentNotifications() {
                                     <div
                                         key={notif.id}
                                         id={`notif-${notif.id}`}
-                                        className={`flex items-start gap-4 px-5 py-4 transition-colors hover:bg-gray-50/70 ${
-                                            !notif.isRead ? 'bg-indigo-50/30' : ''
-                                        }`}
+                                        className={`flex items-start gap-4 px-5 py-4 transition-colors hover:bg-gray-50/70 ${!notif.isRead ? 'bg-indigo-50/30' : ''
+                                            }`}
                                     >
                                         {/* Icon */}
                                         <div className={`p-2.5 rounded-full flex-shrink-0 ${cfg.bg}`}>

@@ -35,11 +35,14 @@ import TrueFalseNotGiven from './TrueFalseNotGiven';
 import MultipleChoice from './MultipleChoice';
 import MultipleChoiceMultiple from './MultipleChoiceMultiple';
 import NoteCompletion from './NoteCompletion';
+import FormCompletion from './FormCompletion';
+import FlowchartCompletion from './FlowchartCompletion';
 import TableCompletion from './TableCompletion';
-import MatchingDropdown from './MatchingDropdown';
 import MatchingSentenceEndings from './MatchingSentenceEndings';
 import SummaryCompletion from './SummaryCompletion';
 import SummaryCompletionOptions from './SummaryCompletionOptions';
+import MatchingMatrix from './MatchingMatrix';
+import MatchingDropdown from './MatchingDropdown';
 
 interface QuestionSectionCardProps {
     subSection: SubSection;
@@ -57,6 +60,8 @@ function getTypeLabel(type: string): string {
         'multiple_choice': 'Multiple Choice',
         'multiple_choice_multiple': 'Multiple Select',
         'note_completion': 'Note Completion',
+        'form_completion': 'Form Completion',
+        'flowchart_completion': 'Flowchart Completion',
         'table_completion': 'Table Completion',
         'matching': 'Matching',
         'matching_information': 'Matching Information',
@@ -66,6 +71,11 @@ function getTypeLabel(type: string): string {
         'summary_completion': 'Summary Completion',
         'summary_completion_options': 'Summary Completion',
         'sentence_completion': 'Sentence Completion',
+        'map_labelling': 'Map Labelling',
+        'matching_headings': 'Matching Headings',
+        'heading_matching': 'Heading Matching',
+        'matching_statements_to_people': 'Matching Statements to People',
+        'sentence_completion_options': 'Sentence Completion Options',
     };
     return map[type] ?? type.replace(/_/g, ' ');
 }
@@ -77,8 +87,6 @@ export default function QuestionSectionCard({ subSection, answers, onAnswer }: Q
         subSection.question_type ??
         subSection.questions?.[0]?.answer_type ??
         'unknown';
-
-    console.log('[QuestionSectionCard] render', { qType, range: subSection.questions_range });
 
     const props = { subSection, answers, onAnswer };
 
@@ -95,12 +103,22 @@ export default function QuestionSectionCard({ subSection, answers, onAnswer }: Q
                 return <MultipleChoiceMultiple {...props} />;
             case 'note_completion':
                 return <NoteCompletion {...props} />;
+            case 'form_completion':
+                return <FormCompletion {...props} />;
+            case 'flowchart_completion':
+                return <FlowchartCompletion {...props} />;
             case 'table_completion':
                 return <TableCompletion {...props} />;
             case 'matching':
             case 'matching_information':
             case 'matching_features':
             case 'matching_paragraph':
+            case 'map_labelling':
+                return <MatchingMatrix {...props} />;
+            case 'matching_statements_to_people':
+            case 'matching_headings':
+            case 'heading_matching':
+            case 'sentence_completion_options':
                 return <MatchingDropdown {...props} />;
             case 'matching_sentence_endings':
                 return <MatchingSentenceEndings {...props} />;

@@ -24,8 +24,9 @@ import { QuestionSectionCard } from '@/components/practice/questions';
 import MockTestResults, { GradeResult } from './MockTestResults';
 import type { ListeningBook, ListeningTest, ListeningPart, SubSection } from '@/types/questionTypes';
 import { useTestDraft } from '@/hooks/useTestDraft';
+import { useAuth } from '@/context/AuthContext';
 
-// ─── Config ──────────────────────────────────────────────────────────────────
+// ─── Utility ──────────────────────────────────────────────────────────────────
 const API_BASE = (import.meta.env.VITE_API_URL as string || 'http://localhost:5000/api').replace(/\/api$/, '');
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -36,19 +37,7 @@ function formatSetName(setId: string): string {
         .replace(/\b\w/g, c => c.toUpperCase());
 }
 
-/**
- * Builds the audio URL for a specific test + section.
- */
-function buildAudioUrl(book: string, testNum: number, section: number): string {
-    return `${API_BASE}/api/cambridge-tests/audio/${book}/T${testNum}S${section}.m4a`;
-}
-
-/**
- * Collects all sub-sections from a part, normalizing the different JSON shapes.
- */
 function getSubSections(part: ListeningPart): SubSection[] {
-    console.log('[MockTestListeningSession] getSubSections', { part: part.part, hasSub: !!part.sub_sections });
-
     if (part.sub_sections && part.sub_sections.length > 0) {
         return part.sub_sections;
     }
@@ -69,6 +58,7 @@ function getSubSections(part: ListeningPart): SubSection[] {
 export default function MockTestListeningSession() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
+    const { user, getIdToken } = useAuth();
 
     const setId = searchParams.get('setId') ?? 'cambridge-20';
     const testNumber = parseInt(searchParams.get('test') ?? '1', 10);
@@ -93,12 +83,12 @@ export default function MockTestListeningSession() {
         totalSeconds: 2400, // 40 min
     });
 
-    // Track total elapsed time for results display
+    // Track total elapsed time — frozen at submission
     const startTimeRef = useRef(Date.now());
+    const [timeSpent, setTimeSpent] = useState(0);
 
     // ── Fetch test data ───────────────────────────────────────────────────────
     useEffect(() => {
-        console.log('[MockTestListeningSession] fetchTest called', { book, testNumber });
         setLoading(true);
 
         fetch(`${API_BASE}/api/cambridge-tests/listening/${book}`)
@@ -107,7 +97,6 @@ export default function MockTestListeningSession() {
                 return r.json();
             })
             .then((data: ListeningBook) => {
-                console.log('[MockTestListeningSession] fetchTest success', { testCount: data.tests?.length });
                 const found = data.tests.find(t => t.test_number === testNumber);
                 if (found) {
                     setTest(found);
@@ -129,7 +118,7 @@ export default function MockTestListeningSession() {
             console.log('[MockTestListeningSession] Timer expired — auto-submitting');
             handleSubmit();
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [timerExpired]);
 
     const formatTimer = (s: number) =>
@@ -137,13 +126,11 @@ export default function MockTestListeningSession() {
 
     // ── Answer handler ────────────────────────────────────────────────────────
     const handleAnswer = (questionNumber: number | string, value: string) => {
-        console.log('[MockTestListeningSession] handleAnswer', { questionNumber, value });
         setAnswers(prev => ({ ...prev, [String(questionNumber)]: value }));
     };
 
     // ── Submit & Grade ────────────────────────────────────────────────────────
     const handleSubmit = async () => {
-        console.log('[MockTestListeningSession] handleSubmit called', { answerCount: Object.keys(answers).length });
         setSubmitting(true);
 
         try {
@@ -160,9 +147,27 @@ export default function MockTestListeningSession() {
 
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const result: GradeResult = await response.json();
-            console.log('[MockTestListeningSession] handleSubmit success', { bandScore: result.bandScore });
             clearDraft(); // ── Wipe saved draft on successful submit
+            setTimeSpent(Math.round((Date.now() - startTimeRef.current) / 1000));
             setGradeResult(result);
+
+            if (user && getIdToken) {
+                const token = await getIdToken();
+                await fetch(`${API_BASE}/api/attempts`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        type: 'listening',
+                        testId: `listening-${setId}-${testNumber}`,
+                        score: result.bandScore,
+                        answers: answers,
+                        feedback: `Completed Listening Test ${testNumber} from ${setName}.`
+                    })
+                }).catch(e => console.error('[MockTestListeningSession] Failed to save attempt', e));
+            }
         } catch (err) {
             console.error('[MockTestListeningSession] handleSubmit error', err);
             setError('Failed to grade your test. Please try again.');
@@ -173,7 +178,6 @@ export default function MockTestListeningSession() {
 
     // ── Show results if graded ────────────────────────────────────────────────
     if (gradeResult) {
-        const timeSpent = Math.round((Date.now() - startTimeRef.current) / 1000);
         return (
             <MockTestResults
                 skill="Listening"
@@ -196,12 +200,16 @@ export default function MockTestListeningSession() {
     // ── Current part data ─────────────────────────────────────────────────────
     const currentPart: ListeningPart | undefined = test?.parts.find(p => p.part === activePart);
     const subSections = currentPart ? getSubSections(currentPart) : [];
-    const audioUrl = buildAudioUrl(book, testNumber, activePart);
+
+    // Read the exact MinIO path from the JSON and pass it to the backend streaming route
+    const audioUrl = currentPart?.audio_key
+        ? `${API_BASE}/api/cambridge-tests/stream?key=${encodeURIComponent(currentPart.audio_key)}`
+        : '';
 
     // ── Answered count per part ───────────────────────────────────────────────
     const getPartRange = (part: ListeningPart): [number, number] => {
-        const range = part.questions_range.split('-').map(Number);
-        return [range[0], range[1]];
+        const start = (part.part - 1) * 10 + 1;
+        return [start, start + 9];
     };
 
     const getAnsweredCount = (part: ListeningPart): number => {
@@ -299,7 +307,7 @@ export default function MockTestListeningSession() {
                                     >
                                         <span>Part {part.part}</span>
                                         <span className="ml-2 text-[10px] text-gray-400">
-                                            Q {part.questions_range}
+                                            Q {(part.part - 1) * 10 + 1}-{part.part * 10}
                                         </span>
                                         {answered > 0 && (
                                             <span className="ml-1.5 text-[10px] bg-gray-900 text-white rounded-full px-1.5 py-0.5">

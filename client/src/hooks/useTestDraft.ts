@@ -58,7 +58,7 @@ export function useTestDraft({
             const raw = sessionStorage.getItem(storageKey);
             if (raw) {
                 const draft = JSON.parse(raw);
-                
+
                 // Backwards compatibility with old drafts that used startedAt
                 if (draft.startedAt && draft.secondsLeft === undefined) {
                     const elapsed = Math.floor((Date.now() - draft.startedAt) / 1000);
@@ -66,9 +66,9 @@ export function useTestDraft({
                     return { answers: draft.answers || {}, secondsLeft: remaining };
                 }
 
-                return { 
-                    answers: draft.answers || {}, 
-                    secondsLeft: draft.secondsLeft ?? totalSeconds 
+                return {
+                    answers: draft.answers || {},
+                    secondsLeft: draft.secondsLeft ?? totalSeconds
                 };
             }
         } catch {
@@ -84,7 +84,7 @@ export function useTestDraft({
 
     // Use a ref to prevent double-initialization in StrictMode
     const initializedRef = useRef(false);
-    
+
     const [answers, setAnswers] = useState<Record<string, string>>({});
     const [secondsLeft, setSecondsLeft] = useState(totalSeconds);
     const [timerExpired, setTimerExpired] = useState(false);
@@ -101,7 +101,7 @@ export function useTestDraft({
     // ── Persist answers and timer whenever they change ───────────────────────
     useEffect(() => {
         if (!initializedRef.current) return;
-        
+
         try {
             sessionStorage.setItem(storageKey, JSON.stringify({
                 answers,
@@ -115,7 +115,7 @@ export function useTestDraft({
     // ── Countdown timer ────────────────────────────────────────────────────────
     useEffect(() => {
         if (!initializedRef.current) return;
-        
+
         if (secondsLeft <= 0) {
             setTimerExpired(true);
             return;
@@ -141,7 +141,6 @@ export function useTestDraft({
     // ── Clear draft (call on successful submit) ────────────────────────────────
     const clearDraft = useCallback(() => {
         sessionStorage.removeItem(storageKey);
-        console.log(`[useTestDraft] Draft cleared for ${storageKey}`);
     }, [storageKey]);
 
     return { answers, setAnswers, secondsLeft, timerExpired, clearDraft };

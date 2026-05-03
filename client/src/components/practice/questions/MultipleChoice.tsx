@@ -7,8 +7,6 @@
 import type { QuestionComponentProps } from '@/types/questionTypes';
 
 export default function MultipleChoice({ subSection, answers, onAnswer }: QuestionComponentProps) {
-    console.log('[MultipleChoice] render called', { qCount: subSection.questions.length });
-
     return (
         <div className="space-y-5">
             {subSection.questions.map(q => {

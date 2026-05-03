@@ -11,8 +11,6 @@ interface TFNGProps extends QuestionComponentProps {
 }
 
 export default function TrueFalseNotGiven({ subSection, answers, onAnswer, variant = 'tfng' }: TFNGProps) {
-    console.log('[TrueFalseNotGiven] render called', { variant, qCount: subSection.questions.length });
-
     const labels = variant === 'ynng' ? ['YES', 'NO', 'NOT GIVEN'] : ['TRUE', 'FALSE', 'NOT GIVEN'];
 
     return (

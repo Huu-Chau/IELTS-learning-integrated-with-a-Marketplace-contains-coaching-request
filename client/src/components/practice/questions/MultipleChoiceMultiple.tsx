@@ -9,13 +9,11 @@ import { useState, useEffect } from 'react';
 import type { QuestionComponentProps } from '@/types/questionTypes';
 
 export default function MultipleChoiceMultiple({ subSection, answers, onAnswer }: QuestionComponentProps) {
-    console.log('[MultipleChoiceMultiple] render called', { qCount: subSection.questions.length });
-
     // Options / stem may live at sub_section level OR at question level (e.g. multiple_choice_multiple_answers)
     const firstQ = subSection.questions[0];
     const opts = subSection.options ?? firstQ?.options ?? {};
     const stem = subSection.question_text ?? subSection.question_stem ?? firstQ?.question_text ?? '';
-    
+
     // Expand hyphenated question numbers (e.g., "23-24" -> [23, 24])
     const questionNumbers: number[] = [];
     subSection.questions.forEach(q => {
@@ -42,7 +40,6 @@ export default function MultipleChoiceMultiple({ subSection, answers, onAnswer }
     }, []);
 
     const toggleOption = (optKey: string) => {
-        console.log('[MultipleChoiceMultiple] toggleOption', { optKey });
         let next: string[];
         if (selected.includes(optKey)) {
             next = selected.filter(s => s !== optKey);

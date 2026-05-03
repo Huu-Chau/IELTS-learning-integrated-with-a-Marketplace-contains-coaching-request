@@ -17,12 +17,16 @@ function renderNoteText(
     answers: AnswerMap,
     onAnswer: (qn: number, val: string) => void
 ) {
-    // Match patterns like [31], [Q31], etc.
-    const parts = text.split(/(\[Q?\d+\])/g);
+    // Match patterns like [31], [Q31], or "31 ________"
+    const parts = text.split(/(\[Q?\d+\]|\b\d+\s*_+)/g);
+    
     return parts.map((part, i) => {
-        const match = part.match(/^\[Q?(\d+)\]$/);
-        if (match) {
-            const qn = parseInt(match[1], 10);
+        const matchBracket = part.match(/^\[Q?(\d+)\]$/);
+        const matchUnderscore = part.match(/^(\d+)\s*_+$/);
+        const qnMatch = matchBracket || matchUnderscore;
+
+        if (qnMatch) {
+            const qn = parseInt(qnMatch[1], 10);
             const val = answers[String(qn)] ?? '';
             return (
                 <span key={i} className="inline-flex items-center gap-0.5 mx-0.5">
@@ -44,8 +48,6 @@ function renderNoteText(
 }
 
 export default function NoteCompletion({ subSection, answers, onAnswer }: QuestionComponentProps) {
-    console.log('[NoteCompletion] render called', { qCount: subSection.questions.length });
-
     const content = subSection.content as Record<string, unknown> | undefined;
     const title = (content?.title as string) ?? '';
     const sections = (content?.sections as Array<{

@@ -89,37 +89,40 @@ router.get('/sets/:skill', async (req: Request, res: Response): Promise<void> =>
     }
 });
 
-// ─── GET /audio/:book/:file — Stream audio from MinIO ───────────────────────
-router.get('/audio/:book/:file', async (req: Request, res: Response): Promise<void> => {
-    const { book, file } = req.params;
-    console.log('[cambridgeTestRoutes] getAudio called', { book, file });
+
+
+// ─── GET /stream — Stream anything directly from MinIO by storage_key ────────
+router.get('/stream', async (req: Request, res: Response): Promise<void> => {
+    const storageKey = req.query.key as string;
+    console.log('[cambridgeTestRoutes] getStream called', { storageKey });
+
+    if (!storageKey) {
+        res.status(400).json({ error: 'Missing key parameter' });
+        return;
+    }
 
     try {
-        const storageKey = `mock-test/cam${book}/${file}`;
-        const recording = await Recording.findOne({
-            where: { storage_key: storageKey },
-        });
+        console.log('[cambridgeTestRoutes] Streaming directly from MinIO via /stream', { storageKey });
 
-        if (recording) {
-            console.log('[cambridgeTestRoutes] Streaming audio from MinIO', { storageKey });
-            const mimeType = recording.mimetype || 'audio/mp4';
-            const stream = await storageProvider.getFileStream(storageKey);
+        let mimeType = 'application/octet-stream';
+        const ext = storageKey.split('.').pop()?.toLowerCase();
 
-            res.setHeader('Content-Type', mimeType);
-            res.setHeader('Accept-Ranges', 'bytes');
-            if (recording.size_bytes) {
-                res.setHeader('Content-Length', recording.size_bytes);
-            }
+        if (ext === 'mp3') mimeType = 'audio/mpeg';
+        else if (ext === 'm4a' || ext === 'mp4') mimeType = 'audio/mp4';
+        else if (ext === 'png') mimeType = 'image/png';
+        else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
+        else if (ext === 'webp') mimeType = 'image/webp';
+        else if (ext === 'svg') mimeType = 'image/svg+xml';
 
-            stream.pipe(res);
-            return;
-        }
+        const stream = await storageProvider.getFileStream(storageKey);
 
-        console.error('[cambridgeTestRoutes] Audio not found', { storageKey });
-        res.status(404).json({ error: 'Audio file not found' });
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Accept-Ranges', 'bytes');
+
+        stream.pipe(res);
     } catch (error) {
-        console.error('[cambridgeTestRoutes] getAudio error', error);
-        res.status(500).json({ error: 'Failed to serve audio file' });
+        console.error('[cambridgeTestRoutes] getStream error (MinIO)', error);
+        res.status(404).json({ error: 'File not found in MinIO' });
     }
 });
 
@@ -189,13 +192,28 @@ router.post('/grade', async (req: Request, res: Response): Promise<void> => {
         const results: QuestionAnswer[] = [];
         const sections = (testContent as any).passages || (testContent as any).parts || [];
 
+        // Track answers used in multiple_choice_multiple groups to prevent double-counting
+        const usedGroupAnswers = new Set<string>();
+        let subGroupIdCounter = 0;
+
         for (const section of sections) {
             // Collect questions from sub_sections or direct questions array
             const allQuestions: any[] = [];
 
             if (section.sub_sections && section.sub_sections.length > 0) {
                 for (const sub of section.sub_sections) {
-                    if (sub.questions) allQuestions.push(...sub.questions);
+                    if (sub.questions) {
+                        subGroupIdCounter++;
+                        const isMultiSelect = sub.answer_type === 'multiple_choice_multiple';
+                        const optionsMap = sub.options || {};
+                        allQuestions.push(...sub.questions.map((q: any) => ({
+                            ...q,
+                            _isMultiSelect: isMultiSelect || q.answer_type === 'multiple_choice_multiple',
+                            _subGroupId: subGroupIdCounter,
+                            _subQuestions: sub.questions,
+                            _optionsMap: optionsMap
+                        })));
+                    }
                 }
             } else if (section.questions && section.questions.length > 0) {
                 allQuestions.push(...section.questions);
@@ -225,14 +243,45 @@ router.post('/grade', async (req: Request, res: Response): Promise<void> => {
                     }
                 } else {
                     const userAns = (answers[qNum] || '').trim();
-                    // Handle multiple acceptable answers separated by /
-                    const acceptableAnswers = correctAnswer.split('/').map((s: string) => s.trim().toLowerCase());
-                    const isCorrect = userAns !== '' && acceptableAnswers.includes(userAns.toLowerCase());
+                    const lowerUserAns = userAns.toLowerCase();
+                    let isCorrect = false;
+                    let expectedAnsStr = correctAnswer;
+
+                    if (userAns !== '') {
+                        if (q._isMultiSelect && q._subQuestions) {
+                            // For multiple select, pool all correct answers in this group
+                            const pool = q._subQuestions.map((sq: any) => String(sq.answer || '').trim().toLowerCase());
+                            expectedAnsStr = q._subQuestions.map((sq: any) => sq.answer).join(' / ');
+
+                            // Check if user answer is in the pool and hasn't been consumed yet
+                            if (pool.includes(lowerUserAns) && !usedGroupAnswers.has(`${q._subGroupId}-${lowerUserAns}`)) {
+                                isCorrect = true;
+                                usedGroupAnswers.add(`${q._subGroupId}-${lowerUserAns}`);
+                            }
+                        } else {
+                            // Standard evaluation
+                            const acceptableAnswers = correctAnswer.split('/').map((s: string) => s.trim().toLowerCase());
+                            isCorrect = acceptableAnswers.includes(lowerUserAns);
+                        }
+                    }
+
+                    // Resolve option keys to display values if an options map exists
+                    const opts = q._optionsMap as Record<string, string> | undefined;
+                    const hasOpts = opts && Object.keys(opts).length > 0;
+
+                    const resolveKey = (key: string): string => {
+                        if (!hasOpts) return key;
+                        // Handle multi-part keys like "B / E" by resolving each individually
+                        if (key.includes(' / ')) {
+                            return key.split(' / ').map(k => opts![k.trim()] || k.trim()).join(' / ');
+                        }
+                        return opts![key] || key;
+                    };
 
                     results.push({
                         questionNumber: qNum,
-                        correctAnswer,
-                        userAnswer: userAns,
+                        correctAnswer: resolveKey(expectedAnsStr),
+                        userAnswer: userAns !== '' ? resolveKey(userAns) : userAns,
                         isCorrect,
                     });
                 }

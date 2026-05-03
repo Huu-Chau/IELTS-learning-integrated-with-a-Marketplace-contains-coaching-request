@@ -128,7 +128,19 @@ export default function MockTestSpeakingSession() {
 
     // ── Audio playback queue ───────────────────────────────────────────────
     const playNextInQueue = useCallback(async () => {
-        if (isPlayingRef.current || audioQueueRef.current.length === 0) return;
+        if (isPlayingRef.current) return;
+
+        if (audioQueueRef.current.length === 0) {
+            setPhase(prev => {
+                if (prev === 'processing') {
+                    setStatusText('Press the microphone to respond.');
+                    return 'ready';
+                }
+                return prev;
+            });
+            return;
+        }
+
         isPlayingRef.current = true;
         const buffer = audioQueueRef.current.shift()!;
         console.log('[MockTestSpeakingSession] playNextInQueue called', { bytes: buffer.byteLength });

@@ -15,13 +15,14 @@ import { EssaySubmission, WritingPart } from '../types/ai-types';
 import { getRandomPart1Task, getRandomPart2Task } from '../services/writingQuestionBank';
 import { storageProvider } from '../services/storage/StorageService';
 import WritingSession from '../models/WritingSession';
-import Notification from '../models/Notification';
+import { NotificationService } from '../services/notificationService';
+import { CreateNotificationPayload, NotificationType } from '../types/notification';
 
 // ─── Configuration ─────────────────────────────────────────────────────────
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
 const MODEL_NAME = 'gemma3:12b';
-
+const notificationService = new NotificationService();
 // ─── System Prompt ──────────────────────────────────────────────────────────
 
 function buildSystemPrompt(): string {
@@ -303,14 +304,16 @@ export const evaluateEssay = async (req: Request, res: Response): Promise<void> 
                     sessionRec.endTime = new Date();
 
                     // Create System Notification
+                    // TODO: Will change to Event Driven to create notification
                     try {
-                        await Notification.create({
-                            userId: userId,
-                            type: 'system',
-                            title: 'Writing Evaluation Complete 🎉',
-                            body: `Your IELTS Writing mock test for ${sessionRec.book} Test ${sessionRec.testNumber} has been fully evaluated. Click here to view your band score and detailed feedback!`,
-                            linkPath: '/progress',  // Could link directly to details if UI supports opening modal via URL
-                        });
+                        const payload = new CreateNotificationPayload(
+                            userId,
+                            NotificationType.SYSTEM,
+                            'Writing Evaluation Complete 🎉',
+                            `Your IELTS Writing mock test for ${sessionRec.book} Test ${sessionRec.testNumber} has been fully evaluated. Click here to view your band score and detailed feedback!`,
+                            '/progress',  // Could link directly to details if UI supports opening modal via URL
+                        )
+                        await notificationService.createNotification(payload);
                         console.log(`[WritingEvaluationController] Notification created for user ${userId}`);
                     } catch (notifErr) {
                         console.error('[WritingEvaluationController] Failed to create notification:', notifErr);

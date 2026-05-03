@@ -2,7 +2,6 @@ import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
 import { verifyToken } from '../middleware/authMiddleware';
 import Message from '../models/Message';
-import Notification from '../models/Notification';
 import User from '../models/User';
 
 const router = Router();
@@ -117,6 +116,7 @@ router.get('/:conversationId', async (req: Request, res: Response): Promise<void
  * POST /api/messages/send/:receiverId
  * Send a message to another user. Body: { content, type? }
  * Works for both students messaging teachers and vice versa.
+ * TODO: Will change to SocketIO for sending message
  */
 router.post('/send/:receiverId', async (req: Request, res: Response): Promise<void> => {
     console.log('[MessageRoutes] POST /send/:receiverId called', { receiverId: req.params.receiverId });
@@ -138,15 +138,6 @@ router.post('/send/:receiverId', async (req: Request, res: Response): Promise<vo
             receiverId,
             content,
             type,
-        });
-
-        // Notify the receiver
-        await Notification.create({
-            userId: receiverId,
-            type: 'message',
-            title: 'New message',
-            body: content.length > 60 ? content.slice(0, 57) + '...' : content,
-            linkPath: '/messages',
         });
 
         // Emit new message event to the receiver's room, and the sender's room

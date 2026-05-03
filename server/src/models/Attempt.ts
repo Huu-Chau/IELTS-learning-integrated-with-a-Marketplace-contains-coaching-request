@@ -1,15 +1,30 @@
-import { DataTypes, Model } from 'sequelize';
+import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../config/database';
-import { CreateNotificationPayload, NotificationType } from '../types/notification';
-import { NotificationService } from '../services/notificationService';
+import { KafkaService } from '../services/queue/KafkaService';
+import { IQueueProvider } from '../services/queue/IQueueProvider';
+import { QueueMessage, QueueTopic } from '../types/queue';
 
-const notificationService = new NotificationService();
-
+const queueService: IQueueProvider = new KafkaService();
 /**
  * Attempt model - stores IELTS test results.
  * Linked to a User via Firebase UID.
  */
-class Attempt extends Model {
+export interface IAttemptAttributes {
+    id: number;
+    userId: string;
+    testId?: string;
+    type: 'reading' | 'listening' | 'writing' | 'speaking' | 'manual';
+    score?: number;
+    feedback?: string;
+    answers?: Record<string, unknown>;
+    recordingPath?: string | null;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+export interface IAttemptCreationAttributes extends Optional<IAttemptAttributes, 'id'> { }
+
+class Attempt extends Model<IAttemptAttributes, IAttemptCreationAttributes> implements IAttemptAttributes {
     declare id: number;
     declare userId: string;       // Firebase UID
     declare testId: string;
@@ -59,21 +74,12 @@ Attempt.init(
         tableName: 'Attempts',
         hooks: {
             afterCreate: async (attempt) => {
-                // TODO: Will change to Event Driven to create notification
-                try {
-                    const typeLabel = attempt.type.charAt(0).toUpperCase() + attempt.type.slice(1);
-                    const scoreStr = attempt.score ? ` · Band ${attempt.score.toFixed(1)}` : '';
-                    const payload = new CreateNotificationPayload(
-                        attempt.userId,
-                        NotificationType.ATTEMPT,
-                        `${typeLabel} Test Completed${scoreStr}`,
-                        `Your ${attempt.type} mock test result has been saved to your progress.`,
-                        '/progress',
-                    );
-                    await notificationService.createNotification(payload);
-                } catch (err) {
-                    console.error('[Attempt Hook] Failed to create notification:', err);
-                }
+                console.log("🚀 ~ Attempt ~ afterCreate ~ attempt:", attempt.toJSON())
+                await queueService.publish<IAttemptAttributes>(
+                    new QueueMessage<IAttemptAttributes>(attempt.toJSON<IAttemptAttributes>()),
+                    QueueTopic.ATTEMPT_CREATED,
+                );
+                console.log("✅ Attempt created and message published to Kafka");
             }
         }
     }

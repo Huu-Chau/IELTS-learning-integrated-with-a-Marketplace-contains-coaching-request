@@ -1,5 +1,6 @@
 import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
 import sequelize from '../config/database';
+import { Role } from '../types/auth';
 
 /**
  * User model - synced from Firebase Auth.
@@ -11,7 +12,7 @@ class User extends Model<InferAttributes<User, { omit: 'createdAt' | 'updatedAt'
     declare firstName: string;
     declare lastName: string;
     declare email: string;
-    declare role: 'student' | 'teacher' | 'admin';
+    declare role: Role;
     declare wallet_balance: CreationOptional<number>;
     declare createdAt: CreationOptional<Date>;
     declare updatedAt: CreationOptional<Date>;
@@ -38,7 +39,7 @@ User.init(
         role: {
             type: DataTypes.STRING,
             allowNull: false,
-            defaultValue: 'student',
+            defaultValue: Role.STUDENT,
         },
         wallet_balance: {
             type: DataTypes.DECIMAL(10, 2),

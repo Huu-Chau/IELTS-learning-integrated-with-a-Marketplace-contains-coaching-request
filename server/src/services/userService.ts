@@ -1,4 +1,5 @@
 import User from '../models/User';
+import { Role } from '../types/auth';
 
 export const userService = {
     /**
@@ -33,7 +34,7 @@ export const userService = {
     /**
      * Set a user's role (Admin only).
      */
-    async setUserRole(uid: string, role: 'student' | 'teacher' | 'admin'): Promise<void> {
+    async setUserRole(uid: string, role: Role): Promise<void> {
         console.log('[UserService] setUserRole called', { uid, role });
         await User.update({ role }, { where: { id: uid } });
         console.log('[UserService] setUserRole success', { uid, role });

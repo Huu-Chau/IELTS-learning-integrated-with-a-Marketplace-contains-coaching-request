@@ -6,15 +6,20 @@ import { AuthService } from './services/authService';
 import { AuthController } from './controllers/authController';
 import { AttemptService } from './services/attemptService';
 import { AttemptController } from './controllers/attemptController';
+import { CambridgeTestService } from './services/cambridgeTestService';
+import { CambridgeTestController } from './controllers/CambridgeTestController';
+import { storageProvider } from './services/storage/StorageService';
 
 // Services
 const teacherAvailabilityService = new TeacherAvailabilityService();
 const reservationService = new ReservationService();
 const authService = new AuthService();
 const attemptService = new AttemptService();
+const cambridgeTestService = new CambridgeTestService(storageProvider);
 
 // Controllers
 export const teacherAvailabilityController = new TeacherAvailabilityController(teacherAvailabilityService);
 export const reservationController = new ReservationController(reservationService);
 export const authController = new AuthController(authService);
 export const attemptController = new AttemptController(attemptService);
+export const cambridgeTestController = new CambridgeTestController(cambridgeTestService);

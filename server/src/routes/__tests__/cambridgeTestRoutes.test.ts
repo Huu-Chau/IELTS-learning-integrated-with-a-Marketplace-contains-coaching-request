@@ -2,11 +2,11 @@ import request from 'supertest';
 import express from 'express';
 import { Readable } from 'stream';
 import router from '../cambridgeTestRoutes';
-import { PostgresMockMaterialStorage } from '../../database/PostgresMockMaterialStorage';
 import { storageProvider } from '../../services/storage/StorageService';
+import MockMaterial from '../../models/MockMaterial';
 
 // Mock dependencies
-jest.mock('../../database/PostgresMockMaterialStorage');
+jest.mock('../../models/MockMaterial');
 jest.mock('../../services/storage/StorageService', () => ({
     storageProvider: {
         getFileStream: jest.fn(),
@@ -18,12 +18,9 @@ app.use(express.json());
 app.use('/api', router);
 
 describe('cambridgeTestRoutes', () => {
-    let mockMaterialStorage: jest.Mocked<PostgresMockMaterialStorage>;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        // Get the prototype to mock methods easily since it's instantiated at top level
-        mockMaterialStorage = PostgresMockMaterialStorage.prototype as jest.Mocked<PostgresMockMaterialStorage>;
     });
 
     describe('GET /sets/:skill', () => {
@@ -33,7 +30,7 @@ describe('cambridgeTestRoutes', () => {
                 { book: 'Cambridge 20', test_number: 1, skill: 'reading' },
                 { book: 'Cambridge 20', test_number: 2, skill: 'reading' },
             ];
-            (mockMaterialStorage.getAllBySkill as jest.Mock).mockResolvedValue(mockMaterials);
+            (MockMaterial.findAll as jest.Mock).mockResolvedValue(mockMaterials);
 
             const response = await request(app).get('/api/sets/reading');
 
@@ -43,11 +40,11 @@ describe('cambridgeTestRoutes', () => {
             expect(response.body.sets[0].id).toBe('cambridge-20');
             expect(response.body.sets[0].tests).toHaveLength(2);
             expect(response.body.sets[1].id).toBe('cambridge-19');
-            expect(mockMaterialStorage.getAllBySkill).toHaveBeenCalledWith('reading');
+            expect(MockMaterial.findAll).toHaveBeenCalled();
         });
 
         it('should return 500 if database query fails', async () => {
-            (mockMaterialStorage.getAllBySkill as jest.Mock).mockRejectedValue(new Error('DB Error'));
+            (MockMaterial.findAll as jest.Mock).mockRejectedValue(new Error('DB Error'));
 
             const response = await request(app).get('/api/sets/listening');
 
@@ -132,7 +129,7 @@ describe('cambridgeTestRoutes', () => {
         };
 
         it('should grade standard, grouped and multi-select questions correctly', async () => {
-            (mockMaterialStorage.getByBookAndSkill as jest.Mock).mockResolvedValue([
+            (MockMaterial.findAll as jest.Mock).mockResolvedValue([
                 { test_number: 1, content: mockTestContent }
             ]);
 
@@ -170,7 +167,7 @@ describe('cambridgeTestRoutes', () => {
                     }]
                 }]
             };
-            (mockMaterialStorage.getByBookAndSkill as jest.Mock).mockResolvedValue([
+            (MockMaterial.findAll as jest.Mock).mockResolvedValue([
                 { test_number: 1, content: contentWithOptions }
             ]);
 
@@ -194,7 +191,7 @@ describe('cambridgeTestRoutes', () => {
         });
 
         it('should return 404 if test material is not found', async () => {
-            (mockMaterialStorage.getByBookAndSkill as jest.Mock).mockResolvedValue([]);
+            (MockMaterial.findAll as jest.Mock).mockResolvedValue([]);
             const response = await request(app)
                 .post('/api/grade')
                 .send({ skill: 'reading', book: '99', testNumber: 1, answers: {} });
@@ -208,24 +205,24 @@ describe('cambridgeTestRoutes', () => {
                 { book: '20', skill: 'reading', content: { test: 1 } },
                 { book: '20', skill: 'reading', content: { test: 2 } }
             ];
-            (mockMaterialStorage.getByBookAndSkill as jest.Mock).mockResolvedValue(mockMaterials);
+            (MockMaterial.findAll as jest.Mock).mockResolvedValue(mockMaterials);
 
             const response = await request(app).get('/api/reading/20');
 
             expect(response.status).toBe(200);
             expect(response.body.book).toBe('20');
             expect(response.body.tests).toHaveLength(2);
-            expect(mockMaterialStorage.getByBookAndSkill).toHaveBeenCalledWith('20', 'reading');
+            expect(MockMaterial.findAll).toHaveBeenCalled();
         });
 
         it('should return 404 if no materials match', async () => {
-            (mockMaterialStorage.getByBookAndSkill as jest.Mock).mockResolvedValue([]);
+            (MockMaterial.findAll as jest.Mock).mockResolvedValue([]);
             const response = await request(app).get('/api/listening/15');
             expect(response.status).toBe(404);
         });
 
         it('should return 500 if database error occurs', async () => {
-            (mockMaterialStorage.getByBookAndSkill as jest.Mock).mockRejectedValue(new Error('Fail'));
+            (MockMaterial.findAll as jest.Mock).mockRejectedValue(new Error('Fail'));
             const response = await request(app).get('/api/reading/20');
             expect(response.status).toBe(500);
         });

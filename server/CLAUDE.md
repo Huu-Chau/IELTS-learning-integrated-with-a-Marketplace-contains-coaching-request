@@ -54,10 +54,11 @@ Example principle:
 - Reference these enums instead of using raw strings in models, services, and controllers.
 
 ## Controller Implementation
+- **Interface Requirement**: Each controller MUST have an interface (e.g., `IAuthController`) defined in the same file, and the class MUST implement it.
 - Controller methods must be **async**.
 - Always call `return next();` at the end of a successful controller method.
 - Catch errors and either handle them or pass them to `next(error)`.
 
 ## Service Implementation
-- Service interfaces (e.g., `IAuthService`) should be defined in the same file as the implementation or in a dedicated directory.
+- **Interface Requirement**: Each service MUST have an interface (e.g., `IAuthService`) defined in the same file or in a dedicated directory, and the class MUST implement it.
 - Services handle all database interactions via Sequelize models.

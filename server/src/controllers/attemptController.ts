@@ -2,11 +2,17 @@ import { Request, Response, NextFunction } from 'express';
 import { IAttemptService } from '../services/attemptService';
 import { CreateAttemptPayload } from '../types/attempt';
 
-export class AttemptController {
-    constructor(private attemptService: IAttemptService) {}
+export interface IAttemptController {
+    create(req: Request, res: Response, next: NextFunction): Promise<void>;
+    getByUser(req: Request, res: Response, next: NextFunction): Promise<void>;
+    getById(req: Request, res: Response, next: NextFunction): Promise<void>;
+}
+
+export class AttemptController implements IAttemptController {
+    constructor(private readonly attemptService: IAttemptService) { }
 
     // POST /api/attempts — Save a new practice attempt
-    create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    public async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         console.log('[AttemptController] create called', { userId: req.user?.uid, type: req.body.type, hasFile: !!req.file });
         try {
             const { type, testId, score, feedback, answers } = req.body;
@@ -54,8 +60,9 @@ export class AttemptController {
         }
     }
 
+
     // GET /api/attempts/user/:uid — Get a user's attempt history
-    getByUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    public async getByUser(req: Request, res: Response, next: NextFunction): Promise<void> {
         console.log('[AttemptController] getByUser called', { uid: req.params.uid });
         try {
             const attempts = await this.attemptService.getAttemptsByUser(req.params.uid);
@@ -70,7 +77,7 @@ export class AttemptController {
     }
 
     // GET /api/attempts/:id — Get a single attempt
-    getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    public async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
         console.log('[AttemptController] getById called', { id: req.params.id });
         try {
             const attempt = await this.attemptService.getAttemptById(parseInt(req.params.id, 10));

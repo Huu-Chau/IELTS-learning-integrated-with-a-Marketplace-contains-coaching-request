@@ -1,5 +1,6 @@
 import { userService } from '../userService';
 import User from '../../models/User';
+import { Role } from '../../types/auth';
 
 jest.mock('../../models/User', () => ({
   findByPk: jest.fn(),
@@ -36,7 +37,7 @@ describe('userService', () => {
   describe('updateUser', () => {
     it('should update a user', async () => {
       const mockData = { firstName: 'Updated' };
-      
+
       await userService.updateUser('123', mockData as any);
 
       expect(User.update).toHaveBeenCalledWith(mockData, { where: { id: '123' } });
@@ -57,7 +58,7 @@ describe('userService', () => {
 
   describe('setUserRole', () => {
     it('should update the role of a user', async () => {
-      await userService.setUserRole('123', 'admin');
+      await userService.setUserRole('123', Role.ADMIN);
 
       expect(User.update).toHaveBeenCalledWith({ role: 'admin' }, { where: { id: '123' } });
     });

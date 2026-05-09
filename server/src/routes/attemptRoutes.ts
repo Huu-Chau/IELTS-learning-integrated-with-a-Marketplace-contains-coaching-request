@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { attemptController } from '../controllers/attemptController';
+import { attemptController } from '../container';
 import { verifyToken } from '../middleware/authMiddleware';
 import { upload } from '../config/multerConfig';
 

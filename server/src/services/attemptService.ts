@@ -1,15 +1,23 @@
 import Attempt from '../models/Attempt';
+import { CreateAttemptPayload } from '../types/attempt';
 
-export const attemptService = {
+export interface IAttemptService {
+    createAttempt(data: CreateAttemptPayload): Promise<Attempt>;
+    getAttemptsByUser(userId: string): Promise<Attempt[]>;
+    getAttemptById(id: number): Promise<Attempt | null>;
+    updateAttempt(id: number, data: Partial<Attempt>): Promise<void>;
+}
+
+export class AttemptService implements IAttemptService {
     /**
      * Save a new practice attempt to Postgres.
      */
-    async createAttempt(data: Partial<Attempt>): Promise<Attempt> {
+    async createAttempt(data: CreateAttemptPayload): Promise<Attempt> {
         console.log('[AttemptService] createAttempt called', { userId: data.userId, type: data.type });
         const attempt = await Attempt.create(data as any);
         console.log('[AttemptService] createAttempt success', { attemptId: attempt.id });
         return attempt;
-    },
+    }
 
     /**
      * Get all attempts for a specific user, most recent first.
@@ -22,7 +30,7 @@ export const attemptService = {
         });
         console.log('[AttemptService] getAttemptsByUser success', { userId, count: attempts.length });
         return attempts;
-    },
+    }
 
     /**
      * Get a single attempt by ID.
@@ -32,7 +40,7 @@ export const attemptService = {
         const attempt = await Attempt.findByPk(id);
         console.log('[AttemptService] getAttemptById success', { id, found: !!attempt });
         return attempt;
-    },
+    }
 
     /**
      * Update an attempt (e.g., to add AI feedback after processing).
@@ -41,5 +49,7 @@ export const attemptService = {
         console.log('[AttemptService] updateAttempt called', { id, fields: Object.keys(data) });
         await Attempt.update(data, { where: { id } });
         console.log('[AttemptService] updateAttempt success', { id });
-    },
-};
+    }
+}
+
+export const attemptService = new AttemptService();

@@ -1,5 +1,7 @@
 import { TeacherAvailabilityService } from "./services/teacherAvailabilityService";
 import { TeacherAvailabilityController } from "./controllers/teacherAvailabilityController";
+import { TeacherService } from "./services/teacherService";
+import { TeacherController } from "./controllers/teacherController";
 import { ReservationService } from './services/reservationService';
 import { ReservationController } from './controllers/reservationController';
 import { AuthService } from './services/authService';
@@ -31,6 +33,7 @@ const marketplaceService = new MarketplaceService();
 const messageService = new MessageService();
 const notificationService = new NotificationService();
 const requestService = new RequestService();
+const teacherService = new TeacherService(notificationService);
 
 // Controllers
 export const teacherAvailabilityController = new TeacherAvailabilityController(teacherAvailabilityService);
@@ -43,3 +46,4 @@ export const marketplaceController = new MarketplaceController(marketplaceServic
 export const messageController = new MessageController(messageService);
 export const notificationController = new NotificationController(notificationService);
 export const requestController = new RequestController(requestService);
+export const teacherController = new TeacherController(teacherService, messageService, notificationService);

@@ -16,6 +16,8 @@ import { MessageService } from './services/messageService';
 import { MessageController } from './controllers/messageController';
 import { NotificationService } from './services/notificationService';
 import { NotificationController } from './controllers/notificationController';
+import { RequestService } from './services/requestService';
+import { RequestController } from './controllers/requestController';
 import { storageProvider } from './services/storage/StorageService';
 
 // Services
@@ -28,6 +30,7 @@ const writingEvaluationService = new WritingEvaluationService(storageProvider);
 const marketplaceService = new MarketplaceService();
 const messageService = new MessageService();
 const notificationService = new NotificationService();
+const requestService = new RequestService();
 
 // Controllers
 export const teacherAvailabilityController = new TeacherAvailabilityController(teacherAvailabilityService);
@@ -39,3 +42,4 @@ export const writingEvaluationController = new WritingEvaluationController(writi
 export const marketplaceController = new MarketplaceController(marketplaceService, teacherAvailabilityService);
 export const messageController = new MessageController(messageService);
 export const notificationController = new NotificationController(notificationService);
+export const requestController = new RequestController(requestService);

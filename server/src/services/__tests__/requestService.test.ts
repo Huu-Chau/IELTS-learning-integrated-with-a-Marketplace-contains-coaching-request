@@ -1,6 +1,6 @@
 import MarketplaceRequest from '../../models/MarketplaceRequest';
-import { requestService, LegacyRequestPayload } from '../requestService';
-import { MarketplaceRequestStatus, MarketplaceRequestType } from '../../types/marketplace-request';
+import { RequestService, LegacyRequestPayload } from '../requestService';
+import { MarketplaceRequestStatus, MarketplaceRequestType, UpdateRequestStatusPayload } from '../../types/marketplace-request';
 import { Op } from 'sequelize';
 
 jest.mock('../../models/MarketplaceRequest', () => ({
@@ -10,8 +10,11 @@ jest.mock('../../models/MarketplaceRequest', () => ({
 }));
 
 describe('RequestService', () => {
+    let requestService: RequestService;
+
     beforeEach(() => {
         jest.clearAllMocks();
+        requestService = new RequestService();
     });
 
     describe('createRequest', () => {
@@ -151,11 +154,11 @@ describe('RequestService', () => {
         it('should update status successfully', async () => {
             (MarketplaceRequest.findByPk as jest.Mock).mockResolvedValue(mockRequestInstance);
 
-            await requestService.updateRequestStatus('1', 'accepted', 'teacher123');
+            await requestService.updateRequestStatus(new UpdateRequestStatusPayload('1', MarketplaceRequestStatus.ACCEPTED, 'teacher123'));
 
             expect(MarketplaceRequest.findByPk).toHaveBeenCalledWith(1);
             expect(mockRequestInstance.update).toHaveBeenCalledWith({
-                status: 'accepted',
+                status: MarketplaceRequestStatus.ACCEPTED,
                 teacherId: 'teacher123',
             });
         });
@@ -164,23 +167,23 @@ describe('RequestService', () => {
             const requestWithTeacher = { ...mockRequestInstance, teacherId: 'alreadySet' };
             (MarketplaceRequest.findByPk as jest.Mock).mockResolvedValue(requestWithTeacher);
 
-            await requestService.updateRequestStatus('1', 'completed', 'somebodyElse');
+            await requestService.updateRequestStatus(new UpdateRequestStatusPayload('1', MarketplaceRequestStatus.COMPLETED, 'somebodyElse'));
 
             expect(requestWithTeacher.update).toHaveBeenCalledWith({
-                status: 'completed',
+                status: MarketplaceRequestStatus.COMPLETED,
             });
         });
 
         it('should throw error if request not found', async () => {
             (MarketplaceRequest.findByPk as jest.Mock).mockResolvedValue(null);
 
-            await expect(requestService.updateRequestStatus('999', 'accepted')).rejects.toThrow('Request 999 not found');
+            await expect(requestService.updateRequestStatus(new UpdateRequestStatusPayload('999', MarketplaceRequestStatus.ACCEPTED))).rejects.toThrow('Request 999 not found');
         });
 
         it('should handle errors during status update', async () => {
             (MarketplaceRequest.findByPk as jest.Mock).mockRejectedValue(new Error('DB Error'));
 
-            await expect(requestService.updateRequestStatus('1', 'accepted')).rejects.toThrow('DB Error');
+            await expect(requestService.updateRequestStatus(new UpdateRequestStatusPayload('1', MarketplaceRequestStatus.ACCEPTED))).rejects.toThrow('DB Error');
         });
     });
 });

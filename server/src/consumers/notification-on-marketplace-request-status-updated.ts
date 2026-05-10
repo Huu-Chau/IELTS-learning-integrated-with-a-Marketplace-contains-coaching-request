@@ -4,12 +4,13 @@ import { IConsumer } from '.';
 import { INotificationService } from '../services/notificationService';
 import { IMarketplaceRequestAttributes } from '../models/MarketplaceRequest';
 import { CreateNotificationPayload, NotificationType } from '../types/notification';
-import { userService } from '../services/userService';
+import { IUserService } from '../services/userService';
 
 export class NotificationOnMarketplaceRequestStatusUpdatedConsumer implements IConsumer {
     constructor(
         private readonly queueService: IQueueProvider,
         private readonly notificationService: INotificationService,
+        private readonly userService: IUserService,
     ) { }
 
     async consume(): Promise<void> {
@@ -17,7 +18,7 @@ export class NotificationOnMarketplaceRequestStatusUpdatedConsumer implements IC
             console.log(`[${NotificationOnMarketplaceRequestStatusUpdatedConsumer.name}] 🚀 Message received in consumer`, message);
             const request = message.data;
             try {
-                const teacher = request.teacherId ? await userService.getUserById(request.teacherId) : null;
+                const teacher = request.teacherId ? await this.userService.getUserById(request.teacherId) : null;
                 const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}`.trim() : 'a teacher';
 
                 const statusMessages: Record<string, { title: string; body: string }> = {

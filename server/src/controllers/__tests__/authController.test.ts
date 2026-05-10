@@ -1,7 +1,8 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { auth } from '../../config/firebase';
 import User from '../../models/User';
-import { authController } from '../../container';
+import { AuthController } from '../authController';
+import { AuthService } from '../../services/authService';
 
 // Mock dependencies
 jest.mock('../../config/firebase', () => ({
@@ -10,16 +11,27 @@ jest.mock('../../config/firebase', () => ({
   },
 }));
 
-jest.mock('../../models/User', () => ({
-  create: jest.fn(),
-}));
+jest.mock('../../models/User', () => {
+  const mockModel = {
+    create: jest.fn(),
+    hasMany: jest.fn(),
+    belongsTo: jest.fn(),
+  };
+  return {
+    __esModule: true,
+    default: mockModel,
+    ...mockModel,
+  };
+});
 
 describe('authController', () => {
   let mockReq: Partial<Request>;
   let mockRes: Partial<Response>;
-  let nextMock: jest.Mock;
+  let nextMock: NextFunction;
   let jsonMock: jest.Mock;
   let statusMock: jest.Mock;
+  let controller: AuthController;
+  let service: AuthService;
 
   beforeEach(() => {
     jsonMock = jest.fn();
@@ -32,6 +44,8 @@ describe('authController', () => {
       status: statusMock,
       json: jsonMock,
     };
+    service = new AuthService();
+    controller = new AuthController(service);
     jest.clearAllMocks();
   });
 
@@ -43,7 +57,7 @@ describe('authController', () => {
       (auth.createUser as jest.Mock).mockResolvedValue({ uid: mockUid });
       (User.create as jest.Mock).mockResolvedValue({});
 
-      await authController.register(mockReq as Request, mockRes as Response, nextMock);
+      await controller.register(mockReq as Request, mockRes as Response, nextMock);
 
       expect(auth.createUser).toHaveBeenCalledWith({
         email: 'testuser@ieltsapp.local',
@@ -66,6 +80,7 @@ describe('authController', () => {
         uid: mockUid,
         role: 'student',
       });
+      expect(nextMock).toHaveBeenCalled();
     });
 
     it('should return 409 if email already exists in Firebase', async () => {
@@ -76,7 +91,7 @@ describe('authController', () => {
 
       (auth.createUser as jest.Mock).mockRejectedValue(firebaseError);
 
-      await authController.register(mockReq as Request, mockRes as Response, nextMock);
+      await controller.register(mockReq as Request, mockRes as Response, nextMock);
 
       expect(statusMock).toHaveBeenCalledWith(409);
       expect(jsonMock).toHaveBeenCalledWith({ error: 'This email/username is already in use. Please try logging in instead.' });
@@ -87,7 +102,7 @@ describe('authController', () => {
 
       (auth.createUser as jest.Mock).mockRejectedValue(new Error('Unknown error'));
 
-      await authController.register(mockReq as Request, mockRes as Response, nextMock);
+      await controller.register(mockReq as Request, mockRes as Response, nextMock);
 
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({ error: 'Unknown error' });

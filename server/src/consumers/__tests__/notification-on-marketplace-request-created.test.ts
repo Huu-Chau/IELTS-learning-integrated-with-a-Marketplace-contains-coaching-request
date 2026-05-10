@@ -1,24 +1,22 @@
 import { NotificationOnMarketplaceRequestCreatedConsumer } from '../notification-on-marketplace-request-created';
 import { IQueueProvider } from '../../services/queue/IQueueProvider';
 import { INotificationService } from '../../services/notificationService';
-import { userService } from '../../services/userService';
 import { QueueMessage, QueueTopic } from '../../types/queue/queue.types';
 import { MarketplaceRequestStatus } from '../../types/marketplace-request';
 import { NotificationType } from '../../types/notification';
-
-jest.mock('../../services/userService', () => ({
-  userService: {
-    getUserById: jest.fn(),
-  },
-}));
+import { IUserService } from '../../services/userService';
 
 describe('NotificationOnMarketplaceRequestCreatedConsumer', () => {
     let consumer: NotificationOnMarketplaceRequestCreatedConsumer;
     let mockQueueService: jest.Mocked<IQueueProvider>;
     let mockNotificationService: jest.Mocked<INotificationService>;
+    let mockUserService: jest.Mocked<IUserService>;
     let queueCallback: (message: QueueMessage<any>) => Promise<void>;
 
     beforeEach(() => {
+        mockUserService = {
+            getUserById: jest.fn(),
+        } as any;
         mockQueueService = {
             publish: jest.fn(),
             consume: jest.fn().mockImplementation((topic, groupId, callback) => {
@@ -38,7 +36,8 @@ describe('NotificationOnMarketplaceRequestCreatedConsumer', () => {
 
         consumer = new NotificationOnMarketplaceRequestCreatedConsumer(
             mockQueueService,
-            mockNotificationService
+            mockNotificationService,
+            mockUserService
         );
 
         jest.clearAllMocks();
@@ -79,15 +78,15 @@ describe('NotificationOnMarketplaceRequestCreatedConsumer', () => {
             const mockTeacher = { id: 'teacher-1', firstName: 'John', lastName: 'Doe' };
             const mockStudent = { id: 'student-1', firstName: 'Jane', lastName: 'Smith' };
             
-            (userService.getUserById as jest.Mock)
-                .mockResolvedValueOnce(mockTeacher)
-                .mockResolvedValueOnce(mockStudent);
+            mockUserService.getUserById
+                .mockResolvedValueOnce(mockTeacher as any)
+                .mockResolvedValueOnce(mockStudent as any);
 
             const message = createMockMessage(MarketplaceRequestStatus.PENDING, 'Writing');
             await queueCallback(message);
 
-            expect(userService.getUserById).toHaveBeenCalledWith('teacher-1');
-            expect(userService.getUserById).toHaveBeenCalledWith('student-1');
+            expect(mockUserService.getUserById).toHaveBeenCalledWith('teacher-1');
+            expect(mockUserService.getUserById).toHaveBeenCalledWith('student-1');
 
             expect(mockNotificationService.createNotification).toHaveBeenCalledTimes(2);
 
@@ -118,9 +117,9 @@ describe('NotificationOnMarketplaceRequestCreatedConsumer', () => {
             const mockTeacher = { id: 'teacher-1', firstName: 'Alice', lastName: 'Teacher' };
             const mockStudent = { id: 'student-1', firstName: 'Bob', lastName: 'Student' };
             
-            (userService.getUserById as jest.Mock)
-                .mockResolvedValueOnce(mockTeacher)
-                .mockResolvedValueOnce(mockStudent);
+            mockUserService.getUserById
+                .mockResolvedValueOnce(mockTeacher as any)
+                .mockResolvedValueOnce(mockStudent as any);
 
             const message = createMockMessage(MarketplaceRequestStatus.ACCEPTED);
             await queueCallback(message);
@@ -151,7 +150,7 @@ describe('NotificationOnMarketplaceRequestCreatedConsumer', () => {
         });
 
         it('should handle missing teacher and student gracefully (default names)', async () => {
-            (userService.getUserById as jest.Mock)
+            mockUserService.getUserById
                 .mockResolvedValueOnce(null)
                 .mockResolvedValueOnce(null);
 
@@ -182,7 +181,7 @@ describe('NotificationOnMarketplaceRequestCreatedConsumer', () => {
 
         it('should throw error if userService fails', async () => {
             const error = new Error('Database Error');
-            (userService.getUserById as jest.Mock).mockRejectedValueOnce(error);
+            mockUserService.getUserById.mockRejectedValueOnce(error);
 
             const message = createMockMessage(MarketplaceRequestStatus.PENDING);
 
@@ -190,9 +189,9 @@ describe('NotificationOnMarketplaceRequestCreatedConsumer', () => {
         });
 
         it('should throw error if notificationService fails', async () => {
-            (userService.getUserById as jest.Mock)
-                .mockResolvedValueOnce({})
-                .mockResolvedValueOnce({});
+            mockUserService.getUserById
+                .mockResolvedValueOnce({} as any)
+                .mockResolvedValueOnce({} as any);
             
             const error = new Error('Notification Error');
             mockNotificationService.createNotification.mockRejectedValueOnce(error);

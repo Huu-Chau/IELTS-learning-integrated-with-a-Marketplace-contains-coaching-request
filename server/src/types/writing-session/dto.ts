@@ -1,29 +1,19 @@
 import { WritingTask } from "../ai-types";
 
 export class StartSessionPayload {
-    userId: string;
-    book: string;
-    testNumber: number;
-
-    constructor(userId: string, book: string, testNumber: number) {
-        this.userId = userId;
-        this.book = book;
-        this.testNumber = testNumber;
-    }
+    constructor(
+        readonly userId: string,
+        readonly book: string,
+        readonly testNumber: number
+    ) { }
 }
 
 export class EvaluateEssayPayload {
-    essay: string;
-    taskNumber: number;
-    wordCount: number;
-    task: WritingTask;
-    userId: string;
-
-    constructor(essay: string, taskNumber: number, wordCount: number, task: WritingTask, userId: string) {
-        this.essay = essay;
-        this.taskNumber = taskNumber;
-        this.wordCount = wordCount;
-        this.task = task;
-        this.userId = userId;
-    }
+    constructor(
+        readonly essay: string,
+        readonly taskNumber: number,
+        readonly wordCount: number,
+        readonly task: WritingTask,
+        readonly userId: string
+    ) { }
 }

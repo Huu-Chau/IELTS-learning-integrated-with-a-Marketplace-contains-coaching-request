@@ -4,8 +4,6 @@
  * Serves Cambridge IELTS test data from PostgreSQL (MockMaterials table)
  * and audio recordings from MinIO (via IStorageProvider).
  *
- * Architecture: Refactored to follow 3-layer architecture (Routes -> Controller -> Service).
- *
  * Endpoints:
  *   GET  /sets/:skill      — list available test sets (grouped by book)
  *   GET  /:skill/:book     — full test JSON for a given book + skill

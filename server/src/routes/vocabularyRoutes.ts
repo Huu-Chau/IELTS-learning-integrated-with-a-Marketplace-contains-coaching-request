@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { vocabularyController } from '../controllers/vocabularyController';
+import { vocabularyController } from '../container';
 import { verifyToken } from '../middleware/authMiddleware';
 
 const router = Router();

@@ -1,22 +1,21 @@
-import { Request, Response } from 'express';
-import { vocabularyController } from '../vocabularyController';
-import Vocabulary from '../../models/Vocabulary';
+import { Request, Response, NextFunction } from 'express';
+import { VocabularyController } from '../vocabularyController';
+import { IVocabularyService } from '../../services/vocabularyService';
+import { AddVocabularyPayload, UpdateVocabularyPayload, MasteryLevel } from '../../types/vocabulary';
 
-jest.mock('../../models/Vocabulary', () => ({
-    findAll: jest.fn(),
-    create: jest.fn(),
-    findOne: jest.fn(),
-}));
-
-describe('vocabularyController', () => {
+describe('VocabularyController', () => {
     let mockReq: Partial<Request>;
     let mockRes: Partial<Response>;
+    let mockNext: NextFunction;
     let jsonMock: jest.Mock;
     let statusMock: jest.Mock;
+    let mockVocabularyService: jest.Mocked<IVocabularyService>;
+    let controller: VocabularyController;
 
     beforeEach(() => {
         jsonMock = jest.fn();
         statusMock = jest.fn().mockReturnValue({ json: jsonMock });
+        mockNext = jest.fn();
         mockReq = {
             user: { uid: 'test-user-id', email: 'test@example.com' },
             params: {},
@@ -26,51 +25,58 @@ describe('vocabularyController', () => {
             status: statusMock,
             json: jsonMock
         };
+        mockVocabularyService = {
+            getVocabularies: jest.fn(),
+            addVocabulary: jest.fn(),
+            updateVocabulary: jest.fn(),
+            deleteVocabulary: jest.fn()
+        };
+        controller = new VocabularyController(mockVocabularyService);
         jest.clearAllMocks();
     });
 
     describe('getVocabularies', () => {
         it('should return 401 if user is not authenticated', async () => {
             mockReq.user = undefined;
-            await vocabularyController.getVocabularies(mockReq as Request, mockRes as Response);
+            await controller.getVocabularies(mockReq as Request, mockRes as Response, mockNext);
             expect(statusMock).toHaveBeenCalledWith(401);
             expect(jsonMock).toHaveBeenCalledWith({ error: 'Unauthorized' });
+            expect(mockNext).not.toHaveBeenCalledWith(expect.anything());
         });
 
         it('should return vocabularies on success', async () => {
-            const mockVocabs = [{ id: 1, word: 'test' }];
-            (Vocabulary.findAll as jest.Mock).mockResolvedValue(mockVocabs);
+            const mockVocabs = [{ id: 1, word: 'test' }] as any;
+            mockVocabularyService.getVocabularies.mockResolvedValue(mockVocabs);
 
-            await vocabularyController.getVocabularies(mockReq as Request, mockRes as Response);
+            await controller.getVocabularies(mockReq as Request, mockRes as Response, mockNext);
 
-            expect(Vocabulary.findAll).toHaveBeenCalledWith({
-                where: { userId: 'test-user-id' },
-                order: [['createdAt', 'DESC']]
-            });
+            expect(mockVocabularyService.getVocabularies).toHaveBeenCalledWith('test-user-id');
             expect(jsonMock).toHaveBeenCalledWith({ vocabularies: mockVocabs });
+            expect(mockNext).toHaveBeenCalled();
         });
 
-        it('should return 500 on db error', async () => {
-            (Vocabulary.findAll as jest.Mock).mockRejectedValue(new Error('DB Error'));
+        it('should return 500 on service error', async () => {
+            mockVocabularyService.getVocabularies.mockRejectedValue(new Error('Service Error'));
 
-            await vocabularyController.getVocabularies(mockReq as Request, mockRes as Response);
+            await controller.getVocabularies(mockReq as Request, mockRes as Response, mockNext);
 
             expect(statusMock).toHaveBeenCalledWith(500);
             expect(jsonMock).toHaveBeenCalledWith({ error: 'Failed to fetch vocabulary' });
+            expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
         });
     });
 
     describe('addVocabulary', () => {
         it('should return 401 if user is not authenticated', async () => {
             mockReq.user = undefined;
-            await vocabularyController.addVocabulary(mockReq as Request, mockRes as Response);
+            await controller.addVocabulary(mockReq as Request, mockRes as Response, mockNext);
             expect(statusMock).toHaveBeenCalledWith(401);
             expect(jsonMock).toHaveBeenCalledWith({ error: 'Unauthorized' });
         });
 
         it('should return 400 if word is missing', async () => {
             mockReq.body = { englishMeaning: 'test' };
-            await vocabularyController.addVocabulary(mockReq as Request, mockRes as Response);
+            await controller.addVocabulary(mockReq as Request, mockRes as Response, mockNext);
             expect(statusMock).toHaveBeenCalledWith(400);
             expect(jsonMock).toHaveBeenCalledWith({ error: 'Word is required' });
         });
@@ -83,30 +89,28 @@ describe('vocabularyController', () => {
                 ipaSpelling: '/həˈləʊ/'
             };
             const mockVocab = { id: 1, ...mockReq.body, masteryLevel: 'New' };
-            (Vocabulary.create as jest.Mock).mockResolvedValue(mockVocab);
+            mockVocabularyService.addVocabulary.mockResolvedValue(mockVocab as any);
 
-            await vocabularyController.addVocabulary(mockReq as Request, mockRes as Response);
+            await controller.addVocabulary(mockReq as Request, mockRes as Response, mockNext);
 
-            expect(Vocabulary.create).toHaveBeenCalledWith({
-                userId: 'test-user-id',
-                word: 'hello',
-                englishMeaning: 'greeting',
-                vietnameseMeaning: 'chao',
-                ipaSpelling: '/həˈləʊ/',
-                masteryLevel: 'New'
-            });
+            expect(mockVocabularyService.addVocabulary).toHaveBeenCalledWith(
+                'test-user-id',
+                expect.any(AddVocabularyPayload)
+            );
             expect(statusMock).toHaveBeenCalledWith(201);
             expect(jsonMock).toHaveBeenCalledWith({ vocabulary: mockVocab });
+            expect(mockNext).toHaveBeenCalled();
         });
 
-        it('should return 500 on db error', async () => {
+        it('should return 500 on service error', async () => {
             mockReq.body = { word: 'hello' };
-            (Vocabulary.create as jest.Mock).mockRejectedValue(new Error('DB Error'));
+            mockVocabularyService.addVocabulary.mockRejectedValue(new Error('Service Error'));
 
-            await vocabularyController.addVocabulary(mockReq as Request, mockRes as Response);
+            await controller.addVocabulary(mockReq as Request, mockRes as Response, mockNext);
 
             expect(statusMock).toHaveBeenCalledWith(500);
             expect(jsonMock).toHaveBeenCalledWith({ error: 'Failed to add vocabulary' });
+            expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
         });
     });
 
@@ -114,58 +118,58 @@ describe('vocabularyController', () => {
         it('should return 401 if user is not authenticated', async () => {
             mockReq.user = undefined;
             mockReq.params = { id: '1' };
-            await vocabularyController.updateVocabulary(mockReq as Request, mockRes as Response);
+            await controller.updateVocabulary(mockReq as Request, mockRes as Response, mockNext);
             expect(statusMock).toHaveBeenCalledWith(401);
             expect(jsonMock).toHaveBeenCalledWith({ error: 'Unauthorized' });
         });
 
         it('should return 404 if vocabulary not found', async () => {
             mockReq.params = { id: '1' };
-            (Vocabulary.findOne as jest.Mock).mockResolvedValue(null);
+            mockVocabularyService.updateVocabulary.mockResolvedValue(null);
 
-            await vocabularyController.updateVocabulary(mockReq as Request, mockRes as Response);
+            await controller.updateVocabulary(mockReq as Request, mockRes as Response, mockNext);
 
-            expect(Vocabulary.findOne).toHaveBeenCalledWith({ where: { id: '1', userId: 'test-user-id' } });
+            expect(mockVocabularyService.updateVocabulary).toHaveBeenCalledWith(
+                'test-user-id',
+                '1',
+                expect.any(UpdateVocabularyPayload)
+            );
             expect(statusMock).toHaveBeenCalledWith(404);
             expect(jsonMock).toHaveBeenCalledWith({ error: 'Vocabulary not found' });
         });
 
         it('should update vocabulary on success', async () => {
             mockReq.params = { id: '1' };
-            mockReq.body = { word: 'world', masteryLevel: 'Familiar' };
+            mockReq.body = { word: 'world', masteryLevel: MasteryLevel.LEARNING };
             
-            const mockVocabInstance = {
+            const mockVocab = {
                 id: '1',
                 userId: 'test-user-id',
-                word: 'hello',
-                englishMeaning: 'greeting',
-                vietnameseMeaning: 'chao',
-                ipaSpelling: '/həˈləʊ/',
-                masteryLevel: 'New',
-                update: jest.fn().mockResolvedValue(true)
-            };
-            (Vocabulary.findOne as jest.Mock).mockResolvedValue(mockVocabInstance);
-
-            await vocabularyController.updateVocabulary(mockReq as Request, mockRes as Response);
-
-            expect(mockVocabInstance.update).toHaveBeenCalledWith({
                 word: 'world',
-                englishMeaning: 'greeting',
-                vietnameseMeaning: 'chao',
-                ipaSpelling: '/həˈləʊ/',
-                masteryLevel: 'Familiar'
-            });
-            expect(jsonMock).toHaveBeenCalledWith({ vocabulary: mockVocabInstance });
+                masteryLevel: MasteryLevel.LEARNING
+            };
+            mockVocabularyService.updateVocabulary.mockResolvedValue(mockVocab as any);
+
+            await controller.updateVocabulary(mockReq as Request, mockRes as Response, mockNext);
+
+            expect(mockVocabularyService.updateVocabulary).toHaveBeenCalledWith(
+                'test-user-id',
+                '1',
+                expect.objectContaining({ word: 'world', masteryLevel: MasteryLevel.LEARNING })
+            );
+            expect(jsonMock).toHaveBeenCalledWith({ vocabulary: mockVocab });
+            expect(mockNext).toHaveBeenCalled();
         });
 
-        it('should return 500 on db error', async () => {
+        it('should return 500 on service error', async () => {
             mockReq.params = { id: '1' };
-            (Vocabulary.findOne as jest.Mock).mockRejectedValue(new Error('DB Error'));
+            mockVocabularyService.updateVocabulary.mockRejectedValue(new Error('Service Error'));
 
-            await vocabularyController.updateVocabulary(mockReq as Request, mockRes as Response);
+            await controller.updateVocabulary(mockReq as Request, mockRes as Response, mockNext);
 
             expect(statusMock).toHaveBeenCalledWith(500);
             expect(jsonMock).toHaveBeenCalledWith({ error: 'Failed to update vocabulary' });
+            expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
         });
     });
 
@@ -173,46 +177,42 @@ describe('vocabularyController', () => {
         it('should return 401 if user is not authenticated', async () => {
             mockReq.user = undefined;
             mockReq.params = { id: '1' };
-            await vocabularyController.deleteVocabulary(mockReq as Request, mockRes as Response);
+            await controller.deleteVocabulary(mockReq as Request, mockRes as Response, mockNext);
             expect(statusMock).toHaveBeenCalledWith(401);
             expect(jsonMock).toHaveBeenCalledWith({ error: 'Unauthorized' });
         });
 
         it('should return 404 if vocabulary not found', async () => {
             mockReq.params = { id: '1' };
-            (Vocabulary.findOne as jest.Mock).mockResolvedValue(null);
+            mockVocabularyService.deleteVocabulary.mockResolvedValue(false);
 
-            await vocabularyController.deleteVocabulary(mockReq as Request, mockRes as Response);
+            await controller.deleteVocabulary(mockReq as Request, mockRes as Response, mockNext);
 
-            expect(Vocabulary.findOne).toHaveBeenCalledWith({ where: { id: '1', userId: 'test-user-id' } });
+            expect(mockVocabularyService.deleteVocabulary).toHaveBeenCalledWith('test-user-id', '1');
             expect(statusMock).toHaveBeenCalledWith(404);
             expect(jsonMock).toHaveBeenCalledWith({ error: 'Vocabulary not found' });
         });
 
         it('should delete vocabulary on success', async () => {
             mockReq.params = { id: '1' };
-            
-            const mockVocabInstance = {
-                id: '1',
-                userId: 'test-user-id',
-                destroy: jest.fn().mockResolvedValue(true)
-            };
-            (Vocabulary.findOne as jest.Mock).mockResolvedValue(mockVocabInstance);
+            mockVocabularyService.deleteVocabulary.mockResolvedValue(true);
 
-            await vocabularyController.deleteVocabulary(mockReq as Request, mockRes as Response);
+            await controller.deleteVocabulary(mockReq as Request, mockRes as Response, mockNext);
 
-            expect(mockVocabInstance.destroy).toHaveBeenCalled();
+            expect(mockVocabularyService.deleteVocabulary).toHaveBeenCalledWith('test-user-id', '1');
             expect(jsonMock).toHaveBeenCalledWith({ success: true, message: 'Vocabulary deleted successfully' });
+            expect(mockNext).toHaveBeenCalled();
         });
 
-        it('should return 500 on db error', async () => {
+        it('should return 500 on service error', async () => {
             mockReq.params = { id: '1' };
-            (Vocabulary.findOne as jest.Mock).mockRejectedValue(new Error('DB Error'));
+            mockVocabularyService.deleteVocabulary.mockRejectedValue(new Error('Service Error'));
 
-            await vocabularyController.deleteVocabulary(mockReq as Request, mockRes as Response);
+            await controller.deleteVocabulary(mockReq as Request, mockRes as Response, mockNext);
 
             expect(statusMock).toHaveBeenCalledWith(500);
             expect(jsonMock).toHaveBeenCalledWith({ error: 'Failed to delete vocabulary' });
+            expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
         });
     });
 });

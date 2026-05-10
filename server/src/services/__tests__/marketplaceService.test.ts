@@ -79,7 +79,7 @@ describe('MarketplaceService', () => {
             const mockListings = [{ id: 1, teacherId: 't1', pricePerHour: 20 }];
             (TeacherListing.findAll as jest.Mock).mockResolvedValue(mockListings);
             (User.findByPk as jest.Mock).mockResolvedValue({ firstName: 'T', lastName: '1' });
-            
+
             // Mock active reservation
             (Reservation.findOne as jest.Mock)
                 .mockResolvedValueOnce({ studentId: 'student1', expiresAt: new Date() }) // activeReservation
@@ -94,7 +94,7 @@ describe('MarketplaceService', () => {
             const mockListings = [{ id: 1, teacherId: 't1', pricePerHour: 20 }];
             (TeacherListing.findAll as jest.Mock).mockResolvedValue(mockListings);
             (User.findByPk as jest.Mock).mockResolvedValue({ firstName: 'T', lastName: '1' });
-            
+
             // Mock completed booking
             (Reservation.findOne as jest.Mock)
                 .mockResolvedValueOnce(null) // activeReservation
@@ -126,8 +126,8 @@ describe('MarketplaceService', () => {
 
     describe('createBooking', () => {
         it('should create a new marketplace request successfully', async () => {
-            const payload = new CreateBookingPayload(1, 'teacher1', 'Help me', 123);
-            
+            const payload = new CreateBookingPayload(1, 'teacher1', 'student1', 'Help me', 123);
+
             (MarketplaceRequest.findOne as jest.Mock).mockResolvedValue(null); // No duplicate
             (TeacherListing.findOne as jest.Mock).mockResolvedValue({
                 id: 1,
@@ -144,7 +144,7 @@ describe('MarketplaceService', () => {
                 toJSON: () => ({ id: 101, studentId: 'student1', teacherId: 'teacher1', fee: 25 })
             });
 
-            const result = await marketplaceService.createBooking('student1', payload);
+            const result = await marketplaceService.createBooking(payload);
 
             expect(MarketplaceRequest.create).toHaveBeenCalledWith(expect.objectContaining({
                 studentId: 'student1',
@@ -156,18 +156,18 @@ describe('MarketplaceService', () => {
 
         it('should throw error if duplicate pending request exists', async () => {
             (MarketplaceRequest.findOne as jest.Mock).mockResolvedValue({ id: 1 });
-            const payload = new CreateBookingPayload(1, 't1');
-            
-            await expect(marketplaceService.createBooking('s1', payload))
+            const payload = new CreateBookingPayload(1, 't1', 's1');
+
+            await expect(marketplaceService.createBooking(payload))
                 .rejects.toThrow('already have a pending request');
         });
 
         it('should throw error if listing is not found or inactive', async () => {
             (MarketplaceRequest.findOne as jest.Mock).mockResolvedValue(null);
             (TeacherListing.findOne as jest.Mock).mockResolvedValue(null);
-            const payload = new CreateBookingPayload(1, 't1');
+            const payload = new CreateBookingPayload(1, 't1', 's1');
 
-            await expect(marketplaceService.createBooking('s1', payload))
+            await expect(marketplaceService.createBooking(payload))
                 .rejects.toThrow('Listing not found or is no longer active');
         });
     });

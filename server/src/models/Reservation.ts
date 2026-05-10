@@ -7,6 +7,7 @@ import {
 } from 'sequelize';
 import sequelize from '../config/database';
 import TeacherAvailability from './TeacherAvailability';
+import { ReservationStatus } from '../types/reservation';
 
 /**
  * Reservation model — implements a 5-minute "soft lock" on a coaching slot.
@@ -23,6 +24,7 @@ import TeacherAvailability from './TeacherAvailability';
  * the server checks that the client's stored version matches the DB version,
  * preventing race-condition double-charges if two tabs submit simultaneously.
  */
+
 class Reservation extends Model<
     InferAttributes<Reservation, { omit: 'createdAt' | 'updatedAt' }>,
     InferCreationAttributes<Reservation, { omit: 'createdAt' | 'updatedAt' }>
@@ -32,7 +34,7 @@ class Reservation extends Model<
     declare listing: object;
     declare studentId: string;       // Firebase UID
     declare expiresAt: Date;
-    declare status: 'pending' | 'completed' | 'expired';
+    declare status: ReservationStatus;
     declare fee: number;
     declare version: CreationOptional<number>; // Optimistic lock counter
     declare createdAt: CreationOptional<Date>;
@@ -66,9 +68,13 @@ Reservation.init(
             allowNull: false,
         },
         status: {
-            type: DataTypes.ENUM('pending', 'completed', 'expired'),
+            type: DataTypes.ENUM(
+                ReservationStatus.PENDING,
+                ReservationStatus.COMPLETED,
+                ReservationStatus.EXPIRED
+            ),
             allowNull: false,
-            defaultValue: 'pending',
+            defaultValue: ReservationStatus.PENDING,
         },
         fee: {
             type: DataTypes.DECIMAL(10, 2),
@@ -92,14 +98,14 @@ Reservation.init(
             {
                 fields: ['availabilityId'],
                 unique: true,
-                where: { status: 'pending' },
+                where: { status: ReservationStatus.PENDING },
                 name: 'reservations_availability_id_pending_unique',
             },
             // Only one completed booking per slot (a slot is booked once)
             {
                 fields: ['availabilityId'],
                 unique: true,
-                where: { status: 'completed' },
+                where: { status: ReservationStatus.COMPLETED },
                 name: 'reservations_availability_id_completed_unique',
             },
             // Note: 'expired' rows are intentionally NOT unique-constrained

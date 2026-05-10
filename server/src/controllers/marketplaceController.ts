@@ -17,7 +17,7 @@ export class MarketplaceController implements IMarketplaceController {
     constructor(
         private marketplaceService: IMarketplaceService,
         private teacherAvailabilityService: ITeacherAvailabilityService
-    ) {}
+    ) { }
 
     async getListings(req: Request, res: Response, next: NextFunction): Promise<void> {
         console.log('[MarketplaceController] getListings called', { uid: req.user?.uid, query: req.query });
@@ -68,11 +68,12 @@ export class MarketplaceController implements IMarketplaceController {
             const payload = new CreateBookingPayload(
                 Number(listingId),
                 teacherId,
+                studentId,
                 message,
                 attemptId ? Number(attemptId) : undefined
             );
 
-            const result = await this.marketplaceService.createBooking(studentId, payload);
+            const result = await this.marketplaceService.createBooking(payload);
             res.status(201).json(result);
             return next();
         } catch (error: any) {
@@ -117,7 +118,7 @@ export class MarketplaceController implements IMarketplaceController {
             const teacherId = req.params.uid;
             const now = new Date();
             const next14Days = new Date(new Date().setDate(now.getDate() + 14));
-            
+
             const params = new GetAvailabilityParams(teacherId, now, next14Days);
             const availability = await this.teacherAvailabilityService.getAvailability(params);
 

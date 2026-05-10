@@ -1,7 +1,7 @@
 import { Op } from 'sequelize';
 import sequelize from '../config/database';
 import Reservation from '../models/Reservation';
-import { PayForReservationPayload } from '../types/reservation';
+import { PayForReservationPayload, ReservationStatus } from '../types/reservation';
 import User from '../models/User';
 import MarketplaceRequest from '../models/MarketplaceRequest';
 import TeacherListing from '../models/TeacherListing';
@@ -9,9 +9,33 @@ import { MarketplaceRequestStatus, MarketplaceRequestType } from '../types/marke
 
 export interface IReservationService {
     payForReservation(payload: PayForReservationPayload): Promise<MarketplaceRequest>;
+    getReservationStatusByListing(listingId: number, studentId: string): Promise<any>;
 }
 
 export class ReservationService implements IReservationService {
+    public async getReservationStatusByListing(listingId: number, studentId: string): Promise<any> {
+        const activeReservation = await Reservation.findOne({
+            where: {
+                'listing.id': listingId,
+                status: ReservationStatus.PENDING,
+                expiresAt: { [Op.gt]: new Date() },
+            },
+        });
+
+        if (!activeReservation) {
+            return { status: 'available' };
+        }
+
+        const isOwn = activeReservation.studentId === studentId;
+        return {
+            status: ReservationStatus.PENDING,
+            isOwn,
+            expiresAt: activeReservation.expiresAt,
+            reservationId: isOwn ? activeReservation.id : undefined,
+            version: isOwn ? activeReservation.version : undefined,
+        };
+    }
+
     public async payForReservation(payload: PayForReservationPayload): Promise<MarketplaceRequest> {
         const { reservationId, studentId } = payload;
 
@@ -22,7 +46,7 @@ export class ReservationService implements IReservationService {
                 where: {
                     id: reservationId,
                     studentId,
-                    status: 'pending',
+                    status: ReservationStatus.PENDING,
                     expiresAt: { [Op.gt]: new Date() },
                 },
                 transaction: t,
@@ -46,11 +70,11 @@ export class ReservationService implements IReservationService {
             });
 
             if (studentUpdatedCount === 0) {
-                throw new Error('Student not found');
+                throw new Error('Student not found or insufficient balance');
             }
 
             await reservation.update({
-                status: 'completed',
+                status: ReservationStatus.COMPLETED,
             }, {
                 transaction: t,
             });

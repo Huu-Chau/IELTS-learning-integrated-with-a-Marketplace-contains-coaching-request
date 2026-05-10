@@ -10,6 +10,7 @@ export class CreateBookingPayload {
     constructor(
         readonly listingId: number,
         readonly teacherId: string,
+        readonly studentId: string,
         readonly message?: string,
         readonly attemptId?: number
     ) { }

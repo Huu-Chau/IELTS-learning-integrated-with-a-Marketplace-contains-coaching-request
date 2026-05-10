@@ -3,13 +3,14 @@ import TeacherListing from '../models/TeacherListing';
 import MarketplaceRequest from '../models/MarketplaceRequest';
 import User from '../models/User';
 import Reservation from '../models/Reservation';
-import { BrowseListingsQuery, CreateBookingPayload } from '../types/marketplace';
 import { MarketplaceRequestStatus } from '../types/marketplace-request';
+import { ReservationStatus } from '../types/reservation';
+import { BrowseListingsQuery, CreateBookingPayload } from '../types/marketplace';
 
 export interface IMarketplaceService {
     getListings(query: BrowseListingsQuery, currentUserId?: string): Promise<any[]>;
     getListingById(id: string): Promise<any>;
-    createBooking(studentId: string, payload: CreateBookingPayload): Promise<any>;
+    createBooking(payload: CreateBookingPayload): Promise<any>;
     getStudentRequests(studentId: string): Promise<any[]>;
     getStudentPayments(studentId: string): Promise<any>;
 }
@@ -51,7 +52,7 @@ export class MarketplaceService implements IMarketplaceService {
                 const activeReservation = await Reservation.findOne({
                     where: {
                         'listing.id': listing.id,
-                        status: 'pending',
+                        status: ReservationStatus.PENDING,
                         expiresAt: { [Op.gt]: new Date() },
                     },
                     attributes: ['studentId', 'expiresAt'],
@@ -60,7 +61,7 @@ export class MarketplaceService implements IMarketplaceService {
                 const completedBooking = await Reservation.findOne({
                     where: {
                         'listing.id': listing.id,
-                        status: 'completed',
+                        status: ReservationStatus.COMPLETED,
                     },
                 });
 
@@ -138,8 +139,8 @@ export class MarketplaceService implements IMarketplaceService {
         };
     }
 
-    async createBooking(studentId: string, payload: CreateBookingPayload): Promise<any> {
-        const { listingId, teacherId, message, attemptId } = payload;
+    async createBooking(payload: CreateBookingPayload): Promise<any> {
+        const { listingId, teacherId, studentId, message, attemptId } = payload;
 
         // Duplicate guard
         const existingRequest = await MarketplaceRequest.findOne({

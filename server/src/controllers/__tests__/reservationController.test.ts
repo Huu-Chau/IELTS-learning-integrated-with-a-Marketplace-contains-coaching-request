@@ -36,6 +36,8 @@ describe('ReservationController', () => {
 
     mockReservationService = {
       payForReservation: jest.fn(),
+      getReservationStatusByListing: jest.fn(),
+      expireStaleReservations: jest.fn(),
     } as unknown as jest.Mocked<IReservationService>;
 
     controller = new ReservationController(mockReservationService);
@@ -68,19 +70,44 @@ describe('ReservationController', () => {
       expect(mockNext).toHaveBeenCalled();
     });
 
-    it('should propagate errors to the global error handler', async () => {
+    it('should call next(error) if service throws', async () => {
       mockReq.params = { reservationId: '123' };
       const error = new Error('Service error');
       (mockReservationService.payForReservation as jest.Mock).mockRejectedValue(error);
 
-      // Since the controller doesn't catch the error internally, it should propagate.
-      await expect(
-        controller.payForReservation(mockReq as Request, mockRes as Response, mockNext)
-      ).rejects.toThrow('Service error');
+      await controller.payForReservation(mockReq as Request, mockRes as Response, mockNext);
 
       expect(statusMock).not.toHaveBeenCalled();
       expect(jsonMock).not.toHaveBeenCalled();
-      expect(mockNext).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenCalledWith(error);
+    });
+  });
+
+  describe('getReservationStatusByListing', () => {
+    it('should successfully get reservation status', async () => {
+      mockReq.params = { listingId: '456' };
+      
+      const mockResult = { status: 'available' };
+      (mockReservationService.getReservationStatusByListing as jest.Mock).mockResolvedValue(mockResult);
+
+      await controller.getReservationStatusByListing(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockReservationService.getReservationStatusByListing).toHaveBeenCalledWith(456, 'student123');
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith(mockResult);
+      expect(mockNext).toHaveBeenCalled();
+    });
+
+    it('should call next(error) if service throws', async () => {
+      mockReq.params = { listingId: '456' };
+      const error = new Error('Service error');
+      (mockReservationService.getReservationStatusByListing as jest.Mock).mockRejectedValue(error);
+
+      await controller.getReservationStatusByListing(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(statusMock).not.toHaveBeenCalled();
+      expect(jsonMock).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenCalledWith(error);
     });
   });
 });

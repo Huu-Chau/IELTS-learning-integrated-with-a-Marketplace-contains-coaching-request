@@ -5,6 +5,7 @@ import { PayForReservationPayload } from '../types/reservation';
 export interface IReservationController {
     payForReservation(req: Request, res: Response, next: NextFunction): Promise<void>;
     getReservationStatusByListing(req: Request, res: Response, next: NextFunction): Promise<void>;
+    getReservationById(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export class ReservationController implements IReservationController {
@@ -31,6 +32,22 @@ export class ReservationController implements IReservationController {
             const { listingId } = req.params;
             const studentId = req.user!.uid;
             const result = await this.reservationService.getReservationStatusByListing(Number(listingId), studentId);
+            res.status(200).json(result);
+            return next();
+        } catch (error) {
+            return next(error);
+        }
+    }
+
+    public async getReservationById(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { reservationId } = req.params;
+            const studentId = req.user!.uid;
+            const result = await this.reservationService.getReservationById(Number(reservationId), studentId);
+            if (!result) {
+                res.status(404).json({ message: 'Reservation not found' });
+                return next();
+            }
             res.status(200).json(result);
             return next();
         } catch (error) {

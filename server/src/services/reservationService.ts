@@ -10,6 +10,7 @@ import { MarketplaceRequestStatus, MarketplaceRequestType } from '../types/marke
 export interface IReservationService {
     payForReservation(payload: PayForReservationPayload): Promise<MarketplaceRequest>;
     getReservationStatusByListing(listingId: number, studentId: string): Promise<any>;
+    getReservationById(reservationId: number, studentId: string): Promise<any>;
 }
 
 export class ReservationService implements IReservationService {
@@ -103,5 +104,15 @@ export class ReservationService implements IReservationService {
             console.error('[ReservationService] payForReservation error', error);
             throw error;
         }
+    }
+
+    public async getReservationById(reservationId: number, studentId: string): Promise<any> {
+        const reservation = await Reservation.findOne({
+            where: {
+                id: reservationId,
+                studentId,
+            },
+        });
+        return reservation;
     }
 }

@@ -32,4 +32,16 @@ router.get('/listing/:listingId', (req: Request, res: Response, next: NextFuncti
     return reservationController.getReservationStatusByListing(req, res, next);
 });
 
+// =============================================================================
+// GET /api/reservations/:reservationId
+// Returns the reservation details.
+// =============================================================================
+router.get('/:reservationId', (req: Request, res: Response, next: NextFunction) => {
+    console.log('[ReservationRoutes] GET /:reservationId called', {
+        reservationId: req.params.reservationId,
+        uid: req.user?.uid,
+    });
+    return reservationController.getReservationById(req, res, next);
+});
+
 export default router;

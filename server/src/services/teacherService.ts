@@ -27,7 +27,7 @@ export interface ITeacherService {
 export class TeacherService implements ITeacherService {
     constructor(
         private readonly notificationService: INotificationService
-    ) {}
+    ) { }
 
     public async getStats(teacherId: string): Promise<any> {
         // Count pending orders
@@ -120,16 +120,16 @@ export class TeacherService implements ITeacherService {
 
     public async updateAvailabilityRules(payload: UpdateAvailabilityRulesPayload): Promise<TeacherAvailability[]> {
         const { teacherId, rules } = payload;
-        
+
         // Since the model uses 'date' instead of 'dayOfWeek', we can't directly store 'dayOfWeek'.
         // However, we'll follow the original logic of replacing all records, but using a dummy date
         // or a specific range if we want to simulate recurring.
         // For now, to avoid breaking, let's assume 'date' is used.
         // If the frontend sends dayOfWeek, we might need a mapping.
-        
+
         // This part is tricky because the model and the route logic are out of sync.
         // I'll implement it using 'date' based on the current model.
-        
+
         const t = await sequelize.transaction();
         try {
             await TeacherAvailability.destroy({ where: { teacherId }, transaction: t });
@@ -194,9 +194,9 @@ export class TeacherService implements ITeacherService {
             throw new Error('Order not found or access denied');
         }
 
-        await order.update({ 
-            status: payload.status, 
-            feedbackPath: payload.feedbackPath 
+        await order.update({
+            status: payload.status,
+            feedbackPath: payload.feedbackPath
         });
         return order;
     }

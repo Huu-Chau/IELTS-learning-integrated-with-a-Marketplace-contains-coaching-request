@@ -12,20 +12,20 @@ router.use(verifyToken());
  * Returns all conversations for the authenticated user (student OR teacher).
  * Each conversation shows the last message, the other participant, and unread count.
  */
-router.get('/conversations', messageController.getConversations);
+router.get('/conversations', (req, res, next) => messageController.getConversations(req, res, next));
 
 /**
  * GET /api/messages/:conversationId
  * Returns all messages in a specific conversation.
  * Also marks all received messages as read.
  */
-router.get('/:conversationId', messageController.getMessages);
+router.get('/:conversationId', (req, res, next) => messageController.getMessages(req, res, next));
 
 /**
  * POST /api/messages/send/:receiverId
  * Send a message to another user. Body: { content, type? }
  * Works for both students messaging teachers and vice versa.
  */
-router.post('/send/:receiverId', messageController.sendMessage);
+router.post('/send/:receiverId', (req, res, next) => messageController.sendMessage(req, res, next));
 
 export default router;

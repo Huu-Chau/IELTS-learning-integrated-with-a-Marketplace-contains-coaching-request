@@ -9,7 +9,9 @@ export interface IAttemptController {
 }
 
 export class AttemptController implements IAttemptController {
-    constructor(private readonly attemptService: IAttemptService) { }
+    constructor(private readonly attemptService: IAttemptService) {
+        console.log('this.attemptService', this.attemptService);
+    }
 
     // POST /api/attempts — Save a new practice attempt
     public async create(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -65,6 +67,7 @@ export class AttemptController implements IAttemptController {
     public async getByUser(req: Request, res: Response, next: NextFunction): Promise<void> {
         console.log('[AttemptController] getByUser called', { uid: req.params.uid });
         try {
+            console.log('=== getByUser this.attemptService', this.attemptService);
             const attempts = await this.attemptService.getAttemptsByUser(req.params.uid);
             console.log('[AttemptController] getByUser success', { uid: req.params.uid, count: attempts.length });
             res.json(attempts);

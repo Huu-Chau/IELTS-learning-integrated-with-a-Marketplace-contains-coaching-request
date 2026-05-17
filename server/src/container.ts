@@ -30,7 +30,12 @@ import { storageProvider } from './services/storage/StorageService';
 const teacherAvailabilityService = new TeacherAvailabilityService();
 const reservationService = new ReservationService();
 const authService = new AuthService();
+
 const attemptService = new AttemptService();
+console.log('=== attempService:', attemptService);
+console.log(Object.getOwnPropertyNames(Object.getPrototypeOf(attemptService)));
+
+
 const cambridgeTestService = new CambridgeTestService(storageProvider);
 const writingEvaluationService = new WritingEvaluationService(storageProvider);
 const marketplaceService = new MarketplaceService();

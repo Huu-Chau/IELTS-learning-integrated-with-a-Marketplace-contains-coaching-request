@@ -5,6 +5,6 @@ import { validateRegister } from '../middleware/validateRegister';
 const router = Router();
 
 // Public route — no auth token required
-router.post('/register', validateRegister, authController.register);
+router.post('/register', validateRegister, (req, res, next) => authController.register(req, res, next));
 
 export default router;

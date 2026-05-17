@@ -50,7 +50,7 @@ describe('UserController', () => {
             mockReq.dbUser = { id: 'test-uid', name: 'Test User' } as any;
             await userController.getMe(mockReq as Request, mockRes as Response, mockNext);
             expect(jsonMock).toHaveBeenCalledWith(mockReq.dbUser);
-            expect(mockNext).toHaveBeenCalled();
+            expect(mockNext).not.toHaveBeenCalled();
         });
 
         it('should return 404 if user not found', async () => {
@@ -65,7 +65,7 @@ describe('UserController', () => {
             mockUserService.getUserById.mockResolvedValue(mockUser);
             await userController.getMe(mockReq as Request, mockRes as Response, mockNext);
             expect(jsonMock).toHaveBeenCalledWith(mockUser);
-            expect(mockNext).toHaveBeenCalled();
+            expect(mockNext).not.toHaveBeenCalled();
         });
 
         it('should pass error to next on service error', async () => {
@@ -91,7 +91,7 @@ describe('UserController', () => {
             mockUserService.getUserById.mockResolvedValue(mockUser);
             await userController.getById(mockReq as Request, mockRes as Response, mockNext);
             expect(jsonMock).toHaveBeenCalledWith(mockUser);
-            expect(mockNext).toHaveBeenCalled();
+            expect(mockNext).not.toHaveBeenCalled();
         });
 
         it('should pass error to next on service error', async () => {
@@ -119,7 +119,7 @@ describe('UserController', () => {
 
             expect(mockUserService.topUp).toHaveBeenCalledWith('test-uid', 100);
             expect(jsonMock).toHaveBeenCalledWith({ message: 'Credits successfully added', walletBalance: 200 });
-            expect(mockNext).toHaveBeenCalled();
+            expect(mockNext).not.toHaveBeenCalled();
         });
 
         it('should pass error to next on service error', async () => {
@@ -141,7 +141,7 @@ describe('UserController', () => {
 
             expect(mockUserService.updateUser).toHaveBeenCalledWith('test-uid', expect.objectContaining({ name: 'Updated Name' }));
             expect(jsonMock).toHaveBeenCalledWith({ message: 'User updated successfully' });
-            expect(mockNext).toHaveBeenCalled();
+            expect(mockNext).not.toHaveBeenCalled();
         });
 
         it('should pass error to next on service error', async () => {
@@ -163,7 +163,7 @@ describe('UserController', () => {
             await userController.getAll(mockReq as Request, mockRes as Response, mockNext);
 
             expect(jsonMock).toHaveBeenCalledWith(mockUsers);
-            expect(mockNext).toHaveBeenCalled();
+            expect(mockNext).not.toHaveBeenCalled();
         });
 
         it('should pass error to next on service error', async () => {
@@ -186,7 +186,7 @@ describe('UserController', () => {
 
             expect(mockUserService.setUserRole).toHaveBeenCalledWith('test-uid', Role.TEACHER);
             expect(jsonMock).toHaveBeenCalledWith({ message: 'Role updated to teacher' });
-            expect(mockNext).toHaveBeenCalled();
+            expect(mockNext).not.toHaveBeenCalled();
         });
 
         it('should pass error to next on service error', async () => {

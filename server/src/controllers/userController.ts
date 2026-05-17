@@ -28,7 +28,7 @@ export class UserController implements IUserController {
             if (req.dbUser) {
                 console.log('[UserController] getMe success (from dbUser)', { uid });
                 res.json(req.dbUser);
-                return next();
+                return;
             }
             const user = await this.userService.getUserById(uid);
             if (!user) {
@@ -38,7 +38,6 @@ export class UserController implements IUserController {
             }
             console.log('[UserController] getMe success', { uid });
             res.json(user);
-            return next();
         } catch (error: any) {
             console.error('[UserController] getMe error', error);
             next(error);
@@ -57,7 +56,6 @@ export class UserController implements IUserController {
             }
             console.log('[UserController] getById success', { uid: req.params.uid });
             res.json(user);
-            return next();
         } catch (error: any) {
             console.error('[UserController] getById error', error);
             next(error);
@@ -79,7 +77,6 @@ export class UserController implements IUserController {
 
             console.log('[UserController] topUp success', { uid, newBalance });
             res.json({ message: 'Credits successfully added', walletBalance: newBalance });
-            return next();
         } catch (error: any) {
             console.error('[UserController] topUp error', error);
             if (error.message === 'Invalid credits amount') {
@@ -98,7 +95,6 @@ export class UserController implements IUserController {
             await this.userService.updateUser(req.params.uid, payload);
             console.log('[UserController] update success', { uid: req.params.uid });
             res.json({ message: 'User updated successfully' });
-            return next();
         } catch (error: any) {
             console.error('[UserController] update error', error);
             next(error);
@@ -112,7 +108,6 @@ export class UserController implements IUserController {
             const users = await this.userService.getAllUsers();
             console.log('[UserController] getAll success', { count: users.length });
             res.json(users);
-            return next();
         } catch (error: any) {
             console.error('[UserController] getAll error', error);
             next(error);
@@ -127,7 +122,6 @@ export class UserController implements IUserController {
             await this.userService.setUserRole(req.params.uid, payload.role);
             console.log('[UserController] setRole success', { uid: req.params.uid, role: payload.role });
             res.json({ message: `Role updated to ${payload.role}` });
-            return next();
         } catch (error: any) {
             console.error('[UserController] setRole error', error);
             next(error);

@@ -274,6 +274,43 @@ async function expireReservations() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// TASK 5: Auto-Clean Past Availability Slots (runs daily at 04:00 AM)
+// Deletes TeacherAvailability rows whose date is in the past AND have no
+// active (PENDING or COMPLETED) reservation attached, keeping the schedule
+// list clean and preventing stale-slot delete errors.
+// ─────────────────────────────────────────────────────────────────────────────
+async function autocleanPastAvailabilities() {
+    console.log('[CronService] autocleanPastAvailabilities called');
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // midnight boundary — only touch yesterday and older
+
+        // Find all past availability IDs that are SAFELY deletable:
+        // no reservation in PENDING or COMPLETED status tied to them
+        const activeReservations = await Reservation.findAll({
+            attributes: ['availabilityId'],
+            where: {
+                status: {
+                    [Op.in]: [ReservationStatus.PENDING, ReservationStatus.COMPLETED],
+                },
+            },
+        });
+        const protectedIds = activeReservations.map((r) => r.availabilityId);
+
+        const deletedCount = await TeacherAvailability.destroy({
+            where: {
+                date: { [Op.lt]: today },
+                ...(protectedIds.length > 0 ? { id: { [Op.notIn]: protectedIds } } : {}),
+            },
+        });
+
+        console.log('[CronService] autocleanPastAvailabilities success', { deletedCount });
+    } catch (error) {
+        console.error('[CronService] autocleanPastAvailabilities error', error);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PUBLIC: Start all cron jobs
 // ─────────────────────────────────────────────────────────────────────────────
 export function startAllJobs() {
@@ -299,8 +336,13 @@ export function startAllJobs() {
         timezone: 'Asia/Ho_Chi_Minh',
     });
 
-    console.log('[CronService] startAllJobs success — 4 jobs registered');
+    // Daily at 04:00 AM — auto-clean stale past availability slots
+    cron.schedule('0 4 * * *', autocleanPastAvailabilities, {
+        timezone: 'Asia/Ho_Chi_Minh',
+    });
+
+    console.log('[CronService] startAllJobs success — 5 jobs registered');
 }
 
 // Export for manual testing via scripts
-export { autoCompleteSessions, autoRejectStaleRequests, sendSessionReminders, expireReservations };
+export { autoCompleteSessions, autoRejectStaleRequests, sendSessionReminders, expireReservations, autocleanPastAvailabilities };

@@ -1,14 +1,6 @@
 import { Op } from 'sequelize';
 import MarketplaceRequest from '../models/MarketplaceRequest';
-import { MarketplaceRequestStatus, MarketplaceRequestType } from '../types/marketplace-request';
-
-/**
- * Request service — now powered by PostgreSQL/Sequelize.
- *
- * Migrated from Cloud Firestore to the unified Sequelize MarketplaceRequest model.
- * All marketplace request operations now go through PostgreSQL,
- * consistent with the rest of the application's data layer.
- */
+import { MarketplaceRequestStatus, MarketplaceRequestType, UpdateRequestStatusPayload } from '../types/marketplace-request';
 
 /** Shape used by the legacy controller interface */
 export interface LegacyRequestPayload {
@@ -37,7 +29,22 @@ export interface RequestResult {
     updatedAt: Date;
 }
 
-export const requestService = {
+export interface IRequestService {
+    createRequest(data: LegacyRequestPayload): Promise<RequestResult>;
+    getOpenRequests(): Promise<RequestResult[]>;
+    getRequestsForTeacher(teacherId: string): Promise<RequestResult[]>;
+    getRequestsByStudent(studentId: string): Promise<RequestResult[]>;
+    updateRequestStatus(payload: UpdateRequestStatusPayload): Promise<void>;
+}
+
+/**
+ * Request service — now powered by PostgreSQL/Sequelize.
+ *
+ * Migrated from Cloud Firestore to the unified Sequelize MarketplaceRequest model.
+ * All marketplace request operations now go through PostgreSQL,
+ * consistent with the rest of the application's data layer.
+ */
+export class RequestService implements IRequestService {
     /**
      * Create a new marketplace request (broadcast or targeted).
      */
@@ -74,7 +81,7 @@ export const requestService = {
             console.error('[RequestService] createRequest error', error);
             throw error;
         }
-    },
+    }
 
     /**
      * Get all open/pending requests (for teachers to browse).
@@ -106,7 +113,7 @@ export const requestService = {
             console.error('[RequestService] getOpenRequests error', error);
             throw error;
         }
-    },
+    }
 
     /**
      * Get requests targeted at a specific teacher.
@@ -138,7 +145,7 @@ export const requestService = {
             console.error('[RequestService] getRequestsForTeacher error', error);
             throw error;
         }
-    },
+    }
 
     /**
      * Get all requests created by a specific student.
@@ -170,16 +177,13 @@ export const requestService = {
             console.error('[RequestService] getRequestsByStudent error', error);
             throw error;
         }
-    },
+    }
 
     /**
      * Update request status (accept, decline, complete).
      */
-    async updateRequestStatus(
-        id: string,
-        status: 'accepted' | 'declined' | 'completed',
-        acceptedBy?: string
-    ): Promise<void> {
+    async updateRequestStatus(payload: UpdateRequestStatusPayload): Promise<void> {
+        const { id, status, acceptedBy } = payload;
         console.log('[RequestService] updateRequestStatus called', { id, status, acceptedBy });
         try {
             const request = await MarketplaceRequest.findByPk(parseInt(id, 10));
@@ -198,5 +202,5 @@ export const requestService = {
             console.error('[RequestService] updateRequestStatus error', error);
             throw error;
         }
-    },
-};
+    }
+}

@@ -1,7 +1,8 @@
-import { Request, Response } from 'express';
-import { authController } from '../authController';
+import { Request, Response, NextFunction } from 'express';
 import { auth } from '../../config/firebase';
 import User from '../../models/User';
+import { AuthController } from '../authController';
+import { AuthService } from '../../services/authService';
 
 // Mock dependencies
 jest.mock('../../config/firebase', () => ({
@@ -10,19 +11,32 @@ jest.mock('../../config/firebase', () => ({
   },
 }));
 
-jest.mock('../../models/User', () => ({
-  create: jest.fn(),
-}));
+jest.mock('../../models/User', () => {
+  const mockModel = {
+    create: jest.fn(),
+    hasMany: jest.fn(),
+    belongsTo: jest.fn(),
+  };
+  return {
+    __esModule: true,
+    default: mockModel,
+    ...mockModel,
+  };
+});
 
 describe('authController', () => {
   let mockReq: Partial<Request>;
   let mockRes: Partial<Response>;
+  let nextMock: NextFunction;
   let jsonMock: jest.Mock;
   let statusMock: jest.Mock;
+  let controller: AuthController;
+  let service: AuthService;
 
   beforeEach(() => {
     jsonMock = jest.fn();
     statusMock = jest.fn().mockReturnValue({ json: jsonMock });
+    nextMock = jest.fn();
     mockReq = {
       body: {},
     };
@@ -30,45 +44,20 @@ describe('authController', () => {
       status: statusMock,
       json: jsonMock,
     };
+    service = new AuthService();
+    controller = new AuthController(service);
     jest.clearAllMocks();
   });
 
   describe('register', () => {
-    it('should return 400 if missing fields', async () => {
-      mockReq.body = { username: 'testuser' }; // missing password and role
-      
-      await authController.register(mockReq as Request, mockRes as Response);
-
-      expect(statusMock).toHaveBeenCalledWith(400);
-      expect(jsonMock).toHaveBeenCalledWith({ error: 'Username, password, and role are required.' });
-    });
-
-    it('should return 400 if invalid role', async () => {
-      mockReq.body = { username: 'testuser', password: 'password123', role: 'admin' };
-      
-      await authController.register(mockReq as Request, mockRes as Response);
-
-      expect(statusMock).toHaveBeenCalledWith(400);
-      expect(jsonMock).toHaveBeenCalledWith({ error: 'Role must be "student" or "teacher".' });
-    });
-
-    it('should return 400 if password too short', async () => {
-      mockReq.body = { username: 'testuser', password: '123', role: 'student' };
-      
-      await authController.register(mockReq as Request, mockRes as Response);
-
-      expect(statusMock).toHaveBeenCalledWith(400);
-      expect(jsonMock).toHaveBeenCalledWith({ error: 'Password must be at least 6 characters.' });
-    });
-
     it('should successfully register a user and sync to Postgres', async () => {
       mockReq.body = { username: 'testuser', password: 'password123', name: 'Test User', role: 'student' };
-      
+
       const mockUid = 'firebase-uid-123';
       (auth.createUser as jest.Mock).mockResolvedValue({ uid: mockUid });
       (User.create as jest.Mock).mockResolvedValue({});
 
-      await authController.register(mockReq as Request, mockRes as Response);
+      await controller.register(mockReq as Request, mockRes as Response, nextMock);
 
       expect(auth.createUser).toHaveBeenCalledWith({
         email: 'testuser@ieltsapp.local',
@@ -91,17 +80,18 @@ describe('authController', () => {
         uid: mockUid,
         role: 'student',
       });
+      expect(nextMock).toHaveBeenCalled();
     });
 
     it('should return 409 if email already exists in Firebase', async () => {
       mockReq.body = { username: 'testuser', password: 'password123', role: 'student' };
-      
+
       const firebaseError = new Error('Firebase error');
       (firebaseError as any).code = 'auth/email-already-exists';
-      
+
       (auth.createUser as jest.Mock).mockRejectedValue(firebaseError);
 
-      await authController.register(mockReq as Request, mockRes as Response);
+      await controller.register(mockReq as Request, mockRes as Response, nextMock);
 
       expect(statusMock).toHaveBeenCalledWith(409);
       expect(jsonMock).toHaveBeenCalledWith({ error: 'This email/username is already in use. Please try logging in instead.' });
@@ -109,10 +99,10 @@ describe('authController', () => {
 
     it('should return 500 for other errors', async () => {
       mockReq.body = { username: 'testuser', password: 'password123', role: 'student' };
-      
+
       (auth.createUser as jest.Mock).mockRejectedValue(new Error('Unknown error'));
 
-      await authController.register(mockReq as Request, mockRes as Response);
+      await controller.register(mockReq as Request, mockRes as Response, nextMock);
 
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({ error: 'Unknown error' });

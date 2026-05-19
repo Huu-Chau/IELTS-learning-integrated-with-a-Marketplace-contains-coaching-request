@@ -1,12 +1,18 @@
-import { Request, Response } from 'express';
-import Vocabulary from '../models/Vocabulary';
+import { Request, Response, NextFunction } from 'express';
+import { IVocabularyService } from '../services/vocabularyService';
+import { AddVocabularyPayload, UpdateVocabularyPayload } from '../types/vocabulary';
 
-export const vocabularyController = {
-    /**
-     * GET /api/vocabulary
-     * Get all vocabulary words for the authenticated user
-     */
-    async getVocabularies(req: Request, res: Response): Promise<void> {
+export interface IVocabularyController {
+    getVocabularies(req: Request, res: Response, next: NextFunction): Promise<void>;
+    addVocabulary(req: Request, res: Response, next: NextFunction): Promise<void>;
+    updateVocabulary(req: Request, res: Response, next: NextFunction): Promise<void>;
+    deleteVocabulary(req: Request, res: Response, next: NextFunction): Promise<void>;
+}
+
+export class VocabularyController implements IVocabularyController {
+    constructor(private readonly vocabularyService: IVocabularyService) { }
+
+    getVocabularies = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const userId = req.user?.uid;
             if (!userId) {
@@ -14,23 +20,17 @@ export const vocabularyController = {
                 return;
             }
 
-            const vocabularies = await Vocabulary.findAll({
-                where: { userId },
-                order: [['createdAt', 'DESC']]
-            });
-
+            const vocabularies = await this.vocabularyService.getVocabularies(userId);
             res.json({ vocabularies });
+            return next();
         } catch (error) {
-            console.error('[vocabularyController] getVocabularies error:', error);
+            console.error('[VocabularyController] getVocabularies error:', error);
             res.status(500).json({ error: 'Failed to fetch vocabulary' });
+            return next(error);
         }
-    },
+    };
 
-    /**
-     * POST /api/vocabulary
-     * Add a new vocabulary word
-     */
-    async addVocabulary(req: Request, res: Response): Promise<void> {
+    addVocabulary = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const userId = req.user?.uid;
             if (!userId) {
@@ -39,71 +39,53 @@ export const vocabularyController = {
             }
 
             const { word, englishMeaning, vietnameseMeaning, ipaSpelling } = req.body;
-
             if (!word) {
                 res.status(400).json({ error: 'Word is required' });
                 return;
             }
 
-            const newVocab = await Vocabulary.create({
-                userId,
-                word,
-                englishMeaning,
-                vietnameseMeaning,
-                ipaSpelling,
-                masteryLevel: 'New'
-            });
+            const payload = new AddVocabularyPayload(word, englishMeaning, vietnameseMeaning, ipaSpelling);
+            const newVocab = await this.vocabularyService.addVocabulary(userId, payload);
 
             res.status(201).json({ vocabulary: newVocab });
+            return next();
         } catch (error) {
-            console.error('[vocabularyController] addVocabulary error:', error);
+            console.error('[VocabularyController] addVocabulary error:', error);
             res.status(500).json({ error: 'Failed to add vocabulary' });
+            return next(error);
         }
-    },
+    };
 
-    /**
-     * PUT /api/vocabulary/:id
-     * Update an existing vocabulary word
-     */
-    async updateVocabulary(req: Request, res: Response): Promise<void> {
+    updateVocabulary = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const userId = req.user?.uid;
             const { id } = req.params;
 
             if (!userId) {
                 res.status(401).json({ error: 'Unauthorized' });
-                return;
-            }
-
-            const vocab = await Vocabulary.findOne({ where: { id, userId } });
-
-            if (!vocab) {
-                res.status(404).json({ error: 'Vocabulary not found' });
                 return;
             }
 
             const { word, englishMeaning, vietnameseMeaning, ipaSpelling, masteryLevel } = req.body;
+            const payload = new UpdateVocabularyPayload(word, englishMeaning, vietnameseMeaning, ipaSpelling, masteryLevel);
 
-            await vocab.update({
-                word: word !== undefined ? word : vocab.word,
-                englishMeaning: englishMeaning !== undefined ? englishMeaning : vocab.englishMeaning,
-                vietnameseMeaning: vietnameseMeaning !== undefined ? vietnameseMeaning : vocab.vietnameseMeaning,
-                ipaSpelling: ipaSpelling !== undefined ? ipaSpelling : vocab.ipaSpelling,
-                masteryLevel: masteryLevel !== undefined ? masteryLevel : vocab.masteryLevel,
-            });
+            const vocab = await this.vocabularyService.updateVocabulary(userId, id, payload);
+
+            if (!vocab) {
+                res.status(404).json({ error: 'Vocabulary not found' });
+                return;
+            }
 
             res.json({ vocabulary: vocab });
+            return next();
         } catch (error) {
-            console.error('[vocabularyController] updateVocabulary error:', error);
+            console.error('[VocabularyController] updateVocabulary error:', error);
             res.status(500).json({ error: 'Failed to update vocabulary' });
+            return next(error);
         }
-    },
+    };
 
-    /**
-     * DELETE /api/vocabulary/:id
-     * Delete a vocabulary word
-     */
-    async deleteVocabulary(req: Request, res: Response): Promise<void> {
+    deleteVocabulary = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const userId = req.user?.uid;
             const { id } = req.params;
@@ -113,19 +95,19 @@ export const vocabularyController = {
                 return;
             }
 
-            const vocab = await Vocabulary.findOne({ where: { id, userId } });
+            const deleted = await this.vocabularyService.deleteVocabulary(userId, id);
 
-            if (!vocab) {
+            if (!deleted) {
                 res.status(404).json({ error: 'Vocabulary not found' });
                 return;
             }
 
-            await vocab.destroy();
-
             res.json({ success: true, message: 'Vocabulary deleted successfully' });
+            return next();
         } catch (error) {
-            console.error('[vocabularyController] deleteVocabulary error:', error);
+            console.error('[VocabularyController] deleteVocabulary error:', error);
             res.status(500).json({ error: 'Failed to delete vocabulary' });
+            return next(error);
         }
-    }
-};
+    };
+}

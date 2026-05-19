@@ -4,6 +4,7 @@ import Reservation from '../../models/Reservation';
 import User from '../../models/User';
 import MarketplaceRequest from '../../models/MarketplaceRequest';
 import { MarketplaceRequestStatus, MarketplaceRequestType } from '../../types/marketplace-request';
+import { ReservationStatus } from '../../types/reservation';
 
 jest.mock('../../config/database', () => ({
     transaction: jest.fn(),
@@ -47,7 +48,7 @@ describe('ReservationService', () => {
             id: 1,
             studentId: '101',
             fee: 50,
-            status: 'pending',
+            status: ReservationStatus.PENDING,
             listing: {
                 teacherId: '201',
                 skills: ['IELTS Writing'],
@@ -67,7 +68,7 @@ describe('ReservationService', () => {
                 where: expect.objectContaining({
                     id: payload.reservationId,
                     studentId: payload.studentId,
-                    status: 'pending',
+                    status: ReservationStatus.PENDING,
                 }),
                 transaction: mockTransaction,
                 lock: mockTransaction.LOCK.UPDATE,
@@ -82,7 +83,7 @@ describe('ReservationService', () => {
                 })
             );
             expect(mockReservation.update).toHaveBeenCalledWith(
-                { status: 'completed' },
+                { status: ReservationStatus.COMPLETED },
                 { transaction: mockTransaction }
             );
             expect(MarketplaceRequest.create).toHaveBeenCalledWith(
@@ -117,7 +118,7 @@ describe('ReservationService', () => {
             (User.update as jest.Mock).mockResolvedValue([0]);
 
             await expect(reservationService.payForReservation(payload))
-                .rejects.toThrow('Student not found');
+                .rejects.toThrow('Student not found or insufficient balance');
 
             expect(mockTransaction.rollback).toHaveBeenCalled();
             expect(mockTransaction.commit).not.toHaveBeenCalled();
@@ -130,6 +131,65 @@ describe('ReservationService', () => {
                 .rejects.toThrow('DB Error');
 
             expect(mockTransaction.rollback).toHaveBeenCalled();
+        });
+    });
+
+    describe('getReservationStatusByListing', () => {
+        const listingId = 456;
+        const studentId = 'student123';
+
+        it('should return available status if no reservation exists', async () => {
+            (Reservation.findOne as jest.Mock).mockResolvedValue(null);
+
+            const result = await reservationService.getReservationStatusByListing(listingId, studentId);
+
+            expect(result).toEqual({ status: 'available' });
+            expect(Reservation.findOne).toHaveBeenCalledWith(expect.objectContaining({
+                where: expect.objectContaining({
+                    'listing.id': listingId,
+                    status: ReservationStatus.PENDING,
+                }),
+            }));
+        });
+
+        it('should return pending status and isOwn true if own reservation exists', async () => {
+            const mockReservation = {
+                id: 123,
+                studentId,
+                expiresAt: new Date(Date.now() + 300000),
+                version: 1,
+            };
+            (Reservation.findOne as jest.Mock).mockResolvedValue(mockReservation);
+
+            const result = await reservationService.getReservationStatusByListing(listingId, studentId);
+
+            expect(result).toEqual({
+                status: ReservationStatus.PENDING,
+                isOwn: true,
+                expiresAt: mockReservation.expiresAt,
+                reservationId: 123,
+                version: 1,
+            });
+        });
+
+        it('should return pending status and isOwn false if another student has reservation', async () => {
+            const mockReservation = {
+                id: 123,
+                studentId: 'otherStudent',
+                expiresAt: new Date(Date.now() + 300000),
+                version: 1,
+            };
+            (Reservation.findOne as jest.Mock).mockResolvedValue(mockReservation);
+
+            const result = await reservationService.getReservationStatusByListing(listingId, studentId);
+
+            expect(result).toEqual({
+                status: ReservationStatus.PENDING,
+                isOwn: false,
+                expiresAt: mockReservation.expiresAt,
+                reservationId: undefined,
+                version: undefined,
+            });
         });
     });
 });

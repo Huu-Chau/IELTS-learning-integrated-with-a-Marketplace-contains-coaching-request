@@ -5,6 +5,7 @@ import User from '../models/User';
 import sequelize from '../config/database';
 import Reservation from '../models/Reservation';
 import TeacherAvailability from '../models/TeacherAvailability';
+import { ReservationStatus } from '../types/reservation';
 import { NotificationService } from '../services/notificationService';
 import { CreateNotificationPayload, NotificationType } from '../types/notification';
 import { MarketplaceRequestStatus } from '../types/marketplace-request';
@@ -240,7 +241,7 @@ async function expireReservations() {
         await sequelize.transaction(async (t) => {
             const expiredReservations = await Reservation.findAll({
                 where: {
-                    status: 'pending',
+                    status: ReservationStatus.PENDING,
                     expiresAt: { [Op.lt]: new Date() },
                 },
                 transaction: t,
@@ -254,7 +255,7 @@ async function expireReservations() {
 
             for (const reservation of expiredReservations) {
                 // Mark reservation as expired
-                await reservation.update({ status: 'expired' }, { transaction: t });
+                await reservation.update({ status: ReservationStatus.EXPIRED }, { transaction: t });
 
                 // Free up the availability slot
                 await TeacherAvailability.update(

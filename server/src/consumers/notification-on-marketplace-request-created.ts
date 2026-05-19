@@ -4,13 +4,14 @@ import { IConsumer } from '.';
 import { INotificationService } from '../services/notificationService';
 import { IMarketplaceRequestAttributes } from '../models/MarketplaceRequest';
 import { CreateNotificationPayload, NotificationType } from '../types/notification';
-import { userService } from '../services/userService';
+import { IUserService } from '../services/userService';
 import { MarketplaceRequestStatus } from '../types/marketplace-request';
 
 export class NotificationOnMarketplaceRequestCreatedConsumer implements IConsumer {
     constructor(
         private readonly queueService: IQueueProvider,
         private readonly notificationService: INotificationService,
+        private readonly userService: IUserService,
     ) { }
 
     async consume(): Promise<void> {
@@ -20,8 +21,8 @@ export class NotificationOnMarketplaceRequestCreatedConsumer implements IConsume
                 const request = message.data;
                 const teacherId = request.teacherId as string; // Always have teacherId in this case
                 const [teacher, student] = await Promise.all([
-                    userService.getUserById(teacherId),
-                    userService.getUserById(request.studentId)
+                    this.userService.getUserById(teacherId),
+                    this.userService.getUserById(request.studentId)
                 ]);
                 const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}`.trim() : 'a teacher';
                 const studentName = student ? `${student.firstName} ${student.lastName}`.trim() : 'a student';

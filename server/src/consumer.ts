@@ -14,10 +14,12 @@ import {
 } from './consumers';
 import { INotificationService, NotificationService } from './services/notificationService';
 import { IMessageService, MessageService } from './services/messageService';
+import { IUserService, UserService } from './services/userService';
 
 const queueService: IQueueProvider = new KafkaService();
 const notificationService: INotificationService = new NotificationService();
 const messageService: IMessageService = new MessageService();
+const userService: IUserService = new UserService();
 
 
 console.log('[Consumer] Starting standalone consumer process...');
@@ -50,8 +52,8 @@ sequelize.authenticate()
         console.log('[Consumer] ✅ Database connected successfully.');
         const consumers = [
             new NotificationOnAttemptCreatedConsumer(queueService, notificationService),
-            new NotificationOnMarketplaceRequestCreatedConsumer(queueService, notificationService),
-            new NotificationOnMarketplaceRequestStatusUpdatedConsumer(queueService, notificationService),
+            new NotificationOnMarketplaceRequestCreatedConsumer(queueService, notificationService, userService),
+            new NotificationOnMarketplaceRequestStatusUpdatedConsumer(queueService, notificationService, userService),
             new NotificationOnWritingSessionStatusUpdatedConsumer(queueService, notificationService),
             new MessageOnMarketplaceRequestStatusUpdatedConsumer(queueService, messageService),
         ];

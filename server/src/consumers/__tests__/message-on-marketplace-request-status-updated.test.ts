@@ -20,8 +20,10 @@ describe('MessageOnMarketplaceRequestStatusUpdatedConsumer', () => {
         } as unknown as jest.Mocked<IQueueProvider>;
 
         mockMessageService = {
-            createMessage: jest.fn()
-        };
+            createMessage: jest.fn(),
+            getConversations: jest.fn(),
+            getMessages: jest.fn()
+        } as unknown as jest.Mocked<IMessageService>;
 
         consumer = new MessageOnMarketplaceRequestStatusUpdatedConsumer(mockQueueService, mockMessageService);
         jest.spyOn(console, 'warn').mockImplementation(() => {});

@@ -1,8 +1,10 @@
 import { MessageService } from '../messageService';
 import Message from '../../models/Message';
+import User from '../../models/User';
 import { MessageType } from '../../types/message';
 
 jest.mock('../../models/Message');
+jest.mock('../../models/User');
 
 describe('MessageService', () => {
   let messageService: MessageService;
@@ -42,6 +44,72 @@ describe('MessageService', () => {
       (Message.create as jest.Mock).mockRejectedValue(error);
 
       await expect(messageService.createMessage(mockPayload)).rejects.toThrow('DB Error');
+    });
+  });
+
+  describe('getConversations', () => {
+    const userId = 'user1';
+
+    it('should return grouped and enriched conversations', async () => {
+        const mockMessages = [
+            {
+                conversationId: 'conv1',
+                senderId: userId,
+                receiverId: 'user2',
+                content: 'Hello',
+                sentAt: new Date('2024-01-01'),
+                isRead: true,
+            },
+            {
+                conversationId: 'conv1',
+                senderId: 'user2',
+                receiverId: userId,
+                content: 'Hi',
+                sentAt: new Date('2024-01-02'),
+                isRead: false,
+            },
+        ];
+
+        (Message.findAll as jest.Mock).mockResolvedValue(mockMessages);
+        (User.findByPk as jest.Mock).mockResolvedValue({
+            id: 'user2',
+            firstName: 'John',
+            lastName: 'Doe',
+            email: 'john@example.com',
+        });
+
+        const result = await messageService.getConversations(userId);
+
+        expect(result).toHaveLength(1);
+        expect(result[0]).toMatchObject({
+            conversationId: 'conv1',
+            otherId: 'user2',
+            unreadCount: 1,
+            otherUser: {
+                id: 'user2',
+                name: 'John Doe',
+                email: 'john@example.com',
+            },
+        });
+    });
+  });
+
+  describe('getMessages', () => {
+    it('should return messages and mark them as read', async () => {
+        const conversationId = 'conv1';
+        const userId = 'user1';
+        const mockMessages = [{ id: 1, content: 'test' }];
+
+        (Message.findAll as jest.Mock).mockResolvedValue(mockMessages);
+        (Message.update as jest.Mock).mockResolvedValue([1]);
+
+        const result = await messageService.getMessages(conversationId, userId);
+
+        expect(result).toEqual(mockMessages);
+        expect(Message.update).toHaveBeenCalledWith(
+            { isRead: true },
+            { where: { conversationId, receiverId: userId, isRead: false } }
+        );
     });
   });
 

@@ -1,10 +1,21 @@
-import { Request, Response } from 'express';
-import { userService } from '../services/userService';
-import User from '../models/User';
+import { Request, Response, NextFunction } from 'express';
+import { IUserService } from '../services/userService';
+import { TopUpPayload, UpdateUserPayload, SetRolePayload } from '../types/user';
 
-export const userController = {
+export interface IUserController {
+    getMe(req: Request, res: Response, next: NextFunction): Promise<void>;
+    getById(req: Request, res: Response, next: NextFunction): Promise<void>;
+    topUp(req: Request, res: Response, next: NextFunction): Promise<void>;
+    update(req: Request, res: Response, next: NextFunction): Promise<void>;
+    getAll(req: Request, res: Response, next: NextFunction): Promise<void>;
+    setRole(req: Request, res: Response, next: NextFunction): Promise<void>;
+}
+
+export class UserController implements IUserController {
+    constructor(private readonly userService: IUserService) { }
+
     // GET /api/users/me — Get authenticated user's own profile (from Postgres)
-    async getMe(req: Request, res: Response): Promise<void> {
+    getMe = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         console.log('[UserController] getMe called', { uid: req.user?.uid });
         try {
             const uid = req.user?.uid;
@@ -19,7 +30,7 @@ export const userController = {
                 res.json(req.dbUser);
                 return;
             }
-            const user = await userService.getUserById(uid);
+            const user = await this.userService.getUserById(uid);
             if (!user) {
                 console.log('[UserController] getMe failed: user not found', { uid });
                 res.status(404).json({ error: 'User profile not found' });
@@ -29,15 +40,15 @@ export const userController = {
             res.json(user);
         } catch (error: any) {
             console.error('[UserController] getMe error', error);
-            res.status(500).json({ error: error.message });
+            next(error);
         }
-    },
+    };
 
     // GET /api/users/:uid — Get user profile
-    async getById(req: Request, res: Response): Promise<void> {
+    getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         console.log('[UserController] getById called', { uid: req.params.uid });
         try {
-            const user = await userService.getUserById(req.params.uid);
+            const user = await this.userService.getUserById(req.params.uid);
             if (!user) {
                 console.log('[UserController] getById failed: user not found', { uid: req.params.uid });
                 res.status(404).json({ error: 'User not found' });
@@ -47,12 +58,12 @@ export const userController = {
             res.json(user);
         } catch (error: any) {
             console.error('[UserController] getById error', error);
-            res.status(500).json({ error: error.message });
+            next(error);
         }
-    },
+    };
 
     // POST /api/users/me/top-up — Mock Payment Gateway to add credits
-    async topUp(req: Request, res: Response): Promise<void> {
+    topUp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         console.log('[UserController] topUp called', { uid: req.user?.uid, body: req.body });
         try {
             const uid = req.user?.uid;
@@ -61,72 +72,59 @@ export const userController = {
                 return;
             }
 
-            const { credits } = req.body;
-            if (!credits || typeof credits !== 'number' || credits <= 0) {
-                res.status(400).json({ error: 'Invalid credits amount' });
-                return;
-            }
+            const payload = new TopUpPayload(req.body.credits);
+            const newBalance = await this.userService.topUp(uid, payload.credits);
 
-            const user = await User.findByPk(uid);
-            if (!user) {
-                res.status(404).json({ error: 'User not found' });
-                return;
-            }
-
-            // Atomically increment the wallet balance
-            await user.increment('wallet_balance', { by: credits });
-            await user.reload();
-
-            console.log('[UserController] topUp success', { uid, newBalance: user.wallet_balance });
-            res.json({ message: 'Credits successfully added', walletBalance: Number(user.wallet_balance) });
+            console.log('[UserController] topUp success', { uid, newBalance });
+            res.json({ message: 'Credits successfully added', walletBalance: newBalance });
         } catch (error: any) {
             console.error('[UserController] topUp error', error);
-            res.status(500).json({ error: error.message });
+            if (error.message === 'Invalid credits amount') {
+                res.status(400).json({ error: error.message });
+                return;
+            }
+            next(error);
         }
-    },
+    };
 
     // PUT /api/users/:uid — Update user profile
-    async update(req: Request, res: Response): Promise<void> {
+    update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         console.log('[UserController] update called', { uid: req.params.uid, body: req.body });
         try {
-            await userService.updateUser(req.params.uid, req.body);
+            const payload = new UpdateUserPayload(req.body.name, req.body.email, req.body.avatar_url);
+            await this.userService.updateUser(req.params.uid, payload);
             console.log('[UserController] update success', { uid: req.params.uid });
             res.json({ message: 'User updated successfully' });
         } catch (error: any) {
             console.error('[UserController] update error', error);
-            res.status(500).json({ error: error.message });
+            next(error);
         }
-    },
+    };
 
     // GET /api/users — List all users (Admin only)
-    async getAll(req: Request, res: Response): Promise<void> {
+    getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         console.log('[UserController] getAll called');
         try {
-            const users = await userService.getAllUsers();
+            const users = await this.userService.getAllUsers();
             console.log('[UserController] getAll success', { count: users.length });
             res.json(users);
         } catch (error: any) {
             console.error('[UserController] getAll error', error);
-            res.status(500).json({ error: error.message });
+            next(error);
         }
-    },
+    };
 
     // PATCH /api/users/:uid/role — Change user role (Admin only)
-    async setRole(req: Request, res: Response): Promise<void> {
+    setRole = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         console.log('[UserController] setRole called', { uid: req.params.uid, role: req.body.role });
         try {
-            const { role } = req.body;
-            if (!['student', 'teacher', 'admin'].includes(role)) {
-                console.log('[UserController] setRole failed: invalid role', { role });
-                res.status(400).json({ error: 'Invalid role' });
-                return;
-            }
-            await userService.setUserRole(req.params.uid, role);
-            console.log('[UserController] setRole success', { uid: req.params.uid, role });
-            res.json({ message: `Role updated to ${role}` });
+            const payload = new SetRolePayload(req.body.role);
+            await this.userService.setUserRole(req.params.uid, payload.role);
+            console.log('[UserController] setRole success', { uid: req.params.uid, role: payload.role });
+            res.json({ message: `Role updated to ${payload.role}` });
         } catch (error: any) {
             console.error('[UserController] setRole error', error);
-            res.status(500).json({ error: error.message });
+            next(error);
         }
-    },
-};
+    };
+}

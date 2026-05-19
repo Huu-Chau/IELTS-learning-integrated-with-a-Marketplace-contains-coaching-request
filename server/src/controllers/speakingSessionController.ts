@@ -29,6 +29,7 @@ import * as os from 'os';
 import { ConversationMessage, ExamTopic, FluencyMetrics, TranscriptionResult } from '../types/ai-types';
 import { storageProvider } from '../services/storage/StorageService';
 import { attemptService } from '../services/attemptService';
+import { CreateAttemptPayload } from '../types/attempt';
 import MockMaterial from '../models/MockMaterial';
 
 const execAsync = promisify(exec);
@@ -558,21 +559,23 @@ End with **Overall Estimated Band Score** (average of the 3 criteria).`;
                                     text: msg.content,
                                 }));
 
-                            const attempt = await attemptService.createAttempt({
-                                userId: session.userId,
-                                testId: `speaking_${timestamp}`,
-                                type: 'speaking',
-                                score: bandScore,
-                                feedback: fullEvaluation,
-                                answers: {
+                            const payload = new CreateAttemptPayload(
+                                session.userId,
+                                'speaking',
+                                `speaking_${timestamp}`,
+                                bandScore,
+                                fullEvaluation,
+                                {
                                     topic: session.topic.part1Theme,
                                     part3Theme: session.topic.part3Theme,
                                     conversationLength: session.history.length,
                                     transcript,
                                     fluencyMetrics: session.fluencyLog,
                                 },
-                                recordingPath: recordingUrl,
-                            });
+                                recordingUrl
+                            );
+
+                            const attempt = await attemptService.createAttempt(payload);
                             console.log('[SpeakingController] Attempt saved to DB', { attemptId: attempt.id, bandScore });
 
                             // Notify the client that the result was saved

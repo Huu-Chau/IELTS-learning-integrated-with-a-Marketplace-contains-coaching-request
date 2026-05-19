@@ -10,17 +10,17 @@
  */
 
 import { Router } from 'express';
-import { getTask, evaluateEssay, startSession, getSessionsByUser, getSessionDetails } from '../controllers/writingEvaluationController';
+import { writingEvaluationController } from '../container';
 
 const router = Router();
 
 // Writing Agent endpoints (no auth required during development for easier testing)
-router.get('/writing/task', getTask);
-router.post('/writing/start', startSession);
-router.post('/writing/:sessionId/evaluate', evaluateEssay);
+router.get('/writing/task', (req, res, next) => writingEvaluationController.getTask(req, res, next));
+router.post('/writing/start', (req, res, next) => writingEvaluationController.startSession(req, res, next));
+router.post('/writing/:sessionId/evaluate', (req, res, next) => writingEvaluationController.evaluateEssay(req, res, next));
 
 // Dashboard History & Details endpoints
-router.get('/writing/user/:userId', getSessionsByUser);
-router.get('/writing/session/:sessionId/details', getSessionDetails);
+router.get('/writing/user/:userId', (req, res, next) => writingEvaluationController.getSessionsByUser(req, res, next));
+router.get('/writing/session/:sessionId/details', (req, res, next) => writingEvaluationController.getSessionDetails(req, res, next));
 
 export default router;

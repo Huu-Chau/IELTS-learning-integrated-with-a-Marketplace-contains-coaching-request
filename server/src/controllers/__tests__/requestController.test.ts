@@ -1,25 +1,30 @@
-import { Request, Response } from 'express';
-import { requestController } from '../requestController';
-import { requestService } from '../../services/requestService';
+import { Request, Response, NextFunction } from 'express';
+import { RequestController } from '../requestController';
+import { IRequestService } from '../../services/requestService';
+import { MarketplaceRequestStatus, UpdateRequestStatusPayload } from '../../types/marketplace-request';
 
-jest.mock('../../services/requestService', () => ({
-  requestService: {
-    getOpenRequests: jest.fn(),
-    getRequestsForTeacher: jest.fn(),
-    getRequestsByStudent: jest.fn(),
-    updateRequestStatus: jest.fn(),
-  },
-}));
-
-describe('requestController', () => {
+describe('RequestController', () => {
+  let requestController: RequestController;
+  let mockRequestService: jest.Mocked<IRequestService>;
   let mockReq: Partial<Request> & { user?: any };
   let mockRes: Partial<Response>;
+  let nextMock: NextFunction;
   let jsonMock: jest.Mock;
   let statusMock: jest.Mock;
 
   beforeEach(() => {
+    mockRequestService = {
+      getOpenRequests: jest.fn(),
+      getRequestsForTeacher: jest.fn(),
+      getRequestsByStudent: jest.fn(),
+      updateRequestStatus: jest.fn(),
+      createRequest: jest.fn(),
+    };
+    requestController = new RequestController(mockRequestService);
+
     jsonMock = jest.fn();
     statusMock = jest.fn().mockReturnValue({ json: jsonMock });
+    nextMock = jest.fn();
     mockReq = {
       params: {},
       body: {},
@@ -35,21 +40,22 @@ describe('requestController', () => {
   describe('getOpen', () => {
     it('should return open requests', async () => {
       const mockRequests = [{ id: 1 }, { id: 2 }];
-      (requestService.getOpenRequests as jest.Mock).mockResolvedValue(mockRequests);
+      mockRequestService.getOpenRequests.mockResolvedValue(mockRequests as any);
 
-      await requestController.getOpen(mockReq as Request, mockRes as Response);
+      await requestController.getOpen(mockReq as Request, mockRes as Response, nextMock);
 
-      expect(requestService.getOpenRequests).toHaveBeenCalled();
+      expect(mockRequestService.getOpenRequests).toHaveBeenCalled();
       expect(jsonMock).toHaveBeenCalledWith(mockRequests);
+      expect(nextMock).toHaveBeenCalled();
     });
 
-    it('should return 500 on error', async () => {
-      (requestService.getOpenRequests as jest.Mock).mockRejectedValue(new Error('DB error'));
+    it('should call next with error on service failure', async () => {
+      const error = new Error('DB error');
+      mockRequestService.getOpenRequests.mockRejectedValue(error);
 
-      await requestController.getOpen(mockReq as Request, mockRes as Response);
+      await requestController.getOpen(mockReq as Request, mockRes as Response, nextMock);
 
-      expect(statusMock).toHaveBeenCalledWith(500);
-      expect(jsonMock).toHaveBeenCalledWith({ error: 'DB error' });
+      expect(nextMock).toHaveBeenCalledWith(error);
     });
   });
 
@@ -57,22 +63,23 @@ describe('requestController', () => {
     it('should return requests for a specific teacher', async () => {
       mockReq.params = { id: 'teacher123' };
       const mockRequests = [{ id: 1 }];
-      (requestService.getRequestsForTeacher as jest.Mock).mockResolvedValue(mockRequests);
+      mockRequestService.getRequestsForTeacher.mockResolvedValue(mockRequests as any);
 
-      await requestController.getForTeacher(mockReq as Request, mockRes as Response);
+      await requestController.getForTeacher(mockReq as Request, mockRes as Response, nextMock);
 
-      expect(requestService.getRequestsForTeacher).toHaveBeenCalledWith('teacher123');
+      expect(mockRequestService.getRequestsForTeacher).toHaveBeenCalledWith('teacher123');
       expect(jsonMock).toHaveBeenCalledWith(mockRequests);
+      expect(nextMock).toHaveBeenCalled();
     });
 
-    it('should return 500 on error', async () => {
+    it('should call next with error on service failure', async () => {
       mockReq.params = { id: 'teacher123' };
-      (requestService.getRequestsForTeacher as jest.Mock).mockRejectedValue(new Error('DB error'));
+      const error = new Error('DB error');
+      mockRequestService.getRequestsForTeacher.mockRejectedValue(error);
 
-      await requestController.getForTeacher(mockReq as Request, mockRes as Response);
+      await requestController.getForTeacher(mockReq as Request, mockRes as Response, nextMock);
 
-      expect(statusMock).toHaveBeenCalledWith(500);
-      expect(jsonMock).toHaveBeenCalledWith({ error: 'DB error' });
+      expect(nextMock).toHaveBeenCalledWith(error);
     });
   });
 
@@ -80,22 +87,23 @@ describe('requestController', () => {
     it('should return requests by a specific student', async () => {
       mockReq.params = { id: 'student123' };
       const mockRequests = [{ id: 1 }];
-      (requestService.getRequestsByStudent as jest.Mock).mockResolvedValue(mockRequests);
+      mockRequestService.getRequestsByStudent.mockResolvedValue(mockRequests as any);
 
-      await requestController.getByStudent(mockReq as Request, mockRes as Response);
+      await requestController.getByStudent(mockReq as Request, mockRes as Response, nextMock);
 
-      expect(requestService.getRequestsByStudent).toHaveBeenCalledWith('student123');
+      expect(mockRequestService.getRequestsByStudent).toHaveBeenCalledWith('student123');
       expect(jsonMock).toHaveBeenCalledWith(mockRequests);
+      expect(nextMock).toHaveBeenCalled();
     });
 
-    it('should return 500 on error', async () => {
+    it('should call next with error on service failure', async () => {
       mockReq.params = { id: 'student123' };
-      (requestService.getRequestsByStudent as jest.Mock).mockRejectedValue(new Error('DB error'));
+      const error = new Error('DB error');
+      mockRequestService.getRequestsByStudent.mockRejectedValue(error);
 
-      await requestController.getByStudent(mockReq as Request, mockRes as Response);
+      await requestController.getByStudent(mockReq as Request, mockRes as Response, nextMock);
 
-      expect(statusMock).toHaveBeenCalledWith(500);
-      expect(jsonMock).toHaveBeenCalledWith({ error: 'DB error' });
+      expect(nextMock).toHaveBeenCalledWith(error);
     });
   });
 
@@ -104,32 +112,44 @@ describe('requestController', () => {
       mockReq.params = { id: 'req123' };
       mockReq.body = { status: 'accepted' };
 
-      await requestController.updateStatus(mockReq as Request, mockRes as Response);
+      await requestController.updateStatus(mockReq as Request, mockRes as Response, nextMock);
 
-      expect(requestService.updateRequestStatus).toHaveBeenCalledWith('req123', 'accepted', 'user123');
-      expect(jsonMock).toHaveBeenCalledWith({ message: 'Request accepted' });
+      expect(mockRequestService.updateRequestStatus).toHaveBeenCalledWith(new UpdateRequestStatusPayload('req123', MarketplaceRequestStatus.ACCEPTED, 'user123'));
+      expect(jsonMock).toHaveBeenCalledWith({ message: `Request ${MarketplaceRequestStatus.ACCEPTED}` });
+      expect(nextMock).toHaveBeenCalled();
+    });
+
+    it('should map declined to rejected', async () => {
+      mockReq.params = { id: 'req123' };
+      mockReq.body = { status: 'declined' };
+
+      await requestController.updateStatus(mockReq as Request, mockRes as Response, nextMock);
+
+      expect(mockRequestService.updateRequestStatus).toHaveBeenCalledWith(new UpdateRequestStatusPayload('req123', MarketplaceRequestStatus.REJECTED, 'user123'));
+      expect(jsonMock).toHaveBeenCalledWith({ message: `Request ${MarketplaceRequestStatus.REJECTED}` });
+      expect(nextMock).toHaveBeenCalled();
     });
 
     it('should return 400 for invalid status', async () => {
       mockReq.params = { id: 'req123' };
       mockReq.body = { status: 'invalid_status' };
 
-      await requestController.updateStatus(mockReq as Request, mockRes as Response);
+      await requestController.updateStatus(mockReq as Request, mockRes as Response, nextMock);
 
       expect(statusMock).toHaveBeenCalledWith(400);
-      expect(jsonMock).toHaveBeenCalledWith({ error: 'Invalid status. Use: accepted, declined, completed' });
-      expect(requestService.updateRequestStatus).not.toHaveBeenCalled();
+      expect(jsonMock).toHaveBeenCalledWith({ error: `Invalid status. Use: ${Object.values(MarketplaceRequestStatus).join(', ')}` });
+      expect(mockRequestService.updateRequestStatus).not.toHaveBeenCalled();
     });
 
-    it('should return 500 on error', async () => {
+    it('should call next with error on service failure', async () => {
       mockReq.params = { id: 'req123' };
       mockReq.body = { status: 'accepted' };
-      (requestService.updateRequestStatus as jest.Mock).mockRejectedValue(new Error('DB error'));
+      const error = new Error('DB error');
+      mockRequestService.updateRequestStatus.mockRejectedValue(error);
 
-      await requestController.updateStatus(mockReq as Request, mockRes as Response);
+      await requestController.updateStatus(mockReq as Request, mockRes as Response, nextMock);
 
-      expect(statusMock).toHaveBeenCalledWith(500);
-      expect(jsonMock).toHaveBeenCalledWith({ error: 'DB error' });
+      expect(nextMock).toHaveBeenCalledWith(error);
     });
   });
 });

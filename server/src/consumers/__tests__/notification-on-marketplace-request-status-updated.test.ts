@@ -1,20 +1,15 @@
 import { NotificationOnMarketplaceRequestStatusUpdatedConsumer } from '../notification-on-marketplace-request-status-updated';
 import { IQueueProvider } from '../../services/queue/IQueueProvider';
 import { INotificationService } from '../../services/notificationService';
-import { userService } from '../../services/userService';
 import { QueueTopic } from '../../types/queue/queue.types';
 import { CreateNotificationPayload, NotificationType } from '../../types/notification';
-
-jest.mock('../../services/userService', () => ({
-    userService: {
-        getUserById: jest.fn(),
-    },
-}));
+import { IUserService } from '../../services/userService';
 
 describe('NotificationOnMarketplaceRequestStatusUpdatedConsumer', () => {
     let consumer: NotificationOnMarketplaceRequestStatusUpdatedConsumer;
     let mockQueueProvider: jest.Mocked<IQueueProvider>;
     let mockNotificationService: jest.Mocked<INotificationService>;
+    let mockUserService: jest.Mocked<IUserService>;
 
     const mockRequest = {
         id: 'req-123',
@@ -37,6 +32,10 @@ describe('NotificationOnMarketplaceRequestStatusUpdatedConsumer', () => {
             publish: jest.fn(),
         } as any;
 
+        mockUserService = {
+            getUserById: jest.fn(),
+        } as any;
+
         mockNotificationService = {
             createNotification: jest.fn(),
         } as any;
@@ -44,6 +43,7 @@ describe('NotificationOnMarketplaceRequestStatusUpdatedConsumer', () => {
         consumer = new NotificationOnMarketplaceRequestStatusUpdatedConsumer(
             mockQueueProvider,
             mockNotificationService,
+            mockUserService,
         );
 
         jest.clearAllMocks();
@@ -67,11 +67,11 @@ describe('NotificationOnMarketplaceRequestStatusUpdatedConsumer', () => {
         });
 
         it('should create a notification when status is accepted', async () => {
-            (userService.getUserById as jest.Mock).mockResolvedValue(mockTeacher);
+            mockUserService.getUserById.mockResolvedValue(mockTeacher as any);
 
             await messageHandler({ data: { ...mockRequest, status: 'accepted' } });
 
-            expect(userService.getUserById).toHaveBeenCalledWith('teacher-789');
+            expect(mockUserService.getUserById).toHaveBeenCalledWith('teacher-789');
             expect(mockNotificationService.createNotification).toHaveBeenCalledWith(
                 expect.objectContaining({
                     userId: 'student-456',
@@ -84,7 +84,7 @@ describe('NotificationOnMarketplaceRequestStatusUpdatedConsumer', () => {
         });
 
         it('should create a notification when status is completed', async () => {
-            (userService.getUserById as jest.Mock).mockResolvedValue(mockTeacher);
+            mockUserService.getUserById.mockResolvedValue(mockTeacher as any);
 
             await messageHandler({ data: { ...mockRequest, status: 'completed' } });
 
@@ -97,7 +97,7 @@ describe('NotificationOnMarketplaceRequestStatusUpdatedConsumer', () => {
         });
 
         it('should create a notification when status is rejected', async () => {
-            (userService.getUserById as jest.Mock).mockResolvedValue(mockTeacher);
+            mockUserService.getUserById.mockResolvedValue(mockTeacher as any);
 
             await messageHandler({ data: { ...mockRequest, status: 'rejected' } });
 
@@ -110,7 +110,7 @@ describe('NotificationOnMarketplaceRequestStatusUpdatedConsumer', () => {
         });
 
         it('should use "a teacher" if teacher details are missing', async () => {
-            (userService.getUserById as jest.Mock).mockResolvedValue(null);
+            mockUserService.getUserById.mockResolvedValue(null);
 
             await messageHandler({ data: { ...mockRequest, status: 'accepted' } });
 
@@ -129,13 +129,13 @@ describe('NotificationOnMarketplaceRequestStatusUpdatedConsumer', () => {
 
         it('should throw error if user service fails', async () => {
             const error = new Error('User Service Error');
-            (userService.getUserById as jest.Mock).mockRejectedValue(error);
+            mockUserService.getUserById.mockRejectedValue(error);
 
             await expect(messageHandler({ data: mockRequest })).rejects.toThrow(error);
         });
 
         it('should throw error if notification service fails', async () => {
-            (userService.getUserById as jest.Mock).mockResolvedValue(mockTeacher);
+            mockUserService.getUserById.mockResolvedValue(mockTeacher as any);
             const error = new Error('Notification Service Error');
             mockNotificationService.createNotification.mockRejectedValue(error);
 

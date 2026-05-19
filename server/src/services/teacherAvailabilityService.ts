@@ -4,6 +4,7 @@ import Reservation from '../models/Reservation';
 import TeacherAvailability from '../models/TeacherAvailability';
 import TeacherListing from '../models/TeacherListing';
 import { BookAvailabilityPayload, CreateAvailabilityPayload, DeleteAvailabilityPayload, UpdateAvailabilityPayload } from '../types/availability';
+import { ReservationStatus } from '../types/reservation';
 import { GetAvailabilityParams } from '../types/availability/get-availability.params';
 
 export interface ITeacherAvailabilityService {
@@ -79,7 +80,7 @@ export class TeacherAvailabilityService implements ITeacherAvailabilityService {
                 availabilityId,
                 listing: listing.toJSON(),
                 studentId,
-                status: 'pending',
+                status: ReservationStatus.PENDING,
                 fee: listing.pricePerHour,
                 expiresAt: new Date(Date.now() + 5 * 60 * 1000),
             }, { transaction: t });

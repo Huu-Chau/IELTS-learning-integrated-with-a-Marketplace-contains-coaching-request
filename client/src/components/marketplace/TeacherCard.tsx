@@ -81,10 +81,16 @@ export default function TeacherCard({ listing, onReserved }: TeacherCardProps) {
     const teacherName = listing.teacher?.name || 'Unknown Teacher';
     const avatar = listing.teacher?.avatar || `https://ui-avatars.com/api/?name=T&background=random`;
 
+    const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+
     // Derived booleans for clarity
-    const isAvailable = listing.reservationStatus === 'available';
-    const isPendingByOther = listing.reservationStatus === 'pending' && !listing.isOwnReservation;
-    const isBooked = listing.reservationStatus === 'booked';
+    const hasExpired = listing.reservationStatus === 'pending' && secondsLeft === 0;
+    const effectiveStatus = hasExpired ? 'available' : listing.reservationStatus;
+    const effectiveIsOwn = hasExpired ? false : listing.isOwnReservation;
+
+    const isAvailable = effectiveStatus === 'available';
+    const isPendingByOther = effectiveStatus === 'pending' && !effectiveIsOwn;
+    const isBooked = effectiveStatus === 'booked';
     const canBook = isAvailable; // only allow new bookings when slot is free
 
     const handleBookClick = () => {
@@ -98,6 +104,20 @@ export default function TeacherCard({ listing, onReserved }: TeacherCardProps) {
         // Trigger parent to open BookingCheckoutModal (Task 4)
         onReserved?.(listing.id);
     };
+
+    useEffect(() => {
+        if (listing.reservationStatus !== 'pending' || !listing.reservationExpiresAt) {
+            setSecondsLeft(null);
+            return;
+        }
+        const updateTimer = () => {
+            const diff = Math.max(0, Math.floor((new Date(listing.reservationExpiresAt!).getTime() - Date.now()) / 1000));
+            setSecondsLeft(diff);
+        };
+        updateTimer();
+        const interval = setInterval(updateTimer, 1000);
+        return () => clearInterval(interval);
+    }, [listing.reservationStatus, listing.reservationExpiresAt]);
 
     return (
         <div className={`bg-white rounded-xl border shadow-sm transition-all duration-200 overflow-hidden flex flex-col ${
@@ -184,8 +204,8 @@ export default function TeacherCard({ listing, onReserved }: TeacherCardProps) {
             {/* Footer: status badge + action */}
             <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
                 <ReservationBadge
-                    status={listing.reservationStatus}
-                    isOwn={listing.isOwnReservation}
+                    status={effectiveStatus}
+                    isOwn={effectiveIsOwn}
                     expiresAt={listing.reservationExpiresAt}
                 />
 
@@ -201,7 +221,7 @@ export default function TeacherCard({ listing, onReserved }: TeacherCardProps) {
                                 : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-200'
                     }`}
                 >
-                    {isBooked ? 'Sold Out' : isPendingByOther ? 'Notify Me' : listing.isOwnReservation ? 'Continue Booking' : 'Book Now'}
+                    {isBooked ? 'Sold Out' : isPendingByOther ? 'Notify Me' : effectiveIsOwn ? 'Resume Booking' : 'Book Now'}
                 </button>
             </div>
         </div>

@@ -268,6 +268,7 @@ function SchedulePanel() {
     const { getIdToken, user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
     
     const [availabilities, setAvailabilities] = useState<TeacherAvailabilityRecord[]>([]);
     const [date, setDate] = useState('');
@@ -326,18 +327,23 @@ function SchedulePanel() {
 
     const handleDelete = async (avail: TeacherAvailabilityRecord) => {
         if (!avail.isAvailable) return;
-        if (!window.confirm('Delete this availability?')) return;
-        
+        if (!window.confirm('Delete this availability slot?')) return;
+        setDeleteError(null);
         try {
             const token = await getIdToken();
             await apiClient.del(`/teacher-availability/${avail.id}`, token);
             setAvailabilities(availabilities.filter(a => a.id !== avail.id));
         } catch (err: any) {
             console.error('[SchedulePanel] handleDelete error', err);
+            // Refresh the list so the UI reflects the real DB state
+            const token = await getIdToken();
+            const data = await apiClient.get(`/teacher-availability?teacherId=${user?.uid}`, token);
+            setAvailabilities(Array.isArray(data) ? data : []);
+
             if (err.response?.status === 409) {
-                alert('Cannot delete this availability as it was just booked or not found.');
+                setDeleteError('This slot was just booked by a student and can no longer be deleted.');
             } else {
-                alert('Failed to delete availability');
+                setDeleteError('Failed to delete this slot. Please try again.');
             }
         }
     };
@@ -354,6 +360,14 @@ function SchedulePanel() {
 
     return (
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            {/* Inline delete error banner */}
+            {deleteError && (
+                <div className="mx-6 mt-4 flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 rounded-xl">
+                    <span className="text-amber-500 mt-0.5">⚠️</span>
+                    <span className="flex-1">{deleteError}</span>
+                    <button onClick={() => setDeleteError(null)} className="text-amber-500 hover:text-amber-700 font-bold text-base leading-none">×</button>
+                </div>
+            )}
             {/* Panel header */}
             <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">

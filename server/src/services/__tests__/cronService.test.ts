@@ -24,6 +24,7 @@ jest.mock('../../models/Reservation', () => ({
 }));
 jest.mock('../../models/TeacherAvailability', () => ({
     update: jest.fn(),
+    destroy: jest.fn(),
 }));
 jest.mock('../../services/notificationService', () => ({
     NotificationService: jest.fn().mockImplementation(() => ({
@@ -52,7 +53,8 @@ import {
     autoRejectStaleRequests, 
     sendSessionReminders, 
     expireReservations,
-    startAllJobs 
+    startAllJobs,
+    autocleanPastAvailabilities
 } from '../cronService';
 
 describe('CronService', () => {
@@ -196,7 +198,21 @@ describe('CronService', () => {
     describe('startAllJobs', () => {
         it('should schedule all cron jobs', () => {
             startAllJobs();
-            expect(cron.schedule).toHaveBeenCalledTimes(4);
+            expect(cron.schedule).toHaveBeenCalledTimes(5);
+        });
+    });
+
+    describe('autocleanPastAvailabilities', () => {
+        it('should delete stale past availability slots', async () => {
+            (TeacherAvailability.destroy as jest.Mock).mockResolvedValue(3);
+            await autocleanPastAvailabilities();
+            expect(TeacherAvailability.destroy).toHaveBeenCalledWith({
+                where: {
+                    date: { [Op.lt]: expect.any(Date) },
+                    isAvailable: true,
+                },
+            });
+            expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('autocleanPastAvailabilities success'), { deletedCount: 3 });
         });
     });
 });

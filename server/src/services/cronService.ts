@@ -285,22 +285,10 @@ async function autocleanPastAvailabilities() {
         const today = new Date();
         today.setHours(0, 0, 0, 0); // midnight boundary — only touch yesterday and older
 
-        // Find all past availability IDs that are SAFELY deletable:
-        // no reservation in PENDING or COMPLETED status tied to them
-        const activeReservations = await Reservation.findAll({
-            attributes: ['availabilityId'],
-            where: {
-                status: {
-                    [Op.in]: [ReservationStatus.PENDING, ReservationStatus.COMPLETED],
-                },
-            },
-        });
-        const protectedIds = activeReservations.map((r) => r.availabilityId);
-
         const deletedCount = await TeacherAvailability.destroy({
             where: {
                 date: { [Op.lt]: today },
-                ...(protectedIds.length > 0 ? { id: { [Op.notIn]: protectedIds } } : {}),
+                isAvailable: true,
             },
         });
 

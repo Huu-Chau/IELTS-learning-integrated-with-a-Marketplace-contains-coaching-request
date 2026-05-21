@@ -3,7 +3,7 @@ import DashboardLayout from '@/layouts/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
 import { apiClient } from '@/services/apiClient';
 import WritingResultModal from '@/components/progress/WritingResultModal';
-import { Target, Book } from 'lucide-react';
+
 
 export default function ProgressPage() {
     const { user, getIdToken } = useAuth();
@@ -48,10 +48,7 @@ export default function ProgressPage() {
         }
     };
 
-    const totalTests = attempts.length;
-    const averageScore = totalTests > 0 
-        ? (attempts.reduce((sum, a) => sum + (a.score || 0), 0) / totalTests).toFixed(1)
-        : '0.0';
+
 
     return (
         <DashboardLayout role="student">
@@ -67,27 +64,6 @@ export default function ProgressPage() {
                     </div>
                 ) : (
                     <>
-                        {/* Overview Stats */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-500">Average Band Score</p>
-                                    <p className="text-2xl font-bold text-gray-900 mt-1">{averageScore}</p>
-                                </div>
-                                <div className="p-3 rounded-lg bg-indigo-500">
-                                    <Target className="h-6 w-6 text-white" />
-                                </div>
-                            </div>
-                            <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-500">Total Tests Taken</p>
-                                    <p className="text-2xl font-bold text-gray-900 mt-1">{totalTests}</p>
-                                </div>
-                                <div className="p-3 rounded-lg bg-blue-500">
-                                    <Book className="h-6 w-6 text-white" />
-                                </div>
-                            </div>
-                        </div>
 
                         {/* History Table */}
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">

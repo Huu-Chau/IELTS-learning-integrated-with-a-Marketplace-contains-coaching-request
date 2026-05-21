@@ -27,7 +27,7 @@ export default function ProgressPage() {
         try {
             setLoading(true);
             const token = await getIdToken();
-            
+
             const [attemptsData, writingData] = await Promise.all([
                 apiClient.get(`/attempts/user/${user.uid}`, token),
                 apiClient.get(`/evaluate/writing/user/${user.uid}`, token).catch(() => [])
@@ -57,12 +57,12 @@ export default function ProgressPage() {
 
     function getTypeBadge(type: string) {
         switch (type) {
-            case 'reading':   return 'bg-blue-100 text-blue-700';
+            case 'reading': return 'bg-blue-100 text-blue-700';
             case 'listening': return 'bg-teal-100 text-teal-700';
-            case 'speaking':  return 'bg-violet-100 text-violet-700';
-            case 'manual':    return 'bg-purple-100 text-purple-700';
-            case 'writing':   return 'bg-amber-100 text-amber-700';
-            default:          return 'bg-gray-100 text-gray-700';
+            case 'speaking': return 'bg-violet-100 text-violet-700';
+            case 'manual': return 'bg-purple-100 text-purple-700';
+            case 'writing': return 'bg-amber-100 text-amber-700';
+            default: return 'bg-gray-100 text-gray-700';
         }
     }
 
@@ -126,11 +126,10 @@ export default function ProgressPage() {
                                                             <button
                                                                 onClick={() => setSelectedWritingSessionId(attempt.id)}
                                                                 disabled={attempt.status !== 'completed'}
-                                                                className={`px-3 py-1 text-sm font-medium rounded-md ${
-                                                                    attempt.status === 'completed'
+                                                                className={`px-3 py-1 text-sm font-medium rounded-md ${attempt.status === 'completed'
                                                                         ? 'bg-amber-50 text-amber-700 hover:bg-amber-100'
                                                                         : 'bg-gray-50 text-gray-400 cursor-not-allowed'
-                                                                }`}
+                                                                    }`}
                                                             >
                                                                 {attempt.status === 'completed' ? 'View Evaluation' : 'In Progress'}
                                                             </button>

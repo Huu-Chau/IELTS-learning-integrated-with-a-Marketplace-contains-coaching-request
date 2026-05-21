@@ -44,19 +44,31 @@ export default function BookingCheckoutModal({ listing, onClose, availabilityId,
                 const userProfile = await apiClient.get('/users/me', token);
                 if (isMounted) setWalletBalance(Number(userProfile.wallet_balance || 0));
 
-                if (!lockPromiseRef.current) {
-                    lockPromiseRef.current = apiClient.post(
-                        `/teacher-availability/${availabilityId}/book`,
-                        { listingId: listing.id },
-                        token
-                    );
-                }
+                if (listing.isOwnReservation && !availabilityId) {
+                    // Resuming checkout: fetch reservationId using the listing status API
+                    const statusRes = await apiClient.get(`/reservations/listing/${listing.id}`, token);
+                    if (statusRes.reservationId) {
+                        const resData = await apiClient.get(`/reservations/${statusRes.reservationId}`, token);
+                        if (isMounted) setReservation(resData);
+                    } else {
+                        throw new Error('Your reservation has expired or cannot be found.');
+                    }
+                } else {
+                    // Normal flow: acquire 5-minute lease via availabilityId
+                    if (!lockPromiseRef.current) {
+                        lockPromiseRef.current = apiClient.post(
+                            `/teacher-availability/${availabilityId}/book`,
+                            { listingId: listing.id },
+                            token
+                        );
+                    }
 
-                // Acquire 5-minute lease
-                const resData = await lockPromiseRef.current;
-                
-                if (isMounted) {
-                    setReservation(resData);
+                    // Acquire 5-minute lease
+                    const resData = await lockPromiseRef.current;
+                    
+                    if (isMounted) {
+                        setReservation(resData);
+                    }
                 }
             } catch (err: any) {
                 if (isMounted) {
@@ -137,9 +149,13 @@ export default function BookingCheckoutModal({ listing, onClose, availabilityId,
                 {isAcquiringLock ? (
                     <div className="p-12 flex flex-col items-center justify-center space-y-4">
                         <Loader2 className="h-10 w-10 text-indigo-600 animate-spin" />
-                        <h3 className="text-lg font-bold text-gray-800">Securing your slot...</h3>
+                        <h3 className="text-lg font-bold text-gray-800">
+                            {listing.isOwnReservation && !availabilityId ? 'Resuming your checkout...' : 'Securing your slot...'}
+                        </h3>
                         <p className="text-sm text-gray-500 text-center">
-                            Checking availability and placing a 5-minute hold on this coaching session.
+                            {listing.isOwnReservation && !availabilityId
+                                ? 'Retrieving your active reservation details.' 
+                                : 'Checking availability and placing a 5-minute hold on this coaching session.'}
                         </p>
                     </div>
                 ) : successData ? (

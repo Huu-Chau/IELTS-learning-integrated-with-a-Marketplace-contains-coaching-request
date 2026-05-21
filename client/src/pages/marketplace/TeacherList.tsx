@@ -92,8 +92,22 @@ export default function TeacherList() {
     // Now opens the calendar step first
     const handleReserve = (listingId: number) => {
         console.log('[TeacherList] handleReserve called', { listingId });
-        setCalendarListingId(listingId);
-        setSelectedSlot(null);
+        const listing = listings.find((l) => l.id === listingId);
+        
+        const hasExpired = listing?.reservationExpiresAt 
+            ? new Date(listing.reservationExpiresAt).getTime() <= Date.now() 
+            : false;
+        
+        if (listing?.isOwnReservation && !hasExpired) {
+            // Bypass calendar, go straight to checkout for existing reservation
+            setCheckoutListingId(listingId);
+            setCalendarListingId(null);
+            setSelectedSlot(null);
+        } else {
+            // Normal flow: Pick a time slot
+            setCalendarListingId(listingId);
+            setSelectedSlot(null);
+        }
     };
 
     const handleCheckoutClose = (didComplete: boolean) => {
@@ -317,12 +331,12 @@ export default function TeacherList() {
             )}
 
             {/* ── BookingCheckoutModal ──────────────────────────────────── */}
-            {checkoutListing && selectedSlot && (
+            {checkoutListing && (selectedSlot || checkoutListing.isOwnReservation) && (
                 <BookingCheckoutModal
                     listing={checkoutListing}
                     onClose={handleCheckoutClose}
-                    availabilityId={selectedSlot.id}
-                    scheduledAt={`${selectedSlot.date}T${selectedSlot.startTime}:00`}
+                    availabilityId={selectedSlot?.id ?? 0}
+                    scheduledAt={selectedSlot ? `${selectedSlot.date}T${selectedSlot.startTime}:00` : undefined}
                 />
             )}
         </DashboardLayout>

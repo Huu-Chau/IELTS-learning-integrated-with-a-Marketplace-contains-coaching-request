@@ -99,21 +99,21 @@ function getBandColor(band: number): string {
 
 function getTypeIcon(type: string) {
     switch (type) {
-        case 'reading':    return <BookOpen className="h-4 w-4" />;
-        case 'listening':  return <Headphones className="h-4 w-4" />;
-        case 'speaking':   return <Mic className="h-4 w-4" />;
-        case 'manual':     return <Trophy className="h-4 w-4" />;
-        default:           return <Activity className="h-4 w-4" />;
+        case 'reading': return <BookOpen className="h-4 w-4" />;
+        case 'listening': return <Headphones className="h-4 w-4" />;
+        case 'speaking': return <Mic className="h-4 w-4" />;
+        case 'manual': return <Trophy className="h-4 w-4" />;
+        default: return <Activity className="h-4 w-4" />;
     }
 }
 
 function getTypeColor(type: string): string {
     switch (type) {
-        case 'reading':   return 'bg-blue-100 text-blue-700';
+        case 'reading': return 'bg-blue-100 text-blue-700';
         case 'listening': return 'bg-teal-100 text-teal-700';
-        case 'speaking':  return 'bg-violet-100 text-violet-700';
-        case 'manual':    return 'bg-purple-100 text-purple-700';
-        default:          return 'bg-gray-100 text-gray-700';
+        case 'speaking': return 'bg-violet-100 text-violet-700';
+        case 'manual': return 'bg-purple-100 text-purple-700';
+        default: return 'bg-gray-100 text-gray-700';
     }
 }
 
@@ -326,10 +326,10 @@ function ManualDetail({ attempt }: { attempt: AttemptRecord }) {
     const answers = attempt.answers as ManualAnswers | null;
 
     const skills = [
-        { key: 'reading' as const,   label: 'Reading',   color: 'bg-blue-500' },
+        { key: 'reading' as const, label: 'Reading', color: 'bg-blue-500' },
         { key: 'listening' as const, label: 'Listening', color: 'bg-teal-500' },
-        { key: 'writing' as const,   label: 'Writing',   color: 'bg-amber-500' },
-        { key: 'speaking' as const,  label: 'Speaking',  color: 'bg-violet-500' },
+        { key: 'writing' as const, label: 'Writing', color: 'bg-amber-500' },
+        { key: 'speaking' as const, label: 'Speaking', color: 'bg-violet-500' },
     ];
 
     return (

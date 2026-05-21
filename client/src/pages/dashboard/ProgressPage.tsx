@@ -54,7 +54,6 @@ export default function ProgressPage() {
     };
 
 
-
     function getTypeBadge(type: string) {
         switch (type) {
             case 'reading': return 'bg-blue-100 text-blue-700';
@@ -127,8 +126,8 @@ export default function ProgressPage() {
                                                                 onClick={() => setSelectedWritingSessionId(attempt.id)}
                                                                 disabled={attempt.status !== 'completed'}
                                                                 className={`px-3 py-1 text-sm font-medium rounded-md ${attempt.status === 'completed'
-                                                                        ? 'bg-amber-50 text-amber-700 hover:bg-amber-100'
-                                                                        : 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                                                                    ? 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                                                    : 'bg-gray-50 text-gray-400 cursor-not-allowed'
                                                                     }`}
                                                             >
                                                                 {attempt.status === 'completed' ? 'View Evaluation' : 'In Progress'}

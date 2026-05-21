@@ -138,9 +138,7 @@ Ask 3-4 abstract, analytical questions related to this theme.
 - Do NOT give scores or feedback during the test.
 - Do NOT assess pronunciation since this is a voice-to-text test.
 - NEVER include stage directions, actions, or narration in parentheses (), asterisks **, or brackets []. Only output spoken dialogue.
-- Respond QUICKLY — brevity is critical for natural conversation flow.
-- If the candidate's input is exactly "[No speech detected]" once, politely prompt them to repeat or answer the question.
-- If the candidate's input is consecutively "[No speech detected]" twice in a row, state that you will move on (e.g., "I see. Let's move on to the next question." or "We'll skip that question."), note the bypass/abandonment in your reply, and immediately ask the next question or proceed to the next part. Do not repeat the same question a third time.`;
+- Respond QUICKLY — brevity is critical for natural conversation flow.`;
 }
 
 
@@ -309,7 +307,7 @@ function registerSpeakingHandlers(socket: Socket): void {
                         const content = material?.content as any;
                         if (content && content.tests) {
                             const testData = content.tests.find((t: any) => t.test_number === data.testNum);
-                            
+
                             if (testData && testData.parts) {
                                 const p1 = testData.parts.find((p: any) => p.part_number === 1);
                                 const p2 = testData.parts.find((p: any) => p.part_number === 2);
@@ -317,7 +315,7 @@ function registerSpeakingHandlers(socket: Socket): void {
 
                                 topic = {
                                     part1Theme: p1?.topic || 'General Topics',
-                                    part1Questions: p1?.questions || [ 'Tell me about yourself.' ],
+                                    part1Questions: p1?.questions || ['Tell me about yourself.'],
                                     part2Card: `${p2?.instructions || ''}\nYou should say:\n${(p2?.bullet_points || []).map((bp: string) => `- ${bp}`).join('\n')}`,
                                     part3Theme: p3?.topic || 'Extended Discussion'
                                 };
@@ -401,10 +399,15 @@ function registerSpeakingHandlers(socket: Socket): void {
 
             const sttResult = await transcribeAudioBlob(audioBuffer, data.mimeType || 'audio/webm');
 
-            const userText = sttResult.text || '[No speech detected]';
+            if (!sttResult.text) {
+                socket.emit('speaking:transcript', { speaker: 'user', text: '[No speech detected]' });
+                // Reset client back to ready so the mic isn't stuck in processing
+                socket.emit('speaking:processing', { status: 'ready' });
+                return;
+            }
 
             // Send user transcript back
-            socket.emit('speaking:transcript', { speaker: 'user', text: userText });
+            socket.emit('speaking:transcript', { speaker: 'user', text: sttResult.text });
 
             // Log fluency metrics
             if (sttResult.fluency) {
@@ -413,7 +416,7 @@ function registerSpeakingHandlers(socket: Socket): void {
 
             // Step 2: Generate AI response via Ollama
             socket.emit('speaking:processing', { status: 'thinking' });
-            session.history.push({ role: 'user', content: userText });
+            session.history.push({ role: 'user', content: sttResult.text });
 
             const ollama = new Ollama({ host: OLLAMA_HOST });
             const stream = await ollama.chat({

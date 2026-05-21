@@ -51,7 +51,7 @@ describe('AttemptController', () => {
       const payload = mockAttemptService.createAttempt.mock.calls[0][0];
       expect(payload.userId).toBe('user123');
       expect(payload.recordingPath).toBe('/uploads/recordings/audio-123.mp3');
-      
+
       expect(statusMock).toHaveBeenCalledWith(201);
       expect(jsonMock).toHaveBeenCalledWith(mockAttempt);
       expect(mockNext).toHaveBeenCalled();

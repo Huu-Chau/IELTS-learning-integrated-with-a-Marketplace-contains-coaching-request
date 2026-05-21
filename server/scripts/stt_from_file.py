@@ -23,13 +23,13 @@ import os
 import subprocess
 import tempfile
 
+# pyright: ignore [reportMissingImports]
 from faster_whisper import WhisperModel
 
 # Context prompt to steer Whisper toward IELTS vocabulary
 WHISPER_PROMPT = (
     "This is an IELTS Speaking test. The candidate is answering questions "
-    "about hobbies, hometown, work, studies, travel, food, and technology. "
-    "Common words: IELTS, examiner, band score, fluency, coherence."
+    "about hobbies, hometown, work, studies, travel, food, and technology."
 )
 
 # Known Whisper hallucinations on silence/noise — filter these out
@@ -38,6 +38,32 @@ HALLUCINATIONS = [
     "subscribe", "like and subscribe", "see you next time",
     "you", "the end", "thanks",
 ]
+
+def has_excessive_repetitions(text: str) -> bool:
+    """Detect if the text has excessive word repetitions typical of Whisper hallucinations on silence."""
+    words = [w.strip(".,!?\"'()").lower() for w in text.split()]
+    if not words:
+        return False
+        
+    # Check for 3 or more consecutive identical words
+    consecutive_count = 1
+    for i in range(1, len(words)):
+        if words[i] == words[i - 1] and words[i] != "":
+            consecutive_count += 1
+            if consecutive_count >= 3:
+                return True
+        else:
+            consecutive_count = 1
+
+    # Also check if most of the output consists of prompt keywords
+    prompt_keywords = {"ielts", "examiner", "band", "score", "fluency", "coherence"}
+    if len(words) >= 4:
+        keyword_matches = sum(1 for w in words if w in prompt_keywords)
+        if keyword_matches / len(words) > 0.7:
+            return True
+
+    return False
+
 
 
 # ─── Audio Conversion ────────────────────────────────────────────────────────
@@ -150,8 +176,8 @@ def transcribe(model: WhisperModel, wav_path: str) -> dict:
 
     # Filter hallucinations
     is_hallucination = (
-        any(h in text.lower() for h in HALLUCINATIONS)
-        and len(text.split()) < 5
+        (any(h in text.lower() for h in HALLUCINATIONS) and len(text.split()) < 5)
+        or has_excessive_repetitions(text)
     )
 
     if is_hallucination or not text:

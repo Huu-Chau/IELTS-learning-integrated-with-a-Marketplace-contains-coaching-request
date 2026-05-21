@@ -3,7 +3,7 @@ import DashboardLayout from '@/layouts/DashboardLayout';
 import TeacherCard from '@/components/marketplace/TeacherCard';
 import BookingCheckoutModal from '@/components/payment/BookingCheckoutModal';
 import CalendarMatrix, { TeacherAvailability } from '@/components/calendar/CalendarMatrix';
-import { Search, SlidersHorizontal, AlertCircle, X, CalendarDays, Brain } from 'lucide-react';
+import { Search, AlertCircle, X, CalendarDays, Brain } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { apiClient } from '@/services/apiClient';
 import { useAuth } from '@/context/AuthContext';
@@ -41,7 +41,7 @@ export default function TeacherList() {
     const [listings, setListings] = useState<MarketplaceListing[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm] = useState('');
     const [activeFilter, setActiveFilter] = useState('All Tutors');
     // ── Checkout flow state ─────────────────────────────────────────────────
     const [checkoutListingId, setCheckoutListingId] = useState<number | null>(null);
@@ -147,21 +147,7 @@ export default function TeacherList() {
                         <p className="text-gray-500 mt-1">Connect with expert IELTS instructors for personalized guidance.</p>
                     </div>
 
-                    <div className="flex items-center space-x-2">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Search by name or skill..."
-                                className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64 md:w-80"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                        <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600">
-                            <SlidersHorizontal className="h-5 w-5" />
-                        </button>
-                    </div>
+
                 </div>
 
                 {/* Tabs */}

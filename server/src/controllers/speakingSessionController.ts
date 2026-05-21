@@ -177,9 +177,11 @@ function extractBandScore(evaluationText: string): number {
     for (const pattern of patterns) {
         const match = evaluationText.match(pattern);
         if (match && match[1]) {
-            const score = parseFloat(match[1]);
-            if (score >= 1 && score <= 9) {
-                console.log('[SpeakingController] extractBandScore success', { score });
+            const raw = parseFloat(match[1]);
+            if (raw >= 1 && raw <= 9) {
+                // IELTS only uses 0.5 increments — round to nearest 0.5
+                const score = Math.round(raw * 2) / 2;
+                console.log('[SpeakingController] extractBandScore success', { raw, score });
                 return score;
             }
         }

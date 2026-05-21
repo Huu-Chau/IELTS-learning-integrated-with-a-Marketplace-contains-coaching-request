@@ -6,6 +6,7 @@ export interface IAttemptController {
     create(req: Request, res: Response, next: NextFunction): Promise<void>;
     getByUser(req: Request, res: Response, next: NextFunction): Promise<void>;
     getById(req: Request, res: Response, next: NextFunction): Promise<void>;
+    delete(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export class AttemptController implements IAttemptController {
@@ -94,6 +95,33 @@ export class AttemptController implements IAttemptController {
             return next();
         } catch (error: any) {
             console.error('[AttemptController] getById error', error);
+            res.status(500).json({ error: error.message });
+            return next(error);
+        }
+    }
+
+    // DELETE /api/attempts/:id — Remove a user's own attempt
+    public async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
+        console.log('[AttemptController] delete called', { id: req.params.id, uid: req.user?.uid });
+        try {
+            const id = parseInt(req.params.id, 10);
+            if (isNaN(id)) {
+                res.status(400).json({ error: 'Invalid attempt ID' });
+                return;
+            }
+
+            const deleted = await this.attemptService.deleteAttempt(id, req.user?.uid || '');
+            if (!deleted) {
+                console.log('[AttemptController] delete: not found or not owned', { id });
+                res.status(404).json({ error: 'Attempt not found or not owned by you' });
+                return;
+            }
+
+            console.log('[AttemptController] delete success', { id });
+            res.status(204).send();
+            return next();
+        } catch (error: any) {
+            console.error('[AttemptController] delete error', error);
             res.status(500).json({ error: error.message });
             return next(error);
         }

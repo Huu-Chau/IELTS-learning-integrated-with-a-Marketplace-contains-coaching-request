@@ -192,7 +192,17 @@ export default function MockTestReadingSession() {
                         type: 'reading',
                         testId: `reading-${setId}-${testNumber}`,
                         score: result.bandScore,
-                        answers: answers,
+                        // Persist the full graded result so the Progress page can show
+                        // a detailed per-question review when the user clicks "Details".
+                        answers: {
+                            summary: {
+                                correct: result.correct,
+                                wrong: result.wrong,
+                                unanswered: result.unanswered,
+                                total: result.total,
+                            },
+                            review: result.results, // [{questionNumber, userAnswer, correctAnswer, isCorrect}]
+                        },
                         feedback: `Completed Reading Test ${testNumber} from ${setName}.`
                     })
                 }).catch(e => console.error('[MockTestReadingSession] Failed to save attempt', e));

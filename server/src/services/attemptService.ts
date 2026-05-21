@@ -6,6 +6,7 @@ export interface IAttemptService {
     getAttemptsByUser(userId: string): Promise<Attempt[]>;
     getAttemptById(id: number): Promise<Attempt | null>;
     updateAttempt(id: number, data: Partial<Attempt>): Promise<void>;
+    deleteAttempt(id: number, userId: string): Promise<boolean>;
 }
 
 export class AttemptService implements IAttemptService {
@@ -49,6 +50,22 @@ export class AttemptService implements IAttemptService {
         console.log('[AttemptService] updateAttempt called', { id, fields: Object.keys(data) });
         await Attempt.update(data, { where: { id } });
         console.log('[AttemptService] updateAttempt success', { id });
+    }
+
+    /**
+     * Delete an attempt by ID, scoped to userId so users can only delete their own.
+     * Returns true if a row was deleted, false if not found or not owned.
+     */
+    async deleteAttempt(id: number, userId: string): Promise<boolean> {
+        console.log('[AttemptService] deleteAttempt called', { id, userId });
+        const deleted = await Attempt.destroy({ where: { id, userId } });
+        const success = deleted > 0;
+        if (success) {
+            console.log('[AttemptService] deleteAttempt success', { id });
+        } else {
+            console.log('[AttemptService] deleteAttempt: not found or not owned', { id, userId });
+        }
+        return success;
     }
 }
 

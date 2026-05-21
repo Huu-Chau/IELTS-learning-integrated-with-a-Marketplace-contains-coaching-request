@@ -18,6 +18,7 @@ describe('AttemptController', () => {
       getAttemptsByUser: jest.fn(),
       getAttemptById: jest.fn(),
       updateAttempt: jest.fn(),
+      deleteAttempt: jest.fn(),
     };
     attemptController = new AttemptController(mockAttemptService);
 
@@ -158,6 +159,57 @@ describe('AttemptController', () => {
 
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({ error: 'Error finding attempt' });
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+    });
+  });
+
+  describe('delete', () => {
+    it('should return 204 when attempt is found and owned', async () => {
+      mockReq.params = { id: '42' };
+      mockReq.user = { uid: 'user123' };
+      const sendMock = jest.fn();
+      (mockRes as any).send = sendMock;
+      statusMock.mockReturnValue({ send: sendMock });
+      mockAttemptService.deleteAttempt.mockResolvedValue(true);
+
+      await attemptController.delete(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockAttemptService.deleteAttempt).toHaveBeenCalledWith(42, 'user123');
+      expect(statusMock).toHaveBeenCalledWith(204);
+      expect(mockNext).toHaveBeenCalled();
+    });
+
+    it('should return 404 when attempt not found or not owned', async () => {
+      mockReq.params = { id: '42' };
+      mockReq.user = { uid: 'user123' };
+      mockAttemptService.deleteAttempt.mockResolvedValue(false);
+
+      await attemptController.delete(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(statusMock).toHaveBeenCalledWith(404);
+      expect(jsonMock).toHaveBeenCalledWith({ error: 'Attempt not found or not owned by you' });
+    });
+
+    it('should return 400 for a non-numeric ID', async () => {
+      mockReq.params = { id: 'abc' };
+      mockReq.user = { uid: 'user123' };
+
+      await attemptController.delete(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith({ error: 'Invalid attempt ID' });
+      expect(mockAttemptService.deleteAttempt).not.toHaveBeenCalled();
+    });
+
+    it('should return 500 on service error', async () => {
+      mockReq.params = { id: '42' };
+      mockReq.user = { uid: 'user123' };
+      mockAttemptService.deleteAttempt.mockRejectedValue(new Error('DB error'));
+
+      await attemptController.delete(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith({ error: 'DB error' });
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
     });
   });

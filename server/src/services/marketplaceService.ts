@@ -183,11 +183,6 @@ export class MarketplaceService implements IMarketplaceService {
         };
     }
 
-    /**
-     * Creates an evaluation bounty request.
-     * Atomically deducts the fee from the student's wallet (escrow)
-     * and creates a broadcast MarketplaceRequest with requestType=EVALUATION.
-     */
     async createEvaluationRequest(payload: { studentId: string; skill: string; fee: number; contentText: string }): Promise<any> {
         console.log('[MarketplaceService] createEvaluationRequest called', { studentId: payload.studentId, skill: payload.skill, fee: payload.fee });
         const { studentId, skill, fee, contentText } = payload;

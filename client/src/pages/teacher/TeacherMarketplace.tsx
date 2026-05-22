@@ -181,11 +181,10 @@ function CreateListingModal({ onClose, onCreated }: CreateModalProps) {
                                     key={label}
                                     type="button"
                                     onClick={() => toggleSkill(label)}
-                                    className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-all ${
-                                        form.skills.includes(label)
+                                    className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-all ${form.skills.includes(label)
                                             ? 'bg-indigo-600 text-white border-indigo-600'
                                             : 'text-gray-600 border-gray-300 hover:border-indigo-400'
-                                    }`}
+                                        }`}
                                 >
                                     {label}
                                 </button>
@@ -275,7 +274,7 @@ function SchedulePanel() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
-    
+
     const [availabilities, setAvailabilities] = useState<TeacherAvailabilityRecord[]>([]);
     const [date, setDate] = useState('');
     const [startTime, setStartTime] = useState('09:00');
@@ -689,11 +688,10 @@ export default function TeacherMarketplace() {
                             key={tab}
                             id={`tab-${tab}`}
                             onClick={() => setActiveTab(tab)}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                                activeTab === tab
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab
                                     ? 'bg-white text-indigo-700 shadow-sm'
                                     : 'text-gray-500 hover:text-gray-700'
-                            }`}
+                                }`}
                         >
                             {label}
                             {tab === 'requests' && pendingOrders.length > 0 && (
@@ -727,11 +725,10 @@ export default function TeacherMarketplace() {
                                     <button
                                         key={skill}
                                         onClick={() => setSkillFilter(skill)}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                                            skillFilter === skill
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${skillFilter === skill
                                                 ? 'bg-indigo-600 text-white'
                                                 : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-400'
-                                        }`}
+                                            }`}
                                     >
                                         {skill}
                                     </button>
@@ -762,9 +759,8 @@ export default function TeacherMarketplace() {
                                 {filteredListings.map((listing) => (
                                     <div
                                         key={listing.id}
-                                        className={`bg-white rounded-2xl border p-5 transition-all duration-200 hover:shadow-md ${
-                                            listing.isActive ? 'border-gray-100' : 'border-gray-200 opacity-60'
-                                        }`}
+                                        className={`bg-white rounded-2xl border p-5 transition-all duration-200 hover:shadow-md ${listing.isActive ? 'border-gray-100' : 'border-gray-200 opacity-60'
+                                            }`}
                                     >
                                         <div className="flex items-start justify-between gap-3 mb-3">
                                             <h3 className="font-semibold text-gray-800 text-sm leading-snug">{listing.title}</h3>
@@ -817,9 +813,8 @@ export default function TeacherMarketplace() {
                                                 {listing.sessionDuration} min
                                             </span>
                                             <span
-                                                className={`ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                                    listing.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
-                                                }`}
+                                                className={`ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${listing.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
+                                                    }`}
                                             >
                                                 {listing.isActive ? 'Active' : 'Inactive'}
                                             </span>
@@ -854,18 +849,16 @@ export default function TeacherMarketplace() {
                                 return (
                                     <div
                                         key={order.id}
-                                        className={`bg-white rounded-2xl border p-5 transition-all ${
-                                            isEval ? 'border-violet-200 hover:shadow-violet-100' : 'border-gray-100'
-                                        } hover:shadow-sm`}
+                                        className={`bg-white rounded-2xl border p-5 transition-all ${isEval ? 'border-violet-200 hover:shadow-violet-100' : 'border-gray-100'
+                                            } hover:shadow-sm`}
                                     >
                                         {/* ── Card header ─────────────────────────────── */}
                                         <div className="flex items-center justify-between flex-wrap gap-4">
                                             <div className="flex items-center gap-4">
-                                                <div className={`h-11 w-11 rounded-full flex items-center justify-center text-sm font-bold ${
-                                                    isEval
+                                                <div className={`h-11 w-11 rounded-full flex items-center justify-center text-sm font-bold ${isEval
                                                         ? 'bg-gradient-to-br from-violet-100 to-purple-100 text-violet-700'
                                                         : 'bg-gradient-to-br from-indigo-100 to-violet-100 text-indigo-700'
-                                                }`}>
+                                                    }`}>
                                                     {order.studentName?.[0]?.toUpperCase() ?? 'S'}
                                                 </div>
                                                 <div>

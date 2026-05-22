@@ -287,9 +287,22 @@ describe('TeacherService', () => {
     });
 
     describe('updateOrder', () => {
+        let mockTransaction: any;
+
+        beforeEach(() => {
+            mockTransaction = {
+                commit: jest.fn(),
+                rollback: jest.fn(),
+                LOCK: { UPDATE: 'UPDATE' }
+            };
+            (sequelize.transaction as jest.Mock).mockResolvedValue(mockTransaction);
+        });
+
         it('should update order status', async () => {
-            const payload = { id: 'o1', teacherId: 't1', status: 'accepted' as any };
+            const payload = { id: 'o1', teacherId: 't1', status: 'rejected' as any };
             const mockOrder = {
+                teacherId: 't1',
+                status: 'pending',
                 update: jest.fn().mockResolvedValue(true)
             };
             (MarketplaceRequest.findOne as jest.Mock).mockResolvedValue(mockOrder);
@@ -297,10 +310,11 @@ describe('TeacherService', () => {
             const result = await teacherService.updateOrder(payload);
 
             expect(result).toBe(mockOrder);
-            expect(mockOrder.update).toHaveBeenCalledWith({
-                status: 'accepted',
-                feedbackPath: undefined
-            });
+            expect(mockOrder.update).toHaveBeenCalledWith(
+                { status: 'rejected' },
+                { transaction: mockTransaction }
+            );
+            expect(mockTransaction.commit).toHaveBeenCalled();
         });
 
         it('should throw error if order not found', async () => {
@@ -308,6 +322,7 @@ describe('TeacherService', () => {
 
             await expect(teacherService.updateOrder({ id: '1', teacherId: '2', status: 'accepted' as any }))
                 .rejects.toThrow('Order not found or access denied');
+            expect(mockTransaction.rollback).toHaveBeenCalled();
         });
     });
 

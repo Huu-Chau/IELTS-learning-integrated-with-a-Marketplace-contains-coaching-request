@@ -8,6 +8,7 @@ export interface IMarketplaceController {
     getListings(req: Request, res: Response, next: NextFunction): Promise<void>;
     getListingById(req: Request, res: Response, next: NextFunction): Promise<void>;
     createBooking(req: Request, res: Response, next: NextFunction): Promise<void>;
+    createEvaluationRequest(req: Request, res: Response, next: NextFunction): Promise<void>;
     getStudentRequests(req: Request, res: Response, next: NextFunction): Promise<void>;
     getStudentPayments(req: Request, res: Response, next: NextFunction): Promise<void>;
     getTeacherAvailability(req: Request, res: Response, next: NextFunction): Promise<void>;
@@ -80,6 +81,37 @@ export class MarketplaceController implements IMarketplaceController {
             console.error('[MarketplaceController] createBooking error', error);
             if (error.message.includes('already have a pending request') || error.message.includes('Listing not found')) {
                 res.status(error.message.includes('not found') ? 404 : 400).json({ error: error.message });
+                return;
+            }
+            return next(error);
+        }
+    }
+
+    async createEvaluationRequest(req: Request, res: Response, next: NextFunction): Promise<void> {
+        console.log('[MarketplaceController] createEvaluationRequest called', { uid: req.user?.uid, body: req.body });
+        try {
+            const studentId = req.user!.uid;
+            const { skill, fee, contentText } = req.body;
+
+            if (!skill || fee === undefined || !contentText) {
+                res.status(400).json({ error: 'skill, fee, and contentText are required' });
+                return;
+            }
+
+            const result = await this.marketplaceService.createEvaluationRequest({
+                studentId,
+                skill,
+                fee: Number(fee),
+                contentText,
+            });
+
+            console.log('[MarketplaceController] createEvaluationRequest success', { id: result.id });
+            res.status(201).json(result);
+            return next();
+        } catch (error: any) {
+            console.error('[MarketplaceController] createEvaluationRequest error', error);
+            if (error.message.includes('Insufficient balance') || error.message.includes('Fee must be')) {
+                res.status(400).json({ error: error.message });
                 return;
             }
             return next(error);

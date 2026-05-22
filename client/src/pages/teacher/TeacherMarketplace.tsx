@@ -45,9 +45,12 @@ interface Order {
     status: 'pending' | 'accepted' | 'completed' | 'rejected';
     fee: number;
     skill: string | null;
+    requestType: string | null;
     message: string | null;
+    feedbackPath: string | null;
     scheduledAt: string | null;
     createdAt: string;
+    updatedAt: string;
 }
 
 interface AvailabilityRule {
@@ -58,6 +61,9 @@ interface AvailabilityRule {
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DEFAULT_HOURS = { startTime: '09:00', endTime: '17:00' };
+
+// IELTS band scores for evaluation dropdowns (0.0 – 9.0 in 0.5 steps)
+const BAND_SCORES = Array.from({ length: 19 }, (_, i) => (i * 0.5).toFixed(1));
 
 // ── Skill config ──────────────────────────────────────────────────────────────
 
@@ -489,6 +495,56 @@ export default function TeacherMarketplace() {
         }
     };
 
+    // ── Evaluation feedback state ──────────────────────────────────────────
+    const [evaluatingOrderId, setEvaluatingOrderId] = useState<number | null>(null);
+    const [feedbackText, setFeedbackText] = useState('');
+    const [bandScoreLow, setBandScoreLow] = useState('');
+    const [bandScoreHigh, setBandScoreHigh] = useState('');
+    const [evalSubmitting, setEvalSubmitting] = useState(false);
+    const [evalError, setEvalError] = useState<string | null>(null);
+
+    const handleStartEvaluating = (orderId: number) => {
+        console.log('[TeacherMarketplace] handleStartEvaluating called', { orderId });
+        setEvaluatingOrderId(orderId);
+        setFeedbackText('');
+        setBandScoreLow('');
+        setBandScoreHigh('');
+        setEvalError(null);
+    };
+
+    const handleSubmitEvaluation = async (orderId: number) => {
+        console.log('[TeacherMarketplace] handleSubmitEvaluation called', { orderId, bandScoreLow, bandScoreHigh });
+        if (!feedbackText.trim()) {
+            setEvalError('Please write your feedback before submitting.');
+            return;
+        }
+        setEvalSubmitting(true);
+        setEvalError(null);
+        try {
+            // Compose the feedbackPath: optional band score header + qualitative feedback
+            let composedFeedback = '';
+            if (bandScoreLow && bandScoreHigh) {
+                composedFeedback += `**Estimated Band Score: ${bandScoreLow} – ${bandScoreHigh}**\n\n`;
+            } else if (bandScoreLow || bandScoreHigh) {
+                composedFeedback += `**Estimated Band Score: ${bandScoreLow || bandScoreHigh}**\n\n`;
+            }
+            composedFeedback += feedbackText.trim();
+
+            await patch(`/teacher/orders/${orderId}`, {
+                status: 'completed',
+                feedbackPath: composedFeedback,
+            });
+            console.log('[TeacherMarketplace] handleSubmitEvaluation success', { orderId });
+            setEvaluatingOrderId(null);
+            refetchOrders();
+        } catch (err) {
+            console.error('[TeacherMarketplace] handleSubmitEvaluation error', err);
+            setEvalError(err instanceof Error ? err.message : 'Failed to submit evaluation');
+        } finally {
+            setEvalSubmitting(false);
+        }
+    };
+
     // Edit listing — inline controlled state
     const [editingListing, setEditingListing] = useState<Listing | null>(null);
     const [editForm, setEditForm] = useState<Partial<Listing>>({});
@@ -788,65 +844,211 @@ export default function TeacherMarketplace() {
                             <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-200">
                                 <CheckCircle className="h-10 w-10 text-emerald-300 mx-auto mb-3" />
                                 <p className="font-medium text-gray-500">No requests yet</p>
-                                <p className="text-sm text-gray-400 mt-1">Student requests will appear here once you have active listings.</p>
+                                <p className="text-sm text-gray-400 mt-1">Student requests and evaluation bounties will appear here.</p>
                             </div>
                         ) : (
-                            orders.map((order) => (
-                                <div key={order.id} className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-sm transition-all">
-                                    <div className="flex items-center justify-between flex-wrap gap-4">
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-11 w-11 rounded-full bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center text-sm font-bold text-indigo-700">
-                                                {order.studentName?.[0]?.toUpperCase() ?? 'S'}
+                            orders.map((order) => {
+                                const isEval = order.requestType === 'evaluation';
+                                const isEvaluating = evaluatingOrderId === order.id;
+
+                                return (
+                                    <div
+                                        key={order.id}
+                                        className={`bg-white rounded-2xl border p-5 transition-all ${
+                                            isEval ? 'border-violet-200 hover:shadow-violet-100' : 'border-gray-100'
+                                        } hover:shadow-sm`}
+                                    >
+                                        {/* ── Card header ─────────────────────────────── */}
+                                        <div className="flex items-center justify-between flex-wrap gap-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className={`h-11 w-11 rounded-full flex items-center justify-center text-sm font-bold ${
+                                                    isEval
+                                                        ? 'bg-gradient-to-br from-violet-100 to-purple-100 text-violet-700'
+                                                        : 'bg-gradient-to-br from-indigo-100 to-violet-100 text-indigo-700'
+                                                }`}>
+                                                    {order.studentName?.[0]?.toUpperCase() ?? 'S'}
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="font-semibold text-gray-800 text-sm">{order.studentName ?? `Order #${order.id}`}</p>
+                                                        {isEval && (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-100 text-violet-700 uppercase tracking-wider">
+                                                                <Brain className="h-3 w-3" /> Evaluation
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                                                        <Clock className="h-3 w-3" />
+                                                        {new Date(order.createdAt).toLocaleDateString('en-US', {
+                                                            month: 'short', day: 'numeric', year: 'numeric',
+                                                        })}
+                                                        {order.skill && (
+                                                            <span className="ml-2 text-indigo-500 font-medium">· {order.skill}</span>
+                                                        )}
+                                                        {order.fee > 0 && (
+                                                            <span className="ml-2 text-emerald-600 font-semibold flex items-center gap-1">
+                                                                · {(order.fee).toLocaleString('vi-VN')} <Brain className="h-3 w-3" />
+                                                            </span>
+                                                        )}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="font-semibold text-gray-800 text-sm">{order.studentName ?? `Order #${order.id}`}</p>
-                                                <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
-                                                    <Clock className="h-3 w-3" />
-                                                    {new Date(order.createdAt).toLocaleDateString('en-US', {
-                                                        month: 'short', day: 'numeric', year: 'numeric',
-                                                    })}
-                                                    {order.skill && (
-                                                        <span className="ml-2 text-indigo-500 font-medium">· {order.skill}</span>
-                                                    )}
-                                                    {order.fee > 0 && (
-                                                        <span className="ml-2 text-emerald-600 font-semibold flex items-center gap-1">
-                                                            · {(order.fee).toLocaleString('vi-VN')} <Brain className="h-3 w-3" />
-                                                        </span>
-                                                    )}
-                                                </p>
-                                                {order.message && (
-                                                    <p className="text-xs text-gray-500 mt-1 italic max-w-xs truncate">&ldquo;{order.message}&rdquo;</p>
+                                            <div className="flex items-center gap-3">
+                                                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${STATUS_COLORS[order.status]}`}>
+                                                    {order.status}
+                                                </span>
+                                                {order.status === 'pending' && (
+                                                    <>
+                                                        <button
+                                                            id={`accept-order-${order.id}`}
+                                                            onClick={() => handleOrderAction(order.id, 'accepted')}
+                                                            disabled={patchLoading}
+                                                            className="px-3 py-1.5 text-xs font-semibold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-60"
+                                                        >
+                                                            Accept
+                                                        </button>
+                                                        {!isEval && (
+                                                            <button
+                                                                id={`decline-order-${order.id}`}
+                                                                onClick={() => handleOrderAction(order.id, 'rejected')}
+                                                                disabled={patchLoading}
+                                                                className="px-3 py-1.5 text-xs font-semibold bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-60"
+                                                            >
+                                                                Decline
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                )}
+                                                {/* Show "Write Feedback" button for accepted evaluations */}
+                                                {isEval && order.status === 'accepted' && !isEvaluating && (
+                                                    <button
+                                                        id={`evaluate-order-${order.id}`}
+                                                        onClick={() => handleStartEvaluating(order.id)}
+                                                        className="px-3 py-1.5 text-xs font-semibold bg-violet-600 text-white rounded-xl hover:bg-violet-700 transition-colors"
+                                                    >
+                                                        Write Feedback
+                                                    </button>
                                                 )}
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-3">
-                                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${STATUS_COLORS[order.status]}`}>
-                                                {order.status}
-                                            </span>
-                                            {order.status === 'pending' && (
-                                                <>
-                                                    <button
-                                                        id={`accept-order-${order.id}`}
-                                                        onClick={() => handleOrderAction(order.id, 'accepted')}
-                                                        disabled={patchLoading}
-                                                        className="px-3 py-1.5 text-xs font-semibold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-60"
+
+                                        {/* ── Student content (essay or link) ────────── */}
+                                        {isEval && order.message && (
+                                            <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                                                    {order.skill === 'Speaking' ? 'Recording Link' : 'Student\'s Essay'}
+                                                </p>
+                                                {order.skill === 'Speaking' ? (
+                                                    <a
+                                                        href={order.message}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-sm text-indigo-600 hover:text-indigo-800 underline break-all"
                                                     >
-                                                        Accept
+                                                        {order.message}
+                                                    </a>
+                                                ) : (
+                                                    <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
+                                                        {order.message}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* ── Completed feedback display ─────────────── */}
+                                        {isEval && order.status === 'completed' && order.feedbackPath && (
+                                            <div className="mt-4 p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                                                <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-2">Your Feedback</p>
+                                                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                                                    {order.feedbackPath}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* ── Non-eval message (booking) ─────────────── */}
+                                        {!isEval && order.message && (
+                                            <p className="text-xs text-gray-500 mt-3 italic max-w-lg truncate">&ldquo;{order.message}&rdquo;</p>
+                                        )}
+
+                                        {/* ── Inline evaluation form ─────────────────── */}
+                                        {isEval && isEvaluating && (
+                                            <div className="mt-4 p-5 bg-violet-50/50 rounded-xl border border-violet-100 space-y-4">
+                                                <p className="text-sm font-semibold text-violet-800">Submit Your Evaluation</p>
+
+                                                {/* Band score dropdowns */}
+                                                <div>
+                                                    <label className="block text-xs font-medium text-gray-600 mb-1.5">Estimated Band Score Range (optional)</label>
+                                                    <div className="flex items-center gap-3">
+                                                        <select
+                                                            id={`band-low-${order.id}`}
+                                                            value={bandScoreLow}
+                                                            onChange={(e) => setBandScoreLow(e.target.value)}
+                                                            className="px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-violet-500 outline-none"
+                                                        >
+                                                            <option value="">Low</option>
+                                                            {BAND_SCORES.map((s) => <option key={s} value={s}>{s}</option>)}
+                                                        </select>
+                                                        <span className="text-gray-400 text-sm">–</span>
+                                                        <select
+                                                            id={`band-high-${order.id}`}
+                                                            value={bandScoreHigh}
+                                                            onChange={(e) => setBandScoreHigh(e.target.value)}
+                                                            className="px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-violet-500 outline-none"
+                                                        >
+                                                            <option value="">High</option>
+                                                            {BAND_SCORES.map((s) => <option key={s} value={s}>{s}</option>)}
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                {/* Feedback textarea */}
+                                                <div>
+                                                    <label className="block text-xs font-medium text-gray-600 mb-1.5">Detailed Feedback *</label>
+                                                    <textarea
+                                                        id={`eval-feedback-${order.id}`}
+                                                        rows={6}
+                                                        placeholder="Write your detailed feedback here... Assess grammar, vocabulary, coherence, task response, etc."
+                                                        value={feedbackText}
+                                                        onChange={(e) => setFeedbackText(e.target.value)}
+                                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500 outline-none resize-none bg-white"
+                                                    />
+                                                </div>
+
+                                                {/* Error */}
+                                                {evalError && (
+                                                    <div className="text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">
+                                                        {evalError}
+                                                    </div>
+                                                )}
+
+                                                {/* Actions */}
+                                                <div className="flex items-center justify-end gap-3">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setEvaluatingOrderId(null)}
+                                                        disabled={evalSubmitting}
+                                                        className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50"
+                                                    >
+                                                        Cancel
                                                     </button>
                                                     <button
-                                                        id={`decline-order-${order.id}`}
-                                                        onClick={() => handleOrderAction(order.id, 'rejected')}
-                                                        disabled={patchLoading}
-                                                        className="px-3 py-1.5 text-xs font-semibold bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-60"
+                                                        id={`submit-eval-${order.id}`}
+                                                        onClick={() => handleSubmitEvaluation(order.id)}
+                                                        disabled={evalSubmitting}
+                                                        className="flex items-center gap-2 px-5 py-2 bg-violet-600 text-white text-sm font-semibold rounded-xl hover:bg-violet-700 transition-colors disabled:opacity-60 shadow-sm"
                                                     >
-                                                        Decline
+                                                        {evalSubmitting ? (
+                                                            <><Loader2 className="h-4 w-4 animate-spin" /> Submitting...</>
+                                                        ) : (
+                                                            <><Save className="h-4 w-4" /> Submit Evaluation</>
+                                                        )}
                                                     </button>
-                                                </>
-                                            )}
-                                        </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 )}

@@ -9,4 +9,5 @@ export enum MarketplaceRequestType {
     TARGETED = 'targeted',
     BROADCAST = 'broadcast',
     BOOKING = 'booking',
+    EVALUATION = 'evaluation',
 }

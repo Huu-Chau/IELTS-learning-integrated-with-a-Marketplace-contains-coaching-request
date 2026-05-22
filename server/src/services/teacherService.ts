@@ -1,4 +1,5 @@
 import { Op } from 'sequelize';
+import { MarketplaceRequestStatus } from '../types/marketplace-request';
 import TeacherListing from '../models/TeacherListing';
 import MarketplaceRequest from '../models/MarketplaceRequest';
 import User from '../models/User';
@@ -158,12 +159,19 @@ export class TeacherService implements ITeacherService {
     }
 
     public async getOrders(teacherId: string): Promise<any[]> {
+        console.log('[TeacherService] getOrders called', { teacherId });
         const orders = await MarketplaceRequest.findAll({
-            where: { teacherId },
+            where: {
+                [Op.or]: [
+                    { teacherId },
+                    // Also show open evaluation bounties broadcast to all teachers
+                    { teacherId: null, requestType: 'evaluation', status: 'pending' },
+                ],
+            },
             order: [['createdAt', 'DESC']],
         });
 
-        return Promise.all(
+        const results = await Promise.all(
             orders.map(async (order) => {
                 const student = await User.findByPk(order.studentId, {
                     attributes: ['firstName', 'lastName', 'email'],
@@ -177,28 +185,97 @@ export class TeacherService implements ITeacherService {
                     status: order.status,
                     fee: Number(order.fee ?? 0),
                     skill: order.skill,
+                    requestType: order.requestType,
                     message: order.message,
+                    feedbackPath: order.feedbackPath,
+                    scheduledAt: null,
                     createdAt: order.createdAt,
                     updatedAt: order.updatedAt,
                 };
             })
         );
+        console.log('[TeacherService] getOrders success', { count: results.length });
+        return results;
     }
 
     public async updateOrder(payload: UpdateOrderPayload): Promise<MarketplaceRequest> {
-        const order = await MarketplaceRequest.findOne({
-            where: { id: payload.id, teacherId: payload.teacherId },
-        });
+        console.log('[TeacherService] updateOrder called', { id: payload.id, teacherId: payload.teacherId, status: payload.status });
+        const t = await sequelize.transaction();
+        try {
+            // Find the order — allow matching either the teacher's own orders
+            // or open evaluation broadcasts (teacherId=null)
+            const order = await MarketplaceRequest.findOne({
+                where: {
+                    id: payload.id,
+                    [Op.or]: [
+                        { teacherId: payload.teacherId },
+                        { teacherId: null, requestType: 'evaluation', status: 'pending' },
+                    ],
+                },
+                lock: t.LOCK.UPDATE,
+                transaction: t,
+            });
 
-        if (!order) {
-            throw new Error('Order not found or access denied');
+            if (!order) {
+                throw new Error('Order not found or access denied');
+            }
+
+            // ── Case 1: Teacher ACCEPTS a broadcast evaluation request ──────────
+            if (order.teacherId === null && payload.status === 'accepted') {
+                await order.update({
+                    teacherId: payload.teacherId,
+                    status: MarketplaceRequestStatus.ACCEPTED,
+                }, { transaction: t });
+
+                // Notify student that their request was picked up
+                const notifPayload = new CreateNotificationPayload(
+                    order.studentId,
+                    NotificationType.ORDER,
+                    '📝 Evaluation Accepted',
+                    `A teacher has accepted your IELTS ${order.skill} evaluation request.`,
+                    '/my-requests',
+                );
+                await this.notificationService.createNotification(notifPayload);
+
+            // ── Case 2: Teacher COMPLETES the evaluation (submits feedback) ─────
+            } else if (payload.status === 'completed' && order.status !== 'completed') {
+                await order.update({
+                    status: MarketplaceRequestStatus.COMPLETED,
+                    feedbackPath: payload.feedbackPath,
+                }, { transaction: t });
+
+                // Pay the teacher
+                await User.update(
+                    { wallet_balance: sequelize.literal(`wallet_balance + ${order.fee}`) },
+                    { where: { id: payload.teacherId }, transaction: t },
+                );
+
+                // Notify student that their evaluation is ready
+                const notifPayload = new CreateNotificationPayload(
+                    order.studentId,
+                    NotificationType.ORDER,
+                    '✅ Evaluation Completed',
+                    `Your IELTS ${order.skill} evaluation is ready! Check your progress page.`,
+                    '/progress',
+                );
+                await this.notificationService.createNotification(notifPayload);
+
+            // ── Default: standard status update (accept/reject for normal bookings) ──
+            } else {
+                await order.update({
+                    status: payload.status,
+                    feedbackPath: payload.feedbackPath || order.feedbackPath,
+                }, { transaction: t });
+            }
+
+            await t.commit();
+            console.log('[TeacherService] updateOrder success', { id: order.id, newStatus: order.status });
+            return order;
+        } catch (error) {
+            await t.rollback();
+            console.error('[TeacherService] updateOrder error', error);
+            throw error;
         }
-
-        await order.update({
-            status: payload.status,
-            feedbackPath: payload.feedbackPath
-        });
-        return order;
     }
 
     public async getTransactions(teacherId: string): Promise<any> {

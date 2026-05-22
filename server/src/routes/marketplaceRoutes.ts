@@ -34,6 +34,12 @@ router.get('/listings/:id', (req, res, next) => marketplaceController.getListing
 router.post('/requests', (req, res, next) => marketplaceController.createBooking(req, res, next));
 
 /**
+ * POST /api/marketplace/evaluations
+ * Student creates a new evaluation bounty request (writing/speaking) broadcast to all teachers.
+ */
+router.post('/evaluations', (req, res, next) => marketplaceController.createEvaluationRequest(req, res, next));
+
+/**
  * GET /api/marketplace/requests/mine
  * Returns all marketplace requests submitted by the authenticated student.
  */

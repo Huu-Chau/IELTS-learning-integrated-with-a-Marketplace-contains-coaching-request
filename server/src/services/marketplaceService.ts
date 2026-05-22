@@ -1,9 +1,10 @@
 import { Op } from 'sequelize';
+import sequelize from '../config/database';
 import TeacherListing from '../models/TeacherListing';
 import MarketplaceRequest from '../models/MarketplaceRequest';
 import User from '../models/User';
 import Reservation from '../models/Reservation';
-import { MarketplaceRequestStatus } from '../types/marketplace-request';
+import { MarketplaceRequestStatus, MarketplaceRequestType } from '../types/marketplace-request';
 import { ReservationStatus } from '../types/reservation';
 import { BrowseListingsQuery, CreateBookingPayload } from '../types/marketplace';
 
@@ -11,6 +12,7 @@ export interface IMarketplaceService {
     getListings(query: BrowseListingsQuery, currentUserId?: string): Promise<any[]>;
     getListingById(id: string): Promise<any>;
     createBooking(payload: CreateBookingPayload): Promise<any>;
+    createEvaluationRequest(payload: { studentId: string; skill: string; fee: number; contentText: string }): Promise<any>;
     getStudentRequests(studentId: string): Promise<any[]>;
     getStudentPayments(studentId: string): Promise<any>;
 }
@@ -181,13 +183,63 @@ export class MarketplaceService implements IMarketplaceService {
         };
     }
 
+    /**
+     * Creates an evaluation bounty request.
+     * Atomically deducts the fee from the student's wallet (escrow)
+     * and creates a broadcast MarketplaceRequest with requestType=EVALUATION.
+     */
+    async createEvaluationRequest(payload: { studentId: string; skill: string; fee: number; contentText: string }): Promise<any> {
+        console.log('[MarketplaceService] createEvaluationRequest called', { studentId: payload.studentId, skill: payload.skill, fee: payload.fee });
+        const { studentId, skill, fee, contentText } = payload;
+
+        if (fee <= 0) throw new Error('Fee must be greater than zero');
+
+        const t = await sequelize.transaction();
+
+        try {
+            // Atomic balance deduction — same pattern as reservationService.ts
+            const [studentUpdatedCount] = await User.update(
+                { wallet_balance: sequelize.literal(`wallet_balance - ${fee}`) },
+                {
+                    where: { id: studentId, wallet_balance: { [Op.gte]: fee } },
+                    transaction: t,
+                }
+            );
+
+            if (studentUpdatedCount === 0) {
+                throw new Error('Insufficient balance or user not found');
+            }
+
+            const request = await MarketplaceRequest.create({
+                studentId,
+                teacherId: null,       // Broadcast — any teacher can pick it up
+                attemptId: null,
+                status: MarketplaceRequestStatus.PENDING,
+                fee,
+                message: contentText,   // Student's essay text or speaking URL
+                skill,
+                feedbackPath: null,
+                requestType: MarketplaceRequestType.EVALUATION,
+            }, { transaction: t });
+
+            await t.commit();
+            console.log('[MarketplaceService] createEvaluationRequest success', { id: request.id });
+            return request.toJSON();
+        } catch (error) {
+            await t.rollback();
+            console.error('[MarketplaceService] createEvaluationRequest error', error);
+            throw error;
+        }
+    }
+
     async getStudentRequests(studentId: string): Promise<any[]> {
+        console.log('[MarketplaceService] getStudentRequests called', { studentId });
         const requests = await MarketplaceRequest.findAll({
             where: { studentId },
             order: [['createdAt', 'DESC']],
         });
 
-        return Promise.all(
+        const results = await Promise.all(
             requests.map(async (req) => {
                 const teacher = req.teacherId
                     ? await User.findByPk(req.teacherId, {
@@ -199,15 +251,20 @@ export class MarketplaceService implements IMarketplaceService {
                     teacherId: req.teacherId,
                     teacherName: teacher
                         ? `${teacher.firstName} ${teacher.lastName}`.trim()
-                        : 'Unknown',
+                        : req.requestType === MarketplaceRequestType.EVALUATION ? 'Awaiting Teacher' : 'Unknown',
                     status: req.status,
                     fee: Number(req.fee),
                     feedbackPath: req.feedbackPath,
+                    message: req.message,
+                    skill: req.skill,
+                    requestType: req.requestType,
                     createdAt: req.createdAt,
                     updatedAt: req.updatedAt,
                 };
             })
         );
+        console.log('[MarketplaceService] getStudentRequests success', { count: results.length });
+        return results;
     }
 
     async getStudentPayments(studentId: string): Promise<any> {

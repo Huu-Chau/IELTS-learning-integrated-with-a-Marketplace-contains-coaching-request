@@ -609,7 +609,7 @@ export default function MyRequests() {
                                 {submitting ? (
                                     <><Loader2 className="h-4 w-4 animate-spin" /> Submitting...</>
                                 ) : (
-                                    <><Plus className="h-4 w-4" /> Post Bounty</>
+                                    <><Plus className="h-4 w-4" /> Post Request</>
                                 )}
                             </button>
                         </div>

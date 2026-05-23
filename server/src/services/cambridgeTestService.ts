@@ -104,9 +104,9 @@ export class CambridgeTestService implements ICambridgeTestService {
     async gradeTest(payload: GradeTestPayload): Promise<any> {
         const { skill, book, testNumber, answers } = payload;
         console.log('[CambridgeTestService] gradeTest called', { skill, book, testNumber, answerCount: Object.keys(answers || {}).length });
-        
+
         const bookName = book.match(/^\d+$/) ? `Cambridge ${book}` : book;
-        
+
         const materials = await MockMaterial.findAll({
             where: {
                 book: bookName,
@@ -114,7 +114,7 @@ export class CambridgeTestService implements ICambridgeTestService {
             },
             order: [['test_number', 'ASC']],
         });
-        
+
         const material = materials.find(m => m.test_number === testNumber);
 
         if (!material) {
@@ -135,14 +135,22 @@ export class CambridgeTestService implements ICambridgeTestService {
                 for (const sub of section.sub_sections) {
                     if (sub.questions) {
                         subGroupIdCounter++;
-                        const isMultiSelect = sub.answer_type === 'multiple_choice_multiple';
+                        // Recognise both DB spellings of the multi-select type
+                        const isMultiSelect =
+                            sub.answer_type === 'multiple_choice_multiple' ||
+                            sub.answer_type === 'multiple_choice_multiple_answers';
                         const optionsMap = sub.options || {};
                         allQuestions.push(...sub.questions.map((q: any) => ({
                             ...q,
-                            _isMultiSelect: isMultiSelect || q.answer_type === 'multiple_choice_multiple',
+                            _isMultiSelect:
+                                isMultiSelect ||
+                                q.answer_type === 'multiple_choice_multiple' ||
+                                q.answer_type === 'multiple_choice_multiple_answers',
                             _subGroupId: subGroupIdCounter,
                             _subQuestions: sub.questions,
-                            _optionsMap: optionsMap
+                            _optionsMap: optionsMap,
+                            // Carry sub-section options so range-expansion can resolve letter → label
+                            _subOptions: optionsMap,
                         })));
                     }
                 }
@@ -152,23 +160,87 @@ export class CambridgeTestService implements ICambridgeTestService {
 
             for (const q of allQuestions) {
                 const qNum = String(q.question_number);
-                const correctAnswer = String(q.answer || '').trim();
+
+                // ── Detect array-of-object answer (multiple_choice_multiple_answers with a range) ──
+                // DB shape: answer: [{answer: "A/C", question_number: 23}, {answer: "C/A", question_number: 24}]
+                const rawAnswer = q.answer;
+                const isAnswerArray = Array.isArray(rawAnswer);
+
+                // Build per-question correct-answer lookup from the array
+                const perQuestionAnswerMap: Record<string, string> = {};
+                if (isAnswerArray) {
+                    for (const item of rawAnswer) {
+                        if (item && typeof item === 'object' && item.question_number != null) {
+                            perQuestionAnswerMap[String(item.question_number)] = String(item.answer || '').trim();
+                        }
+                    }
+                }
+
+                // Flat string — only valid when rawAnswer is not an array
+                const correctAnswer = isAnswerArray ? '' : String(rawAnswer || '').trim();
 
                 if (qNum.includes('-')) {
                     const [start, end] = qNum.split('-').map(Number);
-                    const correctParts = correctAnswer.split('/').map((s: string) => s.trim());
+                    const opts = (q._subOptions || q._optionsMap || {}) as Record<string, string>;
+                    const hasOpts = Object.keys(opts).length > 0;
 
-                    for (let i = start; i <= end; i++) {
-                        const userAns = (answers[String(i)] || '').trim();
-                        const partIndex = i - start;
-                        const expectedAns = correctParts[partIndex] || correctAnswer;
+                    const resolveRangeKey = (key: string): string => {
+                        if (!hasOpts) return key;
+                        // "A/C" → resolve each variant and join with " / "
+                        if (key.includes('/')) {
+                            return key.split('/').map((k: string) => opts[k.trim()] || k.trim()).join(' / ');
+                        }
+                        return opts[key] || key;
+                    };
 
-                        results.push({
-                            questionNumber: String(i),
-                            correctAnswer: expectedAns,
-                            userAnswer: userAns,
-                            isCorrect: userAns !== '' && userAns.toLowerCase() === expectedAns.toLowerCase(),
-                        });
+                    if (isAnswerArray) {
+                        // ── multiple_choice_multiple_answers range ───────────────────────
+                        // Build a flat pool of all acceptable answer letters (deduplicated).
+                        // "A/C" means either A or C is acceptable.
+                        const acceptablePool: string[] = [];
+                        for (const item of rawAnswer) {
+                            const variants = String(item.answer || '')
+                                .split('/')
+                                .map((s: string) => s.trim().toLowerCase());
+                            acceptablePool.push(...variants);
+                        }
+                        const acceptableSet = new Set(acceptablePool);
+                        const usedLocal = new Set<string>(); // prevent same letter used twice
+
+                        for (let i = start; i <= end; i++) {
+                            const userAns = (answers[String(i)] || '').trim();
+                            const lower = userAns.toLowerCase();
+                            const expectedRaw = perQuestionAnswerMap[String(i)] || '';
+                            const expectedDisplay = resolveRangeKey(expectedRaw);
+
+                            let isCorrect = false;
+                            if (userAns !== '' && acceptableSet.has(lower) && !usedLocal.has(lower)) {
+                                isCorrect = true;
+                                usedLocal.add(lower);
+                            }
+
+                            results.push({
+                                questionNumber: String(i),
+                                correctAnswer: expectedDisplay,
+                                userAnswer: userAns !== '' ? resolveRangeKey(userAns) : userAns,
+                                isCorrect,
+                            });
+                        }
+                    } else {
+                        // ── Plain-string range (existing logic, unchanged) ───────────────
+                        const correctParts = correctAnswer.split('/').map((s: string) => s.trim());
+                        for (let i = start; i <= end; i++) {
+                            const userAns = (answers[String(i)] || '').trim();
+                            const partIndex = i - start;
+                            const expectedAns = correctParts[partIndex] || correctAnswer;
+
+                            results.push({
+                                questionNumber: String(i),
+                                correctAnswer: expectedAns,
+                                userAnswer: userAns,
+                                isCorrect: userAns !== '' && userAns.toLowerCase() === expectedAns.toLowerCase(),
+                            });
+                        }
                     }
                 } else {
                     const userAns = (answers[qNum] || '').trim();
@@ -178,7 +250,17 @@ export class CambridgeTestService implements ICambridgeTestService {
 
                     if (userAns !== '') {
                         if (q._isMultiSelect && q._subQuestions) {
-                            const pool = q._subQuestions.map((sq: any) => String(sq.answer || '').trim().toLowerCase());
+                            // Build pool — handle both plain-string and array-of-object answer shapes
+                            const pool: string[] = [];
+                            for (const sq of q._subQuestions) {
+                                if (Array.isArray(sq.answer)) {
+                                    for (const item of sq.answer) {
+                                        pool.push(...String(item.answer || '').split('/').map((s: string) => s.trim().toLowerCase()));
+                                    }
+                                } else {
+                                    pool.push(...String(sq.answer || '').split('/').map((s: string) => s.trim().toLowerCase()));
+                                }
+                            }
                             expectedAnsStr = q._subQuestions.map((sq: any) => sq.answer).join(' / ');
 
                             if (pool.includes(lowerUserAns) && !usedGroupAnswers.has(`${q._subGroupId}-${lowerUserAns}`)) {

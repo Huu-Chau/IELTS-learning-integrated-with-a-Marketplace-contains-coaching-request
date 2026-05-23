@@ -8,7 +8,7 @@ import { AuthService } from './services/authService';
 import { AuthController } from './controllers/authController';
 import { AttemptService } from './services/attemptService';
 import { AttemptController } from './controllers/attemptController';
-import { CambridgeTestService } from './services/cambridgeTestService';
+import { CambridgeTestServiceV2 } from './services/cambridgeTestService';
 import { CambridgeTestController } from './controllers/CambridgeTestController';
 import { WritingEvaluationService } from './services/writingEvaluationService';
 import { WritingEvaluationController } from './controllers/writingEvaluationController';
@@ -36,7 +36,7 @@ console.log('=== attempService:', attemptService);
 console.log(Object.getOwnPropertyNames(Object.getPrototypeOf(attemptService)));
 
 
-const cambridgeTestService = new CambridgeTestService(storageProvider);
+const cambridgeTestService = new CambridgeTestServiceV2(storageProvider);
 const writingEvaluationService = new WritingEvaluationService(storageProvider);
 const marketplaceService = new MarketplaceService();
 const messageService = new MessageService();

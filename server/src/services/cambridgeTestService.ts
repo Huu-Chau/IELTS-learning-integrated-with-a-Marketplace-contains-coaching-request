@@ -10,15 +10,15 @@ export interface ICambridgeTestService {
     gradeTest(payload: GradeTestPayload): Promise<any>;
 }
 
-export class CambridgeTestService implements ICambridgeTestService {
-    private readonly LISTENING_BAND_TABLE: [number, number][] = [
+export abstract class CambridgeTestService implements ICambridgeTestService {
+    protected readonly LISTENING_BAND_TABLE: [number, number][] = [
         [39, 9.0], [37, 8.5], [35, 8.0], [33, 7.5],
         [30, 7.0], [27, 6.5], [23, 6.0], [20, 5.5],
         [16, 5.0], [13, 4.5], [10, 4.0], [6, 3.5],
         [4, 3.0], [2, 2.5], [1, 2.0], [0, 0],
     ];
 
-    private readonly READING_BAND_TABLE: [number, number][] = [
+    protected readonly READING_BAND_TABLE: [number, number][] = [
         [39, 9.0], [37, 8.5], [35, 8.0], [33, 7.5],
         [30, 7.0], [27, 6.5], [23, 6.0], [19, 5.5],
         [15, 5.0], [13, 4.5], [10, 4.0], [8, 3.5],
@@ -27,7 +27,7 @@ export class CambridgeTestService implements ICambridgeTestService {
 
     constructor(private storageProvider: IStorageProvider) { }
 
-    private rawToBand(raw: number, table: [number, number][]): number {
+    protected rawToBand(raw: number, table: [number, number][]): number {
         for (const [threshold, band] of table) {
             if (raw >= threshold) {
                 return band;
@@ -101,12 +101,16 @@ export class CambridgeTestService implements ICambridgeTestService {
         };
     }
 
+    abstract gradeTest(payload: GradeTestPayload): Promise<any>;
+}
+
+export class CambridgeTestServiceV1 extends CambridgeTestService {
     async gradeTest(payload: GradeTestPayload): Promise<any> {
         const { skill, book, testNumber, answers } = payload;
         console.log('[CambridgeTestService] gradeTest called', { skill, book, testNumber, answerCount: Object.keys(answers || {}).length });
-        
+
         const bookName = book.match(/^\d+$/) ? `Cambridge ${book}` : book;
-        
+
         const materials = await MockMaterial.findAll({
             where: {
                 book: bookName,
@@ -114,7 +118,7 @@ export class CambridgeTestService implements ICambridgeTestService {
             },
             order: [['test_number', 'ASC']],
         });
-        
+
         const material = materials.find(m => m.test_number === testNumber);
 
         if (!material) {
@@ -179,6 +183,225 @@ export class CambridgeTestService implements ICambridgeTestService {
                     if (userAns !== '') {
                         if (q._isMultiSelect && q._subQuestions) {
                             const pool = q._subQuestions.map((sq: any) => String(sq.answer || '').trim().toLowerCase());
+                            expectedAnsStr = q._subQuestions.map((sq: any) => sq.answer).join(' / ');
+
+                            if (pool.includes(lowerUserAns) && !usedGroupAnswers.has(`${q._subGroupId}-${lowerUserAns}`)) {
+                                isCorrect = true;
+                                usedGroupAnswers.add(`${q._subGroupId}-${lowerUserAns}`);
+                            }
+                        } else {
+                            const acceptableAnswers = correctAnswer.split('/').map((s: string) => s.trim().toLowerCase());
+                            isCorrect = acceptableAnswers.includes(lowerUserAns);
+                        }
+                    }
+
+                    const opts = q._optionsMap as Record<string, string> | undefined;
+                    const hasOpts = opts && Object.keys(opts).length > 0;
+
+                    const resolveKey = (key: string): string => {
+                        if (!hasOpts) return key;
+                        if (key.includes(' / ')) {
+                            return key.split(' / ').map(k => opts![k.trim()] || k.trim()).join(' / ');
+                        }
+                        return opts![key] || key;
+                    };
+
+                    results.push({
+                        questionNumber: qNum,
+                        correctAnswer: resolveKey(expectedAnsStr),
+                        userAnswer: userAns !== '' ? resolveKey(userAns) : userAns,
+                        isCorrect,
+                    });
+                }
+            }
+        }
+
+        results.sort((a, b) => {
+            const numA = parseInt(a.questionNumber, 10);
+            const numB = parseInt(b.questionNumber, 10);
+            return numA - numB;
+        });
+
+        const correct = results.filter(r => r.isCorrect).length;
+        const wrong = results.filter(r => !r.isCorrect && r.userAnswer !== '').length;
+        const unanswered = results.filter(r => r.userAnswer === '').length;
+        const total = results.length;
+
+        const bandTable = skill.toUpperCase() === 'LISTENING' ? this.LISTENING_BAND_TABLE : this.READING_BAND_TABLE;
+        const bandScore = this.rawToBand(correct, bandTable);
+
+        return {
+            correct,
+            wrong,
+            unanswered,
+            total,
+            bandScore,
+            results,
+        };
+    }
+}
+
+export class CambridgeTestServiceV2 extends CambridgeTestService {
+    async gradeTest(payload: GradeTestPayload): Promise<any> {
+        const { skill, book, testNumber, answers } = payload;
+        console.log('[CambridgeTestService] gradeTest called', { skill, book, testNumber, answerCount: Object.keys(answers || {}).length });
+
+        const bookName = book.match(/^\d+$/) ? `Cambridge ${book}` : book;
+
+        const materials = await MockMaterial.findAll({
+            where: {
+                book: bookName,
+                skill: skill.toUpperCase(),
+            },
+            order: [['test_number', 'ASC']],
+        });
+
+        const material = materials.find(m => m.test_number === testNumber);
+
+        if (!material) {
+            throw new Error(`Test not found: ${book} / ${skill} / Test ${testNumber}`);
+        }
+
+        const testContent = material.content as any;
+        const results: any[] = [];
+        const sections = testContent.passages || testContent.parts || [];
+
+        const usedGroupAnswers = new Set<string>();
+        let subGroupIdCounter = 0;
+
+        for (const section of sections) {
+            const allQuestions: any[] = [];
+
+            if (section.sub_sections && section.sub_sections.length > 0) {
+                for (const sub of section.sub_sections) {
+                    if (sub.questions) {
+                        subGroupIdCounter++;
+                        // Recognise both DB spellings of the multi-select type
+                        const isMultiSelect =
+                            sub.answer_type === 'multiple_choice_multiple' ||
+                            sub.answer_type === 'multiple_choice_multiple_answers';
+                        const optionsMap = sub.options || {};
+                        allQuestions.push(...sub.questions.map((q: any) => ({
+                            ...q,
+                            _isMultiSelect:
+                                isMultiSelect ||
+                                q.answer_type === 'multiple_choice_multiple' ||
+                                q.answer_type === 'multiple_choice_multiple_answers',
+                            _subGroupId: subGroupIdCounter,
+                            _subQuestions: sub.questions,
+                            _optionsMap: optionsMap,
+                            // Carry sub-section options so range-expansion can resolve letter → label
+                            _subOptions: optionsMap,
+                        })));
+                    }
+                }
+            } else if (section.questions && section.questions.length > 0) {
+                allQuestions.push(...section.questions);
+            }
+
+            for (const q of allQuestions) {
+                const qNum = String(q.question_number);
+
+                // ── Detect array-of-object answer (multiple_choice_multiple_answers with a range) ──
+                // DB shape: answer: [{answer: "A/C", question_number: 23}, {answer: "C/A", question_number: 24}]
+                const rawAnswer = q.answer;
+                const isAnswerArray = Array.isArray(rawAnswer);
+
+                // Build per-question correct-answer lookup from the array
+                const perQuestionAnswerMap: Record<string, string> = {};
+                if (isAnswerArray) {
+                    for (const item of rawAnswer) {
+                        if (item && typeof item === 'object' && item.question_number != null) {
+                            perQuestionAnswerMap[String(item.question_number)] = String(item.answer || '').trim();
+                        }
+                    }
+                }
+
+                // Flat string — only valid when rawAnswer is not an array
+                const correctAnswer = isAnswerArray ? '' : String(rawAnswer || '').trim();
+
+                if (qNum.includes('-')) {
+                    const [start, end] = qNum.split('-').map(Number);
+                    const opts = (q._subOptions || q._optionsMap || {}) as Record<string, string>;
+                    const hasOpts = Object.keys(opts).length > 0;
+
+                    const resolveRangeKey = (key: string): string => {
+                        if (!hasOpts) return key;
+                        // "A/C" → resolve each variant and join with " / "
+                        if (key.includes('/')) {
+                            return key.split('/').map((k: string) => opts[k.trim()] || k.trim()).join(' / ');
+                        }
+                        return opts[key] || key;
+                    };
+
+                    if (isAnswerArray) {
+                        // ── multiple_choice_multiple_answers range ───────────────────────
+                        // Build a flat pool of all acceptable answer letters (deduplicated).
+                        // "A/C" means either A or C is acceptable.
+                        const acceptablePool: string[] = [];
+                        for (const item of rawAnswer) {
+                            const variants = String(item.answer || '')
+                                .split('/')
+                                .map((s: string) => s.trim().toLowerCase());
+                            acceptablePool.push(...variants);
+                        }
+                        const acceptableSet = new Set(acceptablePool);
+                        const usedLocal = new Set<string>(); // prevent same letter used twice
+
+                        for (let i = start; i <= end; i++) {
+                            const userAns = (answers[String(i)] || '').trim();
+                            const lower = userAns.toLowerCase();
+                            const expectedRaw = perQuestionAnswerMap[String(i)] || '';
+                            const expectedDisplay = resolveRangeKey(expectedRaw);
+
+                            let isCorrect = false;
+                            if (userAns !== '' && acceptableSet.has(lower) && !usedLocal.has(lower)) {
+                                isCorrect = true;
+                                usedLocal.add(lower);
+                            }
+
+                            results.push({
+                                questionNumber: String(i),
+                                correctAnswer: expectedDisplay,
+                                userAnswer: userAns !== '' ? resolveRangeKey(userAns) : userAns,
+                                isCorrect,
+                            });
+                        }
+                    } else {
+                        // ── Plain-string range (existing logic, unchanged) ───────────────
+                        const correctParts = correctAnswer.split('/').map((s: string) => s.trim());
+                        for (let i = start; i <= end; i++) {
+                            const userAns = (answers[String(i)] || '').trim();
+                            const partIndex = i - start;
+                            const expectedAns = correctParts[partIndex] || correctAnswer;
+
+                            results.push({
+                                questionNumber: String(i),
+                                correctAnswer: expectedAns,
+                                userAnswer: userAns,
+                                isCorrect: userAns !== '' && userAns.toLowerCase() === expectedAns.toLowerCase(),
+                            });
+                        }
+                    }
+                } else {
+                    const userAns = (answers[qNum] || '').trim();
+                    const lowerUserAns = userAns.toLowerCase();
+                    let isCorrect = false;
+                    let expectedAnsStr = correctAnswer;
+
+                    if (userAns !== '') {
+                        if (q._isMultiSelect && q._subQuestions) {
+                            // Build pool — handle both plain-string and array-of-object answer shapes
+                            const pool: string[] = [];
+                            for (const sq of q._subQuestions) {
+                                if (Array.isArray(sq.answer)) {
+                                    for (const item of sq.answer) {
+                                        pool.push(...String(item.answer || '').split('/').map((s: string) => s.trim().toLowerCase()));
+                                    }
+                                } else {
+                                    pool.push(...String(sq.answer || '').split('/').map((s: string) => s.trim().toLowerCase()));
+                                }
+                            }
                             expectedAnsStr = q._subQuestions.map((sq: any) => sq.answer).join(' / ');
 
                             if (pool.includes(lowerUserAns) && !usedGroupAnswers.has(`${q._subGroupId}-${lowerUserAns}`)) {

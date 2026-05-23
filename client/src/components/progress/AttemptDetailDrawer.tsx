@@ -236,9 +236,34 @@ function ReadingListeningDetail({ attempt }: { attempt: AttemptRecord }) {
 }
 
 /** Speaking: fluency metrics + transcript + AI evaluation */
-function SpeakingDetail({ attempt }: { attempt: AttemptRecord }) {
+function SpeakingDetail({ attempt, getToken }: { attempt: AttemptRecord; getToken: () => Promise<string | null> }) {
     const answers = attempt.answers as SpeakingAnswers | null;
     const transcript = answers?.transcript ?? [];
+
+    // Presigned recording URL state
+    const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        setRecordingUrl(null); // reset on new attempt
+        const fetchAudioUrl = async () => {
+            console.log('[SpeakingDetail] fetchAudioUrl called', { attemptId: attempt.id });
+            try {
+                const token = await getToken();
+                const res = await fetch(
+                    `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/attempts/${attempt.id}/recording-url`,
+                    { headers: { Authorization: `Bearer ${token}` } },
+                );
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                setRecordingUrl(data.url);
+                console.log('[SpeakingDetail] fetchAudioUrl success');
+            } catch (err) {
+                // Silently ignore — drawer still renders without player
+                console.log('[SpeakingDetail] fetchAudioUrl: no recording or error', err);
+            }
+        };
+        fetchAudioUrl();
+    }, [attempt.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Compute average fluency
     const metrics = answers?.fluencyMetrics ?? [];
@@ -275,6 +300,24 @@ function SpeakingDetail({ attempt }: { attempt: AttemptRecord }) {
                     <div className="bg-gray-50 rounded-xl p-3 text-center">
                         <p className="text-xl font-black text-gray-800">{totalPauses}</p>
                         <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mt-0.5">Pauses</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Recording Playback — only rendered when presigned URL is available */}
+            {recordingUrl && (
+                <div className="rounded-xl border border-gray-100 overflow-hidden bg-gray-50">
+                    <div className="px-4 py-2.5 border-b border-gray-100">
+                        <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Recording</p>
+                    </div>
+                    <div className="px-4 py-3">
+                        <audio
+                            key={recordingUrl}
+                            src={recordingUrl}
+                            controls
+                            className="w-full"
+                            aria-label="Speaking attempt recording"
+                        />
                     </div>
                 </div>
             )}
@@ -493,7 +536,7 @@ export default function AttemptDetailDrawer({ attempt, onClose, onDelete, getTok
                                 <ReadingListeningDetail attempt={attempt} />
                             )}
                             {attempt.type === 'speaking' && (
-                                <SpeakingDetail attempt={attempt} />
+                                <SpeakingDetail attempt={attempt} getToken={getToken} />
                             )}
                             {attempt.type === 'manual' && (
                                 <ManualDetail attempt={attempt} />

@@ -74,18 +74,25 @@ export class MinioStorageProvider implements IStorageProvider {
         console.log('[MinioStorageProvider] getFileUrl called', { filename, expirySeconds });
 
         try {
-            const url = await this.client.presignedGetObject(this.bucket, filename, expirySeconds);
-            
-            // Re-write the URL if a public endpoint is provided (e.g., swapping internal "minio:9000" to "localhost:9000")
-            let finalUrl = url;
+            let signClient = this.client;
+
+            // AWS v4 signatures require the Host header to match exactly what is used to fetch the URL.
+            // If the browser fetches from localhost:9000 but the URL was signed by minio:9000, 
+            // MinIO will reject it with 403 SignatureDoesNotMatch.
+            // By instantiating a local client pointed at the public endpoint, we generate a valid signature.
             if (process.env.MINIO_PUBLIC_ENDPOINT) {
-                const internalEndpoint = process.env.MINIO_ENDPOINT || 'minio';
-                const internalPort = process.env.MINIO_PORT || '9000';
-                const internalHost = `${internalEndpoint}:${internalPort}`;
-                const protocol = process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http';
-                
-                finalUrl = url.replace(`${protocol}://${internalHost}`, process.env.MINIO_PUBLIC_ENDPOINT);
+                const url = new URL(process.env.MINIO_PUBLIC_ENDPOINT);
+                signClient = new Minio.Client({
+                    endPoint: url.hostname,
+                    port: url.port ? parseInt(url.port, 10) : undefined,
+                    useSSL: url.protocol === 'https:',
+                    accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
+                    secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
+                    region: 'us-east-1' // Explicit region prevents network calls during offline signing
+                });
             }
+
+            const finalUrl = await signClient.presignedGetObject(this.bucket, filename, expirySeconds);
 
             console.log('[MinioStorageProvider] getFileUrl success', { url: finalUrl.substring(0, 80) });
             return finalUrl;

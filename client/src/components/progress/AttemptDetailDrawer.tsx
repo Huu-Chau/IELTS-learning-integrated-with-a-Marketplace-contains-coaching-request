@@ -244,7 +244,9 @@ function SpeakingDetail({ attempt, getToken }: { attempt: AttemptRecord; getToke
     const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
 
     useEffect(() => {
+        let isActive = true; // Track if this component/attempt is still mounted/active
         setRecordingUrl(null); // reset on new attempt
+        
         const fetchAudioUrl = async () => {
             console.log('[SpeakingDetail] fetchAudioUrl called', { attemptId: attempt.id });
             try {
@@ -255,14 +257,23 @@ function SpeakingDetail({ attempt, getToken }: { attempt: AttemptRecord; getToke
                 );
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
-                setRecordingUrl(data.url);
-                console.log('[SpeakingDetail] fetchAudioUrl success');
+                
+                // Only update state if the user hasn't quickly clicked to another attempt
+                if (isActive) {
+                    setRecordingUrl(data.url);
+                    console.log('[SpeakingDetail] fetchAudioUrl success');
+                }
             } catch (err) {
                 // Silently ignore — drawer still renders without player
-                console.log('[SpeakingDetail] fetchAudioUrl: no recording or error', err);
+                if (isActive) {
+                    console.log('[SpeakingDetail] fetchAudioUrl: no recording or error', err);
+                }
             }
         };
         fetchAudioUrl();
+
+        // Cleanup: run when attempt.id changes or component unmounts
+        return () => { isActive = false; };
     }, [attempt.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Compute average fluency

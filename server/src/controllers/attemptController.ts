@@ -154,6 +154,15 @@ export class AttemptController implements IAttemptController {
                 return;
             }
 
+            // EDGE CASE: If the attempt was uploaded manually (via dashboard) and saved to local disk, 
+            // the recording path starts with '/uploads'. We don't need MinIO for this.
+            if (attempt.recordingPath.startsWith('/uploads')) {
+                console.log('[AttemptController] getRecordingUrl: local file detected, returning static URL', { id });
+                const baseUrl = process.env.VITE_API_URL || 'http://localhost:5000'; // Fallback for local testing
+                res.json({ url: `${baseUrl}${attempt.recordingPath}` });
+                return next();
+            }
+
             // The DB stores full URLs (e.g. http://minio:9000/ielts-audio/sessions/...). MinIO needs the object key.
             let objectKey = attempt.recordingPath;
             try {

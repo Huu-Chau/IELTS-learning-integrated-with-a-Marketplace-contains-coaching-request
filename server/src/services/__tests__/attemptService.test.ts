@@ -1,4 +1,4 @@
-import { attemptService } from '../attemptService';
+import { AttemptService } from '../attemptService';
 import Attempt from '../../models/Attempt';
 
 jest.mock('../../models/Attempt', () => ({
@@ -8,9 +8,16 @@ jest.mock('../../models/Attempt', () => ({
     update: jest.fn(),
 }));
 
-describe('attemptService', () => {
+describe('AttemptService', () => {
+    let attemptService: AttemptService;
+    let mockStorageProvider: any;
+
     beforeEach(() => {
         jest.clearAllMocks();
+        mockStorageProvider = {
+            getFileUrl: jest.fn(),
+        };
+        attemptService = new AttemptService(mockStorageProvider);
     });
 
     describe('createAttempt', () => {
@@ -109,6 +116,45 @@ describe('attemptService', () => {
             (Attempt.update as jest.Mock).mockRejectedValue(new Error('DB Error'));
 
             await expect(attemptService.updateAttempt(1, { score: 9 } as any)).rejects.toThrow('DB Error');
+        });
+    });
+
+    describe('getRecordingUrl', () => {
+        it('should return null if storageProvider is not injected', async () => {
+            const noStorageService = new AttemptService();
+            const result = await noStorageService.getRecordingUrl(1, 'user-1');
+            expect(result).toBeNull();
+        });
+
+        it('should return null if attempt not found', async () => {
+            (Attempt.findByPk as jest.Mock).mockResolvedValue(null);
+            const result = await attemptService.getRecordingUrl(1, 'user-1');
+            expect(result).toBeNull();
+        });
+
+        it('should return null if user does not own attempt', async () => {
+            (Attempt.findByPk as jest.Mock).mockResolvedValue({ userId: 'other-user' });
+            const result = await attemptService.getRecordingUrl(1, 'user-1');
+            expect(result).toBeNull();
+        });
+
+        it('should return null if attempt has no recording path', async () => {
+            (Attempt.findByPk as jest.Mock).mockResolvedValue({ userId: 'user-1', recordingPath: null });
+            const result = await attemptService.getRecordingUrl(1, 'user-1');
+            expect(result).toBeNull();
+        });
+
+        it('should extract object key from full url and get presigned URL', async () => {
+            (Attempt.findByPk as jest.Mock).mockResolvedValue({ 
+                userId: 'user-1', 
+                recordingPath: 'http://minio:9000/ielts-audio/sessions/abcd/123_master.webm' 
+            });
+            mockStorageProvider.getFileUrl.mockResolvedValue('https://example.com/presigned.webm');
+
+            const result = await attemptService.getRecordingUrl(1, 'user-1');
+            
+            expect(mockStorageProvider.getFileUrl).toHaveBeenCalledWith('sessions/abcd/123_master.webm', 3600);
+            expect(result).toBe('https://example.com/presigned.webm');
         });
     });
 });

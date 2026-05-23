@@ -98,6 +98,7 @@ export class MinioStorageProvider implements IStorageProvider {
             }
 
             const url = await signClient.presignedGetObject(this.bucket, filename, expirySeconds);
+            console.log('[MinioStorageProvider] getFileUrl success', { url: url.substring(0, 80) });
             return url;
         } catch (error) {
             console.error('[MinioStorageProvider] getFileUrl error', error);

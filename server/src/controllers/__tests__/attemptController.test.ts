@@ -19,6 +19,7 @@ describe('AttemptController', () => {
       getAttemptById: jest.fn(),
       updateAttempt: jest.fn(),
       deleteAttempt: jest.fn(),
+      getRecordingUrl: jest.fn(),
     };
     attemptController = new AttemptController(mockAttemptService);
 
@@ -210,6 +211,62 @@ describe('AttemptController', () => {
 
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({ error: 'DB error' });
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+    });
+  });
+
+  describe('getRecordingUrl', () => {
+    it('should return 400 for a non-numeric ID', async () => {
+      mockReq.params = { id: 'abc' };
+      mockReq.user = { uid: 'user123' };
+
+      await attemptController.getRecordingUrl(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith({ error: 'Invalid attempt ID' });
+    });
+
+    it('should return 401 if user is not authenticated', async () => {
+      mockReq.params = { id: '42' };
+      mockReq.user = undefined;
+
+      await attemptController.getRecordingUrl(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(statusMock).toHaveBeenCalledWith(401);
+      expect(jsonMock).toHaveBeenCalledWith({ error: 'Unauthorized' });
+    });
+
+    it('should return 404 if recording url is null', async () => {
+      mockReq.params = { id: '42' };
+      mockReq.user = { uid: 'user123' };
+      mockAttemptService.getRecordingUrl.mockResolvedValue(null);
+
+      await attemptController.getRecordingUrl(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(statusMock).toHaveBeenCalledWith(404);
+      expect(jsonMock).toHaveBeenCalledWith({ error: 'Recording not found, not owned by user, or storage unavailable' });
+    });
+
+    it('should return presigned URL with expiresIn', async () => {
+      mockReq.params = { id: '42' };
+      mockReq.user = { uid: 'user123' };
+      mockAttemptService.getRecordingUrl.mockResolvedValue('https://example.com/recording.webm');
+
+      await attemptController.getRecordingUrl(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockAttemptService.getRecordingUrl).toHaveBeenCalledWith(42, 'user123');
+      expect(jsonMock).toHaveBeenCalledWith({ url: 'https://example.com/recording.webm', expiresIn: 3600 });
+    });
+
+    it('should return 500 on service error', async () => {
+      mockReq.params = { id: '42' };
+      mockReq.user = { uid: 'user123' };
+      mockAttemptService.getRecordingUrl.mockRejectedValue(new Error('Storage error'));
+
+      await attemptController.getRecordingUrl(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith({ error: 'Storage error' });
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
     });
   });

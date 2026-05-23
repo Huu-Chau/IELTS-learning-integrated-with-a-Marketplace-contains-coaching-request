@@ -31,7 +31,7 @@ const teacherAvailabilityService = new TeacherAvailabilityService();
 const reservationService = new ReservationService();
 const authService = new AuthService();
 
-const attemptService = new AttemptService();
+const attemptService = new AttemptService(storageProvider);
 console.log('=== attempService:', attemptService);
 console.log(Object.getOwnPropertyNames(Object.getPrototypeOf(attemptService)));
 
@@ -50,7 +50,7 @@ const teacherService = new TeacherService(notificationService);
 export const teacherAvailabilityController = new TeacherAvailabilityController(teacherAvailabilityService);
 export const reservationController = new ReservationController(reservationService);
 export const authController = new AuthController(authService);
-export const attemptController = new AttemptController(attemptService, storageProvider);
+export const attemptController = new AttemptController(attemptService);
 export const cambridgeTestController = new CambridgeTestController(cambridgeTestService);
 export const writingEvaluationController = new WritingEvaluationController(writingEvaluationService);
 export const marketplaceController = new MarketplaceController(marketplaceService, teacherAvailabilityService);

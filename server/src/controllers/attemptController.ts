@@ -1,16 +1,21 @@
 import { Request, Response, NextFunction } from 'express';
 import { IAttemptService } from '../services/attemptService';
 import { CreateAttemptPayload } from '../types/attempt';
+import { IStorageProvider } from '../services/storage/IStorageProvider';
 
 export interface IAttemptController {
     create(req: Request, res: Response, next: NextFunction): Promise<void>;
     getByUser(req: Request, res: Response, next: NextFunction): Promise<void>;
     getById(req: Request, res: Response, next: NextFunction): Promise<void>;
     delete(req: Request, res: Response, next: NextFunction): Promise<void>;
+    getRecordingUrl(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export class AttemptController implements IAttemptController {
-    constructor(private readonly attemptService: IAttemptService) {
+    constructor(
+        private readonly attemptService: IAttemptService,
+        private readonly storageProvider?: IStorageProvider,
+    ) {
         console.log('this.attemptService', this.attemptService);
     }
 
@@ -122,6 +127,74 @@ export class AttemptController implements IAttemptController {
             return next();
         } catch (error: any) {
             console.error('[AttemptController] delete error', error);
+            res.status(500).json({ error: error.message });
+            return next(error);
+        }
+    }
+
+    /**
+     * GET /api/attempts/:id/recording-url
+     * Generate a presigned URL (60-min TTL) for the speaking recording.
+     * Verifies that the requesting user owns the attempt.
+     */
+    public async getRecordingUrl(req: Request, res: Response, next: NextFunction): Promise<void> {
+        console.log('[AttemptController] getRecordingUrl called', { id: req.params.id, uid: req.user?.uid });
+        try {
+            const id = parseInt(req.params.id, 10);
+            if (isNaN(id)) {
+                res.status(400).json({ error: 'Invalid attempt ID' });
+                return;
+            }
+
+            // Verify the attempt exists
+            const attempt = await this.attemptService.getAttemptById(id);
+            if (!attempt) {
+                console.log('[AttemptController] getRecordingUrl: attempt not found', { id });
+                res.status(404).json({ error: 'Attempt not found' });
+                return;
+            }
+
+            // Ownership check — users can only access their own recordings
+            if (attempt.userId !== req.user?.uid) {
+                console.log('[AttemptController] getRecordingUrl: not owned by user', { id, attemptOwner: attempt.userId, requester: req.user?.uid });
+                res.status(403).json({ error: 'Forbidden' });
+                return;
+            }
+
+            // Check that a recording exists
+            if (!attempt.recordingPath) {
+                console.log('[AttemptController] getRecordingUrl: no recording path', { id });
+                res.status(404).json({ error: 'No recording found for this attempt' });
+                return;
+            }
+
+            // Check that storageProvider is available
+            if (!this.storageProvider) {
+                console.error('[AttemptController] getRecordingUrl: storageProvider not injected');
+                res.status(500).json({ error: 'Storage service unavailable' });
+                return;
+            }
+
+            // Extract the object key from the full MinIO URL.
+            // recordingPath is stored as a full URL like:
+            //   http://minio:9000/ielts-audio/sessions/<socketId>/<timestamp>_master.webm
+            // We need just: sessions/<socketId>/<timestamp>_master.webm
+            let objectKey = attempt.recordingPath;
+            const bucketName = process.env.MINIO_BUCKET || 'ielts-audio';
+            const bucketIndex = objectKey.indexOf(`/${bucketName}/`);
+            if (bucketIndex !== -1) {
+                objectKey = objectKey.substring(bucketIndex + `/${bucketName}/`.length);
+            }
+
+            console.log('[AttemptController] getRecordingUrl: generating presigned URL', { objectKey });
+
+            // 60 minutes = 3600 seconds
+            const presignedUrl = await this.storageProvider.getFileUrl(objectKey, 3600);
+
+            console.log('[AttemptController] getRecordingUrl success', { id, urlPrefix: presignedUrl.substring(0, 80) });
+            res.json({ url: presignedUrl, expiresIn: 3600 });
+        } catch (error: any) {
+            console.error('[AttemptController] getRecordingUrl error', error);
             res.status(500).json({ error: error.message });
             return next(error);
         }

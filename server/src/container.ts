@@ -31,7 +31,7 @@ const teacherAvailabilityService = new TeacherAvailabilityService();
 const reservationService = new ReservationService();
 const authService = new AuthService();
 
-const attemptService = new AttemptService(storageProvider);
+export const attemptService = new AttemptService(storageProvider);
 console.log('=== attempService:', attemptService);
 console.log(Object.getOwnPropertyNames(Object.getPrototypeOf(attemptService)));
 

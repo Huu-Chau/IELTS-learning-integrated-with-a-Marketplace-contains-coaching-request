@@ -4,7 +4,7 @@ import { Ollama } from 'ollama';
 import * as fs from 'fs';
 import * as child_process from 'child_process';
 import { storageProvider } from '../../services/storage/StorageService';
-import { attemptService } from '../../services/attemptService';
+import { attemptService } from '../../container';
 import MockMaterial from '../../models/MockMaterial';
 
 // --- Mocks ---
@@ -31,7 +31,7 @@ jest.mock('../../services/storage/StorageService', () => ({
     uploadFile: jest.fn(),
   },
 }));
-jest.mock('../../services/attemptService', () => ({
+jest.mock('../../container', () => ({
   attemptService: {
     createAttempt: jest.fn(),
   },

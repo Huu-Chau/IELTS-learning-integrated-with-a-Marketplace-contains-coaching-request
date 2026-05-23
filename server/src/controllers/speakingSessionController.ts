@@ -28,7 +28,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { ConversationMessage, ExamTopic, FluencyMetrics, TranscriptionResult } from '../types/ai-types';
 import { storageProvider } from '../services/storage/StorageService';
-import { attemptService } from '../services/attemptService';
+import { attemptService } from '../container';
 import { CreateAttemptPayload } from '../types/attempt';
 import MockMaterial from '../models/MockMaterial';
 

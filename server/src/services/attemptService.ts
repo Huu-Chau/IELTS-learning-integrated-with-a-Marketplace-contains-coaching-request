@@ -13,7 +13,7 @@ export interface IAttemptService {
 import { IStorageProvider } from './storage/IStorageProvider';
 
 export class AttemptService implements IAttemptService {
-    constructor(private readonly storageProvider?: IStorageProvider) {}
+    constructor(private readonly storageProvider: IStorageProvider) {}
 
     /**
      * Save a new practice attempt to Postgres.
@@ -80,11 +80,6 @@ export class AttemptService implements IAttemptService {
     async getRecordingUrl(attemptId: number, userId: string): Promise<string | null> {
         console.log('[AttemptService] getRecordingUrl called', { attemptId, userId });
 
-        if (!this.storageProvider) {
-            console.warn('[AttemptService] getRecordingUrl: storageProvider not injected');
-            return null;
-        }
-
         const attempt = await this.getAttemptById(attemptId);
         if (!attempt) {
             console.log('[AttemptService] getRecordingUrl: attempt not found', { attemptId });
@@ -115,7 +110,3 @@ export class AttemptService implements IAttemptService {
         return presignedUrl;
     }
 }
-
-// Keeping the default export empty constructor for backward compatibility in tests
-// Real injection happens in container.ts
-export const attemptService = new AttemptService();

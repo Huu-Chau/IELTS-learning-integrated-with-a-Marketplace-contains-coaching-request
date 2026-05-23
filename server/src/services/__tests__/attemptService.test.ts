@@ -120,12 +120,6 @@ describe('AttemptService', () => {
     });
 
     describe('getRecordingUrl', () => {
-        it('should return null if storageProvider is not injected', async () => {
-            const noStorageService = new AttemptService();
-            const result = await noStorageService.getRecordingUrl(1, 'user-1');
-            expect(result).toBeNull();
-        });
-
         it('should return null if attempt not found', async () => {
             (Attempt.findByPk as jest.Mock).mockResolvedValue(null);
             const result = await attemptService.getRecordingUrl(1, 'user-1');

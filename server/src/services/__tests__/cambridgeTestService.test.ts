@@ -1,6 +1,6 @@
 import { Readable } from 'stream';
 import MockMaterial from '../../models/MockMaterial';
-import { CambridgeTestService } from '../cambridgeTestService';
+import { CambridgeTestServiceV2, ICambridgeTestService } from '../cambridgeTestService';
 import { IStorageProvider } from '../storage/IStorageProvider';
 
 jest.mock('../../models/MockMaterial', () => ({
@@ -8,7 +8,7 @@ jest.mock('../../models/MockMaterial', () => ({
 }));
 
 describe('CambridgeTestService', () => {
-    let service: CambridgeTestService;
+    let service: ICambridgeTestService;
     let mockStorageProvider: jest.Mocked<IStorageProvider>;
 
     beforeEach(() => {
@@ -18,7 +18,7 @@ describe('CambridgeTestService', () => {
             getFileUrl: jest.fn(),
             deleteFile: jest.fn(),
         } as any;
-        service = new CambridgeTestService(mockStorageProvider);
+        service = new CambridgeTestServiceV2(mockStorageProvider);
         jest.clearAllMocks();
     });
 
@@ -192,7 +192,7 @@ describe('CambridgeTestService', () => {
                 book: '18',
                 testNumber: 1,
                 answers: {
-                    '5': 'A', 
+                    '5': 'A',
                     '6': 'A', // Duplicate 'A' should be wrong for one of them
                 }
             };

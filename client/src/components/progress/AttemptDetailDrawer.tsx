@@ -236,9 +236,58 @@ function ReadingListeningDetail({ attempt }: { attempt: AttemptRecord }) {
 }
 
 /** Speaking: fluency metrics + transcript + AI evaluation */
-function SpeakingDetail({ attempt }: { attempt: AttemptRecord }) {
+function SpeakingDetail({ attempt, getToken }: { attempt: AttemptRecord; getToken: () => Promise<string | null> }) {
     const answers = attempt.answers as SpeakingAnswers | null;
     const transcript = answers?.transcript ?? [];
+
+    // ── Recording playback state ──────────────────────────────────
+    const [audioUrl, setAudioUrl] = useState<string | null>(null);
+    const [audioLoading, setAudioLoading] = useState(false);
+    const [audioError, setAudioError] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function fetchRecordingUrl() {
+            console.log('[SpeakingDetail] fetchRecordingUrl called', { attemptId: attempt.id });
+            // Only fetch if there's a recording path on the attempt
+            if (!attempt.recordingPath) {
+                console.log('[SpeakingDetail] fetchRecordingUrl: no recordingPath, skipping');
+                return;
+            }
+
+            setAudioLoading(true);
+            setAudioError(false);
+
+            try {
+                const token = await getToken();
+                const API_BASE = (import.meta.env.VITE_API_URL as string || 'http://localhost:5000/api').replace(/\/api$/, '');
+                const res = await fetch(`${API_BASE}/api/attempts/${attempt.id}/recording-url`, {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                });
+
+                if (!res.ok) {
+                    console.log('[SpeakingDetail] fetchRecordingUrl: API returned non-ok', { status: res.status });
+                    setAudioError(true);
+                    return;
+                }
+
+                const data = await res.json();
+                if (!cancelled && data.url) {
+                    console.log('[SpeakingDetail] fetchRecordingUrl success', { urlPrefix: data.url.substring(0, 80) });
+                    setAudioUrl(data.url);
+                }
+            } catch (err) {
+                console.error('[SpeakingDetail] fetchRecordingUrl error', err);
+                if (!cancelled) setAudioError(true);
+            } finally {
+                if (!cancelled) setAudioLoading(false);
+            }
+        }
+
+        fetchRecordingUrl();
+        return () => { cancelled = true; };
+    }, [attempt.id, attempt.recordingPath, getToken]);
 
     // Compute average fluency
     const metrics = answers?.fluencyMetrics ?? [];
@@ -276,6 +325,39 @@ function SpeakingDetail({ attempt }: { attempt: AttemptRecord }) {
                         <p className="text-xl font-black text-gray-800">{totalPauses}</p>
                         <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mt-0.5">Pauses</p>
                     </div>
+                </div>
+            )}
+
+            {/* Recording Playback */}
+            {audioLoading && (
+                <div className="bg-gray-50 rounded-xl p-4 text-center">
+                    <p className="text-xs text-gray-400 animate-pulse">Loading recording...</p>
+                </div>
+            )}
+            {audioUrl && !audioLoading && (
+                <div className="rounded-xl border border-violet-100 overflow-hidden bg-violet-50/30">
+                    <div className="bg-violet-50 px-4 py-2.5 border-b border-violet-100 flex items-center gap-2">
+                        <Mic className="h-3.5 w-3.5 text-violet-500" />
+                        <p className="text-xs font-bold uppercase tracking-wider text-violet-500">Session Recording</p>
+                    </div>
+                    <div className="px-4 py-3">
+                        <audio
+                            controls
+                            src={audioUrl}
+                            className="w-full h-10"
+                            preload="metadata"
+                            onError={() => {
+                                console.log('[SpeakingDetail] audio element error — URL may be expired');
+                                setAudioUrl(null);
+                                setAudioError(true);
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
+            {audioError && !audioLoading && (
+                <div className="bg-red-50/50 rounded-xl px-4 py-2.5 border border-red-100">
+                    <p className="text-xs text-red-400">Recording unavailable or expired.</p>
                 </div>
             )}
 
@@ -493,7 +575,7 @@ export default function AttemptDetailDrawer({ attempt, onClose, onDelete, getTok
                                 <ReadingListeningDetail attempt={attempt} />
                             )}
                             {attempt.type === 'speaking' && (
-                                <SpeakingDetail attempt={attempt} />
+                                <SpeakingDetail attempt={attempt} getToken={getToken} />
                             )}
                             {attempt.type === 'manual' && (
                                 <ManualDetail attempt={attempt} />

@@ -1,14 +1,16 @@
 import * as Minio from 'minio';
 import { MinioStorageProvider } from '../MinioStorageProvider';
 
+const mockMinioMethods = {
+    putObject: jest.fn(),
+    presignedGetObject: jest.fn(),
+    getObject: jest.fn(),
+    removeObject: jest.fn(),
+};
+
 jest.mock('minio', () => {
     return {
-        Client: jest.fn().mockImplementation(() => ({
-            putObject: jest.fn(),
-            presignedGetObject: jest.fn(),
-            getObject: jest.fn(),
-            removeObject: jest.fn(),
-        })),
+        Client: jest.fn().mockImplementation(() => mockMinioMethods),
     };
 });
 
@@ -100,14 +102,21 @@ describe('MinioStorageProvider', () => {
             expect(result).toBe(mockUrl);
         });
 
-        it('should replace internal host with public endpoint if provided', async () => {
+        it('should generate URL using public endpoint if provided', async () => {
             process.env.MINIO_PUBLIC_ENDPOINT = 'https://cdn.example.com';
-            const mockUrl = 'http://localhost:9001/test-bucket/test.txt?token=123';
-            mockClient.presignedGetObject.mockResolvedValue(mockUrl);
+            const mockUrl = 'https://cdn.example.com/test-bucket/test.txt?token=123';
+            mockMinioMethods.presignedGetObject.mockResolvedValue(mockUrl);
 
             const result = await provider.getFileUrl(filename);
 
-            expect(result).toBe('https://cdn.example.com/test-bucket/test.txt?token=123');
+            // It should instantiate a new Minio Client with the public endpoint
+            expect(Minio.Client).toHaveBeenCalledWith(expect.objectContaining({
+                endPoint: 'cdn.example.com',
+                port: 443,
+                useSSL: true,
+            }));
+            
+            expect(result).toBe(mockUrl);
         });
 
         it('should throw error if generating URL fails', async () => {

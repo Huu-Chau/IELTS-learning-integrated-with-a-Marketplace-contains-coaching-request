@@ -1,5 +1,6 @@
 import Attempt from '../models/Attempt';
 import { CreateAttemptPayload } from '../types/attempt';
+import { IStorageProvider } from './storage/IStorageProvider';
 
 export interface IAttemptService {
     createAttempt(data: CreateAttemptPayload): Promise<Attempt>;
@@ -7,9 +8,12 @@ export interface IAttemptService {
     getAttemptById(id: number): Promise<Attempt | null>;
     updateAttempt(id: number, data: Partial<Attempt>): Promise<void>;
     deleteAttempt(id: number, userId: string): Promise<boolean>;
+    getRecordingUrl(attemptId: number, userId: string): Promise<string | null>;
 }
 
 export class AttemptService implements IAttemptService {
+    constructor(private readonly storageProvider: IStorageProvider) { }
+
     /**
      * Save a new practice attempt to Postgres.
      */
@@ -67,6 +71,41 @@ export class AttemptService implements IAttemptService {
         }
         return success;
     }
-}
 
-export const attemptService = new AttemptService();
+    /**
+     * Get a presigned URL for an attempt's recording.
+     * Verifies ownership and returns the URL, or null if not found/authorized.
+     */
+    async getRecordingUrl(attemptId: number, userId: string): Promise<string | null> {
+        console.log('[AttemptService] getRecordingUrl called', { attemptId, userId });
+
+        const attempt = await this.getAttemptById(attemptId);
+        if (!attempt) {
+            console.log('[AttemptService] getRecordingUrl: attempt not found', { attemptId });
+            return null;
+        }
+
+        if (attempt.userId !== userId) {
+            console.log('[AttemptService] getRecordingUrl: not owned by user', { attemptId, owner: attempt.userId, requester: userId });
+            return null;
+        }
+
+        if (!attempt.recordingPath) {
+            console.log('[AttemptService] getRecordingUrl: no recording path', { attemptId });
+            return null;
+        }
+
+        // Extract the object key from the full MinIO URL.
+        let objectKey = attempt.recordingPath;
+        const bucketName = process.env.MINIO_BUCKET || 'ielts-audio';
+        const bucketIndex = objectKey.indexOf(`/${bucketName}/`);
+        if (bucketIndex !== -1) {
+            objectKey = objectKey.substring(bucketIndex + `/${bucketName}/`.length);
+        }
+
+        // 60 minutes = 3600 seconds
+        const presignedUrl = await this.storageProvider.getFileUrl(objectKey, 3600);
+        console.log('[AttemptService] getRecordingUrl success', { attemptId, urlPrefix: presignedUrl.substring(0, 80) });
+        return presignedUrl;
+    }
+}

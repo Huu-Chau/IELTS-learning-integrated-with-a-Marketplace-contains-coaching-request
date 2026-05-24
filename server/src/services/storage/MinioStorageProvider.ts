@@ -74,21 +74,32 @@ export class MinioStorageProvider implements IStorageProvider {
         console.log('[MinioStorageProvider] getFileUrl called', { filename, expirySeconds });
 
         try {
-            const url = await this.client.presignedGetObject(this.bucket, filename, expirySeconds);
-            
-            // Re-write the URL if a public endpoint is provided (e.g., swapping internal "minio:9000" to "localhost:9000")
-            let finalUrl = url;
+            let signClient = this.client;
+
+            // If a public endpoint is set, we must generate the signature using that hostname.
+            // Otherwise, MinIO will throw a 403 Signature Mismatch because the Host header 
+            // the browser sends (e.g. localhost:9000) won't match the internal Host (minio:9000).
             if (process.env.MINIO_PUBLIC_ENDPOINT) {
-                const internalEndpoint = process.env.MINIO_ENDPOINT || 'minio';
-                const internalPort = process.env.MINIO_PORT || '9000';
-                const internalHost = `${internalEndpoint}:${internalPort}`;
-                const protocol = process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http';
-                
-                finalUrl = url.replace(`${protocol}://${internalHost}`, process.env.MINIO_PUBLIC_ENDPOINT);
+                try {
+                    const publicUrl = new URL(process.env.MINIO_PUBLIC_ENDPOINT);
+                    signClient = new Minio.Client({
+                        endPoint: publicUrl.hostname,
+                        port: parseInt(publicUrl.port || (publicUrl.protocol === 'https:' ? '443' : '80'), 10),
+                        useSSL: publicUrl.protocol === 'https:',
+                        accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
+                        secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
+                        // CRITICAL: We must provide a default region. If we don't, minio-js
+                        // will attempt to make an HTTP request to `endPoint` (localhost:9000)
+                        region: process.env.MINIO_REGION || 'ap-southeast-1',
+                    });
+                } catch (e) {
+                    console.warn('[MinioStorageProvider] Failed to parse MINIO_PUBLIC_ENDPOINT', e);
+                }
             }
 
-            console.log('[MinioStorageProvider] getFileUrl success', { url: finalUrl.substring(0, 80) });
-            return finalUrl;
+            const url = await signClient.presignedGetObject(this.bucket, filename, expirySeconds);
+            console.log('[MinioStorageProvider] getFileUrl success', { url: url.substring(0, 80) });
+            return url;
         } catch (error) {
             console.error('[MinioStorageProvider] getFileUrl error', error);
             throw error;

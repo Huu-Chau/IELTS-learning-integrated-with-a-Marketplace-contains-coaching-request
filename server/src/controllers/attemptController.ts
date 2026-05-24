@@ -1,12 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { IAttemptService } from '../services/attemptService';
 import { CreateAttemptPayload } from '../types/attempt';
+import { IStorageProvider } from '../services/storage/IStorageProvider';
 
 export interface IAttemptController {
     create(req: Request, res: Response, next: NextFunction): Promise<void>;
     getByUser(req: Request, res: Response, next: NextFunction): Promise<void>;
     getById(req: Request, res: Response, next: NextFunction): Promise<void>;
     delete(req: Request, res: Response, next: NextFunction): Promise<void>;
+    getRecordingUrl(req: Request, res: Response, next: NextFunction): Promise<void>;
 }
 
 export class AttemptController implements IAttemptController {
@@ -122,6 +124,41 @@ export class AttemptController implements IAttemptController {
             return next();
         } catch (error: any) {
             console.error('[AttemptController] delete error', error);
+            res.status(500).json({ error: error.message });
+            return next(error);
+        }
+    }
+
+    /**
+     * GET /api/attempts/:id/recording-url
+     * Generate a presigned URL (60-min TTL) for the speaking recording.
+     * Verifies that the requesting user owns the attempt.
+     */
+    public async getRecordingUrl(req: Request, res: Response, next: NextFunction): Promise<void> {
+        console.log('[AttemptController] getRecordingUrl called', { id: req.params.id, uid: req.user?.uid });
+        try {
+            const id = parseInt(req.params.id, 10);
+            if (isNaN(id)) {
+                res.status(400).json({ error: 'Invalid attempt ID' });
+                return;
+            }
+
+            const userId = req.user?.uid;
+            if (!userId) {
+                res.status(401).json({ error: 'Unauthorized' });
+                return;
+            }
+
+            const url = await this.attemptService.getRecordingUrl(id, userId);
+
+            if (!url) {
+                res.status(404).json({ error: 'Recording not found, not owned by user, or storage unavailable' });
+                return;
+            }
+
+            res.json({ url, expiresIn: 3600 });
+        } catch (error: any) {
+            console.error('[AttemptController] getRecordingUrl error', error);
             res.status(500).json({ error: error.message });
             return next(error);
         }

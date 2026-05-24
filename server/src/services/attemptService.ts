@@ -1,5 +1,6 @@
 import Attempt from '../models/Attempt';
 import { CreateAttemptPayload } from '../types/attempt';
+import { IStorageProvider } from './storage/IStorageProvider';
 
 export interface IAttemptService {
     createAttempt(data: CreateAttemptPayload): Promise<Attempt>;
@@ -10,10 +11,8 @@ export interface IAttemptService {
     getRecordingUrl(attemptId: number, userId: string): Promise<string | null>;
 }
 
-import { IStorageProvider } from './storage/IStorageProvider';
-
 export class AttemptService implements IAttemptService {
-    constructor(private readonly storageProvider: IStorageProvider) {}
+    constructor(private readonly storageProvider: IStorageProvider) { }
 
     /**
      * Save a new practice attempt to Postgres.

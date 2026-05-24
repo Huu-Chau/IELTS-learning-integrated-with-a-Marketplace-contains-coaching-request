@@ -1,0 +1,27 @@
+src/consumer.ts:4 -> import sequelize from './config/database';
+src/consumer.ts:5 -> import { KafkaService } from './services/queue/KafkaService';
+src/consumer.ts:6 -> import { IQueueProvider } from './services/queue/IQueueProvider';
+src/consumer.ts:7 -> import './models/Notification';
+src/consumer.ts:8 -> import {
+src/consumer.ts:15 -> import { INotificationService, NotificationService } from './services/notificationService';
+src/consumer.ts:16 -> import { IMessageService, MessageService } from './services/messageService';
+src/consumer.ts:17 -> import { IUserService, UserService } from './services/userService';
+src/models/Reservation.ts:8 -> import sequelize from '../config/database';
+src/models/Reservation.ts:9 -> import TeacherAvailability from './TeacherAvailability';
+src/models/Reservation.ts:10 -> import { ReservationStatus } from '../types/reservation';
+src/services/__tests__/cronService.test.ts:44 -> import MarketplaceRequest from '../../models/MarketplaceRequest';
+src/services/__tests__/cronService.test.ts:45 -> import User from '../../models/User';
+src/services/__tests__/cronService.test.ts:46 -> import sequelize from '../../config/database';
+src/services/__tests__/cronService.test.ts:47 -> import Reservation from '../../models/Reservation';
+src/services/__tests__/cronService.test.ts:48 -> import TeacherAvailability from '../../models/TeacherAvailability';
+src/services/__tests__/cronService.test.ts:49 -> import { NotificationService } from '../../services/notificationService';
+src/services/__tests__/cronService.test.ts:50 -> import { MarketplaceRequestStatus } from '../../types/marketplace-request';
+src/services/__tests__/cronService.test.ts:51 -> import {
+src/services/__tests__/marketplaceService.test.ts:18 -> import { Op } from 'sequelize';
+src/services/__tests__/marketplaceService.test.ts:19 -> import { MarketplaceService } from '../marketplaceService';
+src/services/__tests__/marketplaceService.test.ts:20 -> import TeacherListing from '../../models/TeacherListing';
+src/services/__tests__/marketplaceService.test.ts:21 -> import MarketplaceRequest from '../../models/MarketplaceRequest';
+src/services/__tests__/marketplaceService.test.ts:22 -> import User from '../../models/User';
+src/services/__tests__/marketplaceService.test.ts:23 -> import Reservation from '../../models/Reservation';
+src/services/__tests__/marketplaceService.test.ts:24 -> import { BrowseListingsQuery, CreateBookingPayload } from '../../types/marketplace';
+src/services/__tests__/marketplaceService.test.ts:25 -> import { MarketplaceRequestStatus } from '../../types/marketplace-request';

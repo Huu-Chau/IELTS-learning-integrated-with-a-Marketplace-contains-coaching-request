@@ -125,12 +125,12 @@ export default function ProgressPage() {
                                                             <button
                                                                 onClick={() => setSelectedWritingSessionId(attempt.id)}
                                                                 disabled={attempt.status !== 'completed'}
-                                                                className={`px-3 py-1 text-sm font-medium rounded-md ${attempt.status === 'completed'
-                                                                    ? 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                                                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${attempt.status === 'completed'
+                                                                    ? 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                                                                     : 'bg-gray-50 text-gray-400 cursor-not-allowed'
                                                                     }`}
                                                             >
-                                                                {attempt.status === 'completed' ? 'View Evaluation' : 'In Progress'}
+                                                                {attempt.status === 'completed' ? 'View Result' : 'In Progress'}
                                                             </button>
                                                         ) : (
                                                             <button
@@ -138,7 +138,7 @@ export default function ProgressPage() {
                                                                 onClick={() => setSelectedAttempt(attempt as AttemptRecord)}
                                                                 className="px-3 py-1 text-sm font-medium rounded-md bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
                                                             >
-                                                                View Details
+                                                                View Result
                                                             </button>
                                                         )}
                                                     </td>

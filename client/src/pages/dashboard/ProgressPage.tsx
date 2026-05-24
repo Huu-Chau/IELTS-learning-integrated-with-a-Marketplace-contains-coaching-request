@@ -36,14 +36,16 @@ export default function ProgressPage() {
             const mappedWriting = (writingData || []).map((ws: any) => ({
                 id: ws.id,
                 createdAt: ws.createdAt,
+                updatedAt: ws.updatedAt || ws.createdAt,
                 type: 'writing',
                 score: ws.overallBand,
                 status: ws.status
             }));
 
             const combined = [...attemptsData, ...mappedWriting]
+                .map(a => ({ ...a, updatedAt: a.updatedAt || a.createdAt }))
                 .filter(a => a.score !== 0)   // hide zero-score attempts (e.g. silent speaking sessions)
-                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
             setAttempts(combined);
         } catch (error) {
@@ -109,7 +111,7 @@ export default function ProgressPage() {
                                                         {new Date(
                                                             attempt.type === 'manual' && attempt.answers?.date
                                                                 ? attempt.answers.date
-                                                                : attempt.createdAt
+                                                                : attempt.updatedAt || attempt.createdAt
                                                         ).toLocaleDateString()}
                                                     </td>
                                                     <td className="px-6 py-4 capitalize">

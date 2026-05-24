@@ -95,11 +95,7 @@ function TestCard({
                 )}
 
                 {/* Status + actions row */}
-                <div className="flex items-center justify-between gap-2">
-                    {done
-                        ? <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
-                        : <Circle className="h-5 w-5 text-gray-200 shrink-0" />
-                    }
+                <div className="flex items-center justify-end gap-2">
                     <div className="flex gap-2">
                         {done && (
                             <button
@@ -276,11 +272,7 @@ export default function MockTestSkillList({
                                             <p className="text-xs text-gray-400 mb-3">Not attempted yet</p>
                                         )}
 
-                                        <div className="flex items-center justify-between gap-2">
-                                            {done
-                                                ? <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
-                                                : <Circle className="h-5 w-5 text-gray-200 shrink-0" />
-                                            }
+                                        <div className="flex items-center justify-end gap-2">
                                             <div className="flex gap-2">
                                                 {done && (
                                                     <button

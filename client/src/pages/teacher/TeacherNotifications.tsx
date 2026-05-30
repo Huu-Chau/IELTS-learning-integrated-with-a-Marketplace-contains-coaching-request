@@ -12,6 +12,11 @@ import {
 } from 'lucide-react';
 import { useTeacherApi, useTeacherMutation } from '@/hooks/useTeacherApi';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { useEffect, useRef } from 'react';
+import { io, Socket } from 'socket.io-client';
+
+const SOCKET_URL = import.meta.env.VITE_API_URL as string;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -56,8 +61,38 @@ export default function TeacherNotifications() {
 
     const { data: notifications, loading, refetch } = useTeacherApi<Notification[]>('/teacher/notifications');
     const { patch, loading: marking } = useTeacherMutation();
+    const { user } = useAuth();
+    const socketRef = useRef<Socket | null>(null);
 
     const unreadCount = notifications?.filter((n) => !n.isRead).length ?? 0;
+
+    // ── Real-time: socket + polling ──────────────────────────────────────────
+    useEffect(() => {
+        const socket: Socket = io(SOCKET_URL, { transports: ['websocket'] });
+        socketRef.current = socket;
+
+        socket.on('connect', () => {
+            console.log('[TeacherNotifications] socket connected', { id: socket.id });
+            if (user?.uid) socket.emit('join_user_room', user.uid);
+        });
+
+        // Server emits this after a student confirms a booking.
+        // Wait 1.5s for the Kafka consumer to write the notification to DB.
+        socket.on('new_notification', () => {
+            console.log('[TeacherNotifications] new_notification event received — refetching in 1.5s');
+            setTimeout(refetch, 1500);
+        });
+
+        // Fallback polling every 30s for cron-generated notifications
+        // (session completions, auto-refunds) that don't emit socket events.
+        const pollInterval = setInterval(refetch, 30_000);
+
+        return () => {
+            socket.disconnect();
+            clearInterval(pollInterval);
+            console.log('[TeacherNotifications] socket disconnected, polling cleared');
+        };
+    }, [refetch, user?.uid]);
 
     const handleMarkAllRead = async () => {
         console.log('[TeacherNotifications] handleMarkAllRead called');

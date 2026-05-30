@@ -11,10 +11,13 @@ import {
     ArrowRight,
     Trophy,
 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient } from '@/services/apiClient';
 import { useAuth } from '@/context/AuthContext';
 import { Link } from 'react-router-dom';
+import { io, Socket } from 'socket.io-client';
+
+const SOCKET_URL = import.meta.env.VITE_API_URL as string;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -64,7 +67,7 @@ function timeAgo(dateStr: string): string {
 export default function StudentNotifications() {
     console.log('[StudentNotifications] render called');
 
-    const { getIdToken } = useAuth();
+    const { getIdToken, user } = useAuth();
     const [data, setData] = useState<NotificationsResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [marking, setMarking] = useState(false);
@@ -82,9 +85,39 @@ export default function StudentNotifications() {
         }
     }, [getIdToken]);
 
+    // ── Real-time: socket + polling ──────────────────────────────────────────
+    const socketRef = useRef<Socket | null>(null);
+
     useEffect(() => {
+        // Initial fetch on mount
         fetchNotifications();
-    }, [fetchNotifications]);
+
+        // Connect to Socket.io and join the user's personal room
+        const socket: Socket = io(SOCKET_URL, { transports: ['websocket'] });
+        socketRef.current = socket;
+
+        socket.on('connect', () => {
+            console.log('[StudentNotifications] socket connected', { id: socket.id });
+            if (user?.uid) socket.emit('join_user_room', user.uid);
+        });
+
+        // Server emits this after a booking is confirmed — wait 1.5s for the
+        // Kafka consumer to write the notification to DB before refetching.
+        socket.on('new_notification', () => {
+            console.log('[StudentNotifications] new_notification event received — refetching in 1.5s');
+            setTimeout(fetchNotifications, 1500);
+        });
+
+        // Fallback polling every 30s for notifications created by background
+        // workers (cron jobs, writing evaluations) that don't emit socket events.
+        const pollInterval = setInterval(fetchNotifications, 30_000);
+
+        return () => {
+            socket.disconnect();
+            clearInterval(pollInterval);
+            console.log('[StudentNotifications] socket disconnected, polling cleared');
+        };
+    }, [fetchNotifications, user?.uid]);
 
     const notifications = data?.notifications ?? [];
     const unreadCount = data?.unreadCount ?? 0;

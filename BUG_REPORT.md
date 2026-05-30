@@ -193,6 +193,58 @@ useEffect(() => {
 
 ---
 
+## 🐛 Bug 3: Unit Test Fails After Socket.io Emit Was Added
+
+### Affected File
+
+**`server/src/controllers/__tests__/reservationController.test.ts`**
+
+### Why It Was Not Working
+
+After the socket emit was added to `payForReservation()`, the existing unit test started failing:
+
+```
+Expected: 200
+Number of calls: 0
+```
+
+The test mock for `mockReq` did not include an `app` property:
+
+```typescript
+// ❌ BEFORE — mockReq has no app property
+mockReq = {
+  params: {},
+  user: { uid: 'student123', email: 'student@test.com' } as any,
+};
+```
+
+When the controller ran `req.app.get('io')`, it threw:
+
+```
+TypeError: Cannot read properties of undefined (reading 'get')
+```
+
+This error was silently caught by the `try/catch` block, which called `next(error)` instead of `res.status(200).json(...)`. The test then asserted `statusMock` was called with `200`, but it never was — hence 0 calls.
+
+### Solution
+
+Add a mock for `req.app.get` that returns `null`. The controller's guard `if (io && result.teacherId)` safely skips the emit, and execution continues to `res.status(200)` as expected:
+
+```typescript
+// ✅ AFTER — mockReq includes app.get mock
+mockReq = {
+  params: {},
+  user: { uid: 'student123', email: 'student@test.com' } as any,
+  // Mock req.app.get so the Socket.io emit guard (if (io && ...)) returns
+  // null safely and doesn't throw "Cannot read properties of undefined".
+  app: { get: jest.fn().mockReturnValue(null) } as any,
+};
+```
+
+**Result:** All 4 tests in `reservationController.test.ts` pass. The `io` guard pattern is the correct defensive approach — controllers must always check `if (io)` before emitting so they degrade gracefully in test and CI environments where no Socket.io server is running.
+
+---
+
 ## ✅ Summary of All Changes
 
 | File | Bug | Change |
@@ -202,6 +254,7 @@ useEffect(() => {
 | `server/src/controllers/teacherController.ts` | Missing notification | Emit `new_notification` socket event to teacher after withdrawal |
 | `client/src/pages/dashboard/StudentNotifications.tsx` | Missing notification | Add socket listener + 30s polling fallback |
 | `client/src/pages/teacher/TeacherNotifications.tsx` | Missing notification | Add socket listener + 30s polling fallback |
+| `server/src/controllers/__tests__/reservationController.test.ts` | Broken unit test | Add `app: { get: jest.fn().mockReturnValue(null) }` to `mockReq` |
 
 ---
 

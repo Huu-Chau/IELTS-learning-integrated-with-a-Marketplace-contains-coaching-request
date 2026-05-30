@@ -87,6 +87,7 @@ export default function StudentNotifications() {
 
     // ── Real-time: socket + polling ──────────────────────────────────────────
     const socketRef = useRef<Socket | null>(null);
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         // Initial fetch on mount
@@ -96,16 +97,28 @@ export default function StudentNotifications() {
         const socket: Socket = io(SOCKET_URL, { transports: ['websocket'] });
         socketRef.current = socket;
 
+        // Join the room — also handles reconnections after dropped connections.
+        // If user?.uid is null (auth still loading), this effect will re-run
+        // once it resolves because user?.uid is in the dependency array.
+        const joinRoom = () => {
+            if (user?.uid) socket.emit('join_user_room', user.uid);
+        };
         socket.on('connect', () => {
             console.log('[StudentNotifications] socket connected', { id: socket.id });
-            if (user?.uid) socket.emit('join_user_room', user.uid);
+            joinRoom();
+        });
+        socket.on('reconnect', () => {
+            console.log('[StudentNotifications] socket reconnected — rejoining room');
+            joinRoom();
         });
 
         // Server emits this after a booking is confirmed — wait 1.5s for the
         // Kafka consumer to write the notification to DB before refetching.
+        // Cancel any pending timeout to avoid duplicate fetches.
         socket.on('new_notification', () => {
             console.log('[StudentNotifications] new_notification event received — refetching in 1.5s');
-            setTimeout(fetchNotifications, 1500);
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            timeoutRef.current = setTimeout(fetchNotifications, 1500);
         });
 
         // Fallback polling every 30s for notifications created by background
@@ -115,9 +128,12 @@ export default function StudentNotifications() {
         return () => {
             socket.disconnect();
             clearInterval(pollInterval);
+            // Cancel pending timeout so setState isn't called after unmount
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
             console.log('[StudentNotifications] socket disconnected, polling cleared');
         };
-    }, [fetchNotifications, user?.uid]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.uid]); // fetchNotifications intentionally omitted — stable across renders
 
     const notifications = data?.notifications ?? [];
     const unreadCount = data?.unreadCount ?? 0;

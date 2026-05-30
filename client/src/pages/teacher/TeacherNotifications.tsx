@@ -63,6 +63,7 @@ export default function TeacherNotifications() {
     const { patch, loading: marking } = useTeacherMutation();
     const { user } = useAuth();
     const socketRef = useRef<Socket | null>(null);
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const unreadCount = notifications?.filter((n) => !n.isRead).length ?? 0;
 
@@ -71,16 +72,26 @@ export default function TeacherNotifications() {
         const socket: Socket = io(SOCKET_URL, { transports: ['websocket'] });
         socketRef.current = socket;
 
+        // Join the room — also handles reconnections after dropped connections.
+        const joinRoom = () => {
+            if (user?.uid) socket.emit('join_user_room', user.uid);
+        };
         socket.on('connect', () => {
             console.log('[TeacherNotifications] socket connected', { id: socket.id });
-            if (user?.uid) socket.emit('join_user_room', user.uid);
+            joinRoom();
+        });
+        socket.on('reconnect', () => {
+            console.log('[TeacherNotifications] socket reconnected — rejoining room');
+            joinRoom();
         });
 
         // Server emits this after a student confirms a booking.
         // Wait 1.5s for the Kafka consumer to write the notification to DB.
+        // Cancel any pending timeout to avoid duplicate fetches.
         socket.on('new_notification', () => {
             console.log('[TeacherNotifications] new_notification event received — refetching in 1.5s');
-            setTimeout(refetch, 1500);
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            timeoutRef.current = setTimeout(refetch, 1500);
         });
 
         // Fallback polling every 30s for cron-generated notifications
@@ -90,9 +101,11 @@ export default function TeacherNotifications() {
         return () => {
             socket.disconnect();
             clearInterval(pollInterval);
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
             console.log('[TeacherNotifications] socket disconnected, polling cleared');
         };
-    }, [refetch, user?.uid]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.uid]); // refetch intentionally omitted — stable across renders
 
     const handleMarkAllRead = async () => {
         console.log('[TeacherNotifications] handleMarkAllRead called');

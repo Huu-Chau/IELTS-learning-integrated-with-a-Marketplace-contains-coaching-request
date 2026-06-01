@@ -2,6 +2,7 @@ import http from 'http';
 import app from './app';
 import dotenv from 'dotenv';
 import sequelize from './config/database';
+import { queueService } from './services/queue/queueProvider';
 import path from 'path';
 import express from 'express';
 import { Server as SocketIOServer } from 'socket.io';
@@ -60,8 +61,19 @@ sequelize.authenticate()
     //     console.log('[Server] Syncing database schema (alter: true)...');
     //     return sequelize.sync({ alter: true });
     // })
-    .then(() => {
+    .then(async () => {
         console.log('[Server] ✅ Database schema synced successfully.');
+
+        // Warm up the shared Kafka producer at startup so model-hook event
+        // publishes never pay the cold-start connection cost on first use.
+        // Non-fatal: if Kafka is unavailable the API should still serve HTTP.
+        try {
+            await queueService.connect();
+            console.log('[Server] ✅ Kafka producer connected (warmed up).');
+        } catch (err) {
+            console.error('[Server] ⚠️ Kafka producer warm-up failed; will retry on first publish:', err);
+        }
+
         httpServer.listen(PORT, () => {
             console.log(`[Server] 🚀 Server is running on port ${PORT} (HTTP + WebSocket)`);
         });

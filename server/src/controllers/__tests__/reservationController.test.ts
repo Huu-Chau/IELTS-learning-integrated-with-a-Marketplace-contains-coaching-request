@@ -27,9 +27,6 @@ describe('ReservationController', () => {
     mockReq = {
       params: {},
       user: { uid: 'student123', email: 'student@test.com' } as any,
-      // Mock req.app.get so the Socket.io emit guard (if (io && ...)) returns
-      // null safely and doesn't throw "Cannot read properties of undefined".
-      app: { get: jest.fn().mockReturnValue(null) } as any,
     };
     mockRes = {
       status: statusMock,

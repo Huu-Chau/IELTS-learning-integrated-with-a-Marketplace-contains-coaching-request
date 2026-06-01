@@ -202,13 +202,6 @@ export class TeacherController implements ITeacherController {
 
             const payload = new WithdrawPayload(teacherId, Number(amount));
             const newBalance = await this.teacherService.withdraw(payload);
-
-            // Notify the teacher's notification page in real-time
-            const io = req.app.get('io');
-            if (io) {
-                io.to(teacherId).emit('new_notification');
-            }
-
             res.json({ success: true, newBalance });
             return next();
         } catch (error) {

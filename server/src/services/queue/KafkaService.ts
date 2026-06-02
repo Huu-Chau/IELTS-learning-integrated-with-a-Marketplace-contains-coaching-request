@@ -36,7 +36,12 @@ export class KafkaService implements IQueueProvider {
         return consumer;
     }
 
-    private async ensureProducerConnected(): Promise<void> {
+    /**
+     * Connect the producer, reusing a cached connection promise so it only
+     * ever connects once. Called eagerly at startup to warm the connection,
+     * and lazily by publish() as a fallback if startup warm-up was skipped.
+     */
+    public async connect(): Promise<void> {
         if (!this.producerConnectPromise) {
             this.producerConnectPromise = this.producer.connect().catch((err: any) => {
                 this.producerConnectPromise = null;
@@ -55,7 +60,7 @@ export class KafkaService implements IQueueProvider {
 
     async publish<T>(message: QueueMessage<T>, topic: string): Promise<void> {
         try {
-            await this.ensureProducerConnected();
+            await this.connect();
             await this.producer.send({
                 topic,
                 messages: [{ value: JSON.stringify(message) }],

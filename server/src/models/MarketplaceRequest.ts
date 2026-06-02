@@ -1,12 +1,9 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../config/database';
 import Reservation from './Reservation';
-import { KafkaService } from '../services/queue/KafkaService';
-import { IQueueProvider } from '../services/queue/IQueueProvider';
+import { queueService } from '../services/queue/queueProvider';
 import { QueueMessage, QueueTopic } from '../types/queue';
 import { MarketplaceRequestStatus, MarketplaceRequestType } from '../types/marketplace-request';
-
-const queueService: IQueueProvider = new KafkaService();
 
 /**
  * MarketplaceRequest model - manages student-teacher review requests.
@@ -105,28 +102,34 @@ MarketplaceRequest.init(
         modelName: 'MarketplaceRequest',
         tableName: 'MarketplaceRequests',
         hooks: {
-            afterCreate: (request) => {
-                // Fire-and-forget: NEVER await Kafka inside a Sequelize hook.
-                // Awaiting here blocks the DB transaction until Kafka connects (~8s cold start).
-                queueService.publish<IMarketplaceRequestAttributes>(
-                    new QueueMessage<IMarketplaceRequestAttributes>(request.toJSON<IMarketplaceRequestAttributes>()),
-                    QueueTopic.MARKETPLACE_REQUEST_CREATED,
-                )
-                    .then(() => console.log("✅ MarketplaceRequest created and message published to Kafka"))
-                    .catch((err) => console.error('[MarketplaceRequest Hook] afterCreate publish error', err));
+            afterCreate: async (request) => {
+                console.time('afterCreate hook publishing');
+                try {
+                    await queueService.publish<IMarketplaceRequestAttributes>(
+                        new QueueMessage<IMarketplaceRequestAttributes>(request.toJSON<IMarketplaceRequestAttributes>()),
+                        QueueTopic.MARKETPLACE_REQUEST_CREATED,
+                    );
+                    console.log("✅ MarketplaceRequest created and message published to Kafka");
+                } catch (err) {
+                    console.error('[MarketplaceRequest Hook] afterCreate publish error', err);
+                }
+                console.timeEnd('afterCreate hook publishing');
             },
-            afterUpdate: (request) => {
+            afterUpdate: async (request, options) => {
                 if (!request.changed('status')) {
                     return;
                 }
-
-                // Fire-and-forget: same reason as afterCreate — do not await.
-                queueService.publish<IMarketplaceRequestAttributes>(
-                    new QueueMessage<IMarketplaceRequestAttributes>(request.toJSON<IMarketplaceRequestAttributes>()),
-                    QueueTopic.MARKETPLACE_REQUEST_STATUS_UPDATED,
-                )
-                    .then(() => console.log("✅ MarketplaceRequest status updated and message published to Kafka"))
-                    .catch((err) => console.error('[MarketplaceRequest Hook] afterUpdate publish error', err));
+                console.time('afterUpdate hook publishing');
+                try {
+                    await queueService.publish<IMarketplaceRequestAttributes>(
+                        new QueueMessage<IMarketplaceRequestAttributes>(request.toJSON<IMarketplaceRequestAttributes>()),
+                        QueueTopic.MARKETPLACE_REQUEST_STATUS_UPDATED,
+                    );
+                    console.log("✅ MarketplaceRequest status updated and message published to Kafka");
+                } catch (err) {
+                    console.error('[MarketplaceRequest Hook] afterUpdate publish error', err);
+                }
+                console.timeEnd('afterUpdate hook publishing');
             }
         }
     }

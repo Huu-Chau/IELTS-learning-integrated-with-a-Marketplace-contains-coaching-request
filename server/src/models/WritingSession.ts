@@ -2,10 +2,7 @@ import { DataTypes, Model, CreationOptional, Optional } from 'sequelize';
 import sequelize from '../config/database';
 import { WritingSessionStatus } from '../types/writing-session';
 import { QueueMessage, QueueTopic } from '../types/queue';
-import { IQueueProvider } from '../services/queue/IQueueProvider';
-import { KafkaService } from '../services/queue/KafkaService';
-
-const queueService: IQueueProvider = new KafkaService();
+import { queueService } from '../services/queue/queueProvider';
 
 export interface IWritingSessionAttributes {
     id: string;

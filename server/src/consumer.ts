@@ -2,8 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import sequelize from './config/database';
-import { KafkaService } from './services/queue/KafkaService';
-import { IQueueProvider } from './services/queue/IQueueProvider';
+import { queueService } from './services/queue/queueProvider';
 import './models/Notification';
 import {
     NotificationOnAttemptCreatedConsumer,
@@ -16,7 +15,6 @@ import { INotificationService, NotificationService } from './services/notificati
 import { IMessageService, MessageService } from './services/messageService';
 import { IUserService, UserService } from './services/userService';
 
-const queueService: IQueueProvider = new KafkaService();
 const notificationService: INotificationService = new NotificationService();
 const messageService: IMessageService = new MessageService();
 const userService: IUserService = new UserService();

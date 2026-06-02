@@ -52,6 +52,40 @@ describe('KafkaService', () => {
         });
     });
 
+    describe('connect', () => {
+        it('should connect the producer eagerly', async () => {
+            await kafkaService.connect();
+
+            expect(mockProducer.connect).toHaveBeenCalledTimes(1);
+        });
+
+        it('should only connect the producer once on multiple connect calls', async () => {
+            await kafkaService.connect();
+            await kafkaService.connect();
+
+            expect(mockProducer.connect).toHaveBeenCalledTimes(1);
+        });
+
+        it('should not reconnect the producer when publishing after connect', async () => {
+            await kafkaService.connect();
+            await kafkaService.publish({ data: { type: 'test', id: 1 } }, 'test-topic');
+
+            expect(mockProducer.connect).toHaveBeenCalledTimes(1);
+            expect(mockProducer.send).toHaveBeenCalledTimes(1);
+        });
+
+        it('should reset connection state so a retry can reconnect if connect fails', async () => {
+            const error = new Error('Connection failed');
+            mockProducer.connect.mockRejectedValueOnce(error);
+
+            await expect(kafkaService.connect()).rejects.toThrow(error);
+
+            // Second attempt should try to connect again (state was reset)
+            await kafkaService.connect();
+            expect(mockProducer.connect).toHaveBeenCalledTimes(2);
+        });
+    });
+
     describe('publish', () => {
         const topic = 'test-topic';
         const message = { data: { type: 'test', id: 1 } };

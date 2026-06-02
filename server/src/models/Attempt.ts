@@ -1,10 +1,7 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../config/database';
-import { KafkaService } from '../services/queue/KafkaService';
-import { IQueueProvider } from '../services/queue/IQueueProvider';
+import { queueService } from '../services/queue/queueProvider';
 import { QueueMessage, QueueTopic } from '../types/queue';
-
-const queueService: IQueueProvider = new KafkaService();
 /**
  * Attempt model - stores IELTS test results.
  * Linked to a User via Firebase UID.

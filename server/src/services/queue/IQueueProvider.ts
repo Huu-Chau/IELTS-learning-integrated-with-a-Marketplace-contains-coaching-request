@@ -7,5 +7,6 @@ export interface IQueueProvider {
         routingKey?: string,
     ): Promise<void>;
     consume<T>(topic: string, domain: string, handler: (message: QueueMessage<T>) => Promise<void>): Promise<void>;
+    connect(): Promise<void>;
     disconnect?(): Promise<void>;
 }

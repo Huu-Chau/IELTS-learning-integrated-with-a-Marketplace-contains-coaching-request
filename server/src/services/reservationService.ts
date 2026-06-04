@@ -1,16 +1,18 @@
 import { Op } from 'sequelize';
 import sequelize from '../config/database';
 import Reservation from '../models/Reservation';
-import { PayForReservationPayload, ReservationStatus } from '../types/reservation';
+import { CancelReservationPayload, PayForReservationPayload, ReservationStatus } from '../types/reservation';
 import User from '../models/User';
 import MarketplaceRequest from '../models/MarketplaceRequest';
 import TeacherListing from '../models/TeacherListing';
+import TeacherAvailability from '../models/TeacherAvailability';
 import { MarketplaceRequestStatus, MarketplaceRequestType } from '../types/marketplace-request';
 
 export interface IReservationService {
     payForReservation(payload: PayForReservationPayload): Promise<MarketplaceRequest>;
     getReservationStatusByListing(listingId: number, studentId: string): Promise<any>;
     getReservationById(reservationId: number, studentId: string): Promise<any>;
+    cancelReservation(payload: CancelReservationPayload): Promise<Reservation | null>;
 }
 
 export class ReservationService implements IReservationService {
@@ -114,5 +116,44 @@ export class ReservationService implements IReservationService {
             },
         });
         return reservation;
+    }
+
+    public async cancelReservation(payload: CancelReservationPayload): Promise<Reservation | null> {
+        const { reservationId, studentId } = payload;
+        const t = await sequelize.transaction();
+        try {
+            const reservation = await Reservation.findOne({
+                where: {
+                    id: reservationId,
+                    studentId,
+                    status: ReservationStatus.PENDING,
+                    expiresAt: { [Op.gt]: new Date() },
+                },
+                transaction: t,
+                lock: t.LOCK.UPDATE,
+            });
+
+            if (!reservation) {
+                await t.rollback();
+                return null;
+            }
+
+            await reservation.update(
+                { status: ReservationStatus.CANCELLED },
+                { transaction: t },
+            );
+
+            await TeacherAvailability.update(
+                { isAvailable: true },
+                { where: { id: reservation.availabilityId }, transaction: t },
+            );
+
+            await t.commit();
+            return reservation;
+        } catch (error) {
+            await t.rollback();
+            console.error('[ReservationService] cancelReservation error', error);
+            throw error;
+        }
     }
 }

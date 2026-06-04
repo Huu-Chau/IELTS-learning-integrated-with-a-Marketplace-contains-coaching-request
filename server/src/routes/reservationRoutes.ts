@@ -20,6 +20,18 @@ router.post('/:reservationId/pay', (req: Request, res: Response, next: NextFunct
 });
 
 // =============================================================================
+// POST /api/reservations/:reservationId/cancel
+// Student cancels their own PENDING reservation.
+// =============================================================================
+router.post('/:reservationId/cancel', (req: Request, res: Response, next: NextFunction) => {
+    console.log('[ReservationRoutes] POST /:reservationId/cancel called', {
+        reservationId: req.params.reservationId,
+        uid: req.user?.uid,
+    });
+    return reservationController.cancelReservation(req, res, next);
+});
+
+// =============================================================================
 // GET /api/reservations/listing/:listingId
 // Returns the active reservation status for a listing.
 // Used by the frontend to determine: Available / Pending / Booked.

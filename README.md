@@ -278,6 +278,11 @@ Student confirms payment (within 5 min)
     → Reservation → COMPLETED
     → MarketplaceRequest → ACCEPTED
     → Teacher notified via WebSocket
+
+Student cancels before paying (optional)
+    → POST /api/reservations/:id/cancel
+    → DB transaction (FOR UPDATE): PENDING + owner only, no refund
+    → Reservation → CANCELLED; slot freed (isAvailable=true) immediately
 ```
 
 ---

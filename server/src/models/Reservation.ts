@@ -71,7 +71,8 @@ Reservation.init(
             type: DataTypes.ENUM(
                 ReservationStatus.PENDING,
                 ReservationStatus.COMPLETED,
-                ReservationStatus.EXPIRED
+                ReservationStatus.EXPIRED,
+                ReservationStatus.CANCELLED,
             ),
             allowNull: false,
             defaultValue: ReservationStatus.PENDING,

@@ -3,8 +3,9 @@ import sequelize from '../../config/database';
 import Reservation from '../../models/Reservation';
 import User from '../../models/User';
 import MarketplaceRequest from '../../models/MarketplaceRequest';
+import TeacherAvailability from '../../models/TeacherAvailability';
 import { MarketplaceRequestStatus, MarketplaceRequestType } from '../../types/marketplace-request';
-import { ReservationStatus } from '../../types/reservation';
+import { ReservationStatus, CancelReservationPayload } from '../../types/reservation';
 
 jest.mock('../../config/database', () => ({
     transaction: jest.fn(),
@@ -21,6 +22,10 @@ jest.mock('../../models/User', () => ({
 
 jest.mock('../../models/MarketplaceRequest', () => ({
     create: jest.fn(),
+}));
+
+jest.mock('../../models/TeacherAvailability', () => ({
+    update: jest.fn(),
 }));
 
 describe('ReservationService', () => {
@@ -131,6 +136,109 @@ describe('ReservationService', () => {
                 .rejects.toThrow('DB Error');
 
             expect(mockTransaction.rollback).toHaveBeenCalled();
+        });
+    });
+
+    describe('cancelReservation', () => {
+        const payload = new CancelReservationPayload(1, 'student-uid-1');
+
+        const mockReservation = {
+            id: 1,
+            studentId: 'student-uid-1',
+            availabilityId: 42,
+            status: ReservationStatus.PENDING,
+            update: jest.fn().mockResolvedValue(undefined),
+        };
+
+        beforeEach(() => {
+            mockReservation.update = jest.fn().mockResolvedValue(undefined);
+            (sequelize.transaction as jest.Mock).mockResolvedValue(mockTransaction);
+        });
+
+        it('should update status to CANCELLED and commit on success', async () => {
+            (Reservation.findOne as jest.Mock).mockResolvedValue(mockReservation);
+            (TeacherAvailability.update as jest.Mock).mockResolvedValue([1]);
+
+            const result = await reservationService.cancelReservation(payload);
+
+            expect(Reservation.findOne).toHaveBeenCalledWith(expect.objectContaining({
+                where: expect.objectContaining({
+                    id: payload.reservationId,
+                    studentId: payload.studentId,
+                    status: ReservationStatus.PENDING,
+                }),
+                transaction: mockTransaction,
+                lock: mockTransaction.LOCK.UPDATE,
+            }));
+            expect(mockReservation.update).toHaveBeenCalledWith(
+                { status: ReservationStatus.CANCELLED },
+                { transaction: mockTransaction },
+            );
+            expect(mockTransaction.commit).toHaveBeenCalled();
+            expect(mockTransaction.rollback).not.toHaveBeenCalled();
+            expect(result).toBe(mockReservation);
+        });
+
+        it('should free the teacher availability slot on successful cancel', async () => {
+            const commitOrder: string[] = [];
+            (Reservation.findOne as jest.Mock).mockResolvedValue(mockReservation);
+            (TeacherAvailability.update as jest.Mock).mockResolvedValue([1]);
+            mockTransaction.commit.mockImplementation(() => {
+                commitOrder.push('commit');
+                return Promise.resolve();
+            });
+            (TeacherAvailability.update as jest.Mock).mockImplementation(() => {
+                commitOrder.push('availability.update');
+                return Promise.resolve([1]);
+            });
+
+            await reservationService.cancelReservation(payload);
+
+            expect(TeacherAvailability.update).toHaveBeenCalledWith(
+                { isAvailable: true },
+                { where: { id: mockReservation.availabilityId }, transaction: mockTransaction },
+            );
+            // availability.update must happen before commit
+            expect(commitOrder.indexOf('availability.update')).toBeLessThan(commitOrder.indexOf('commit'));
+        });
+
+        it('should rollback and return null when reservation is not found', async () => {
+            (Reservation.findOne as jest.Mock).mockResolvedValue(null);
+
+            const result = await reservationService.cancelReservation(payload);
+
+            expect(result).toBeNull();
+            expect(mockTransaction.rollback).toHaveBeenCalled();
+            expect(mockTransaction.commit).not.toHaveBeenCalled();
+            expect(mockReservation.update).not.toHaveBeenCalled();
+            expect(TeacherAvailability.update).not.toHaveBeenCalled();
+        });
+
+        it('should NOT call User.update in any path (no wallet mutation)', async () => {
+            // success path
+            (Reservation.findOne as jest.Mock).mockResolvedValue(mockReservation);
+            (TeacherAvailability.update as jest.Mock).mockResolvedValue([1]);
+            await reservationService.cancelReservation(payload);
+            expect(User.update).not.toHaveBeenCalled();
+
+            jest.clearAllMocks();
+            (sequelize.transaction as jest.Mock).mockResolvedValue(mockTransaction);
+
+            // not-found path
+            (Reservation.findOne as jest.Mock).mockResolvedValue(null);
+            await reservationService.cancelReservation(payload);
+            expect(User.update).not.toHaveBeenCalled();
+        });
+
+        it('should rollback and rethrow when update throws', async () => {
+            const dbError = new Error('DB update error');
+            (Reservation.findOne as jest.Mock).mockResolvedValue(mockReservation);
+            mockReservation.update = jest.fn().mockRejectedValue(dbError);
+
+            await expect(reservationService.cancelReservation(payload)).rejects.toThrow('DB update error');
+
+            expect(mockTransaction.rollback).toHaveBeenCalled();
+            expect(mockTransaction.commit).not.toHaveBeenCalled();
         });
     });
 

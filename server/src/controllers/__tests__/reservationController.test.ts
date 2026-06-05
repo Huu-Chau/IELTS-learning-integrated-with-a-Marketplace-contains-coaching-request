@@ -1,11 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import { ReservationController } from '../reservationController';
 import { IReservationService } from '../../services/reservationService';
-import { PayForReservationPayload } from '../../types/reservation';
+import { CancelReservationPayload, PayForReservationPayload } from '../../types/reservation';
 
 jest.mock('../../types/reservation', () => {
   return {
     PayForReservationPayload: jest.fn().mockImplementation((reservationId, studentId) => ({
+      reservationId,
+      studentId,
+    })),
+    CancelReservationPayload: jest.fn().mockImplementation((reservationId, studentId) => ({
       reservationId,
       studentId,
     })),
@@ -37,6 +41,8 @@ describe('ReservationController', () => {
     mockReservationService = {
       payForReservation: jest.fn(),
       getReservationStatusByListing: jest.fn(),
+      getReservationById: jest.fn(),
+      cancelReservation: jest.fn(),
       expireStaleReservations: jest.fn(),
     } as unknown as jest.Mocked<IReservationService>;
 
@@ -86,7 +92,7 @@ describe('ReservationController', () => {
   describe('getReservationStatusByListing', () => {
     it('should successfully get reservation status', async () => {
       mockReq.params = { listingId: '456' };
-      
+
       const mockResult = { status: 'available' };
       (mockReservationService.getReservationStatusByListing as jest.Mock).mockResolvedValue(mockResult);
 
@@ -104,6 +110,47 @@ describe('ReservationController', () => {
       (mockReservationService.getReservationStatusByListing as jest.Mock).mockRejectedValue(error);
 
       await controller.getReservationStatusByListing(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(statusMock).not.toHaveBeenCalled();
+      expect(jsonMock).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenCalledWith(error);
+    });
+  });
+
+  describe('cancelReservation', () => {
+    it('should return 200 {success:true} and call next when service resolves a reservation', async () => {
+      mockReq.params = { reservationId: '7' };
+      const mockReservation = { id: 7, status: 'cancelled' };
+      (mockReservationService.cancelReservation as jest.Mock).mockResolvedValue(mockReservation);
+
+      await controller.cancelReservation(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(CancelReservationPayload).toHaveBeenCalledWith(7, 'student123');
+      expect(mockReservationService.cancelReservation).toHaveBeenCalledWith(
+        expect.objectContaining({ reservationId: 7, studentId: 'student123' }),
+      );
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith({ success: true });
+      expect(mockNext).toHaveBeenCalled();
+    });
+
+    it('should return 404 with message and call next when service resolves null', async () => {
+      mockReq.params = { reservationId: '7' };
+      (mockReservationService.cancelReservation as jest.Mock).mockResolvedValue(null);
+
+      await controller.cancelReservation(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(statusMock).toHaveBeenCalledWith(404);
+      expect(jsonMock).toHaveBeenCalledWith({ message: 'Reservation not found or not cancellable' });
+      expect(mockNext).toHaveBeenCalled();
+    });
+
+    it('should call next(error) when service rejects', async () => {
+      mockReq.params = { reservationId: '7' };
+      const error = new Error('Service failure');
+      (mockReservationService.cancelReservation as jest.Mock).mockRejectedValue(error);
+
+      await controller.cancelReservation(mockReq as Request, mockRes as Response, mockNext);
 
       expect(statusMock).not.toHaveBeenCalled();
       expect(jsonMock).not.toHaveBeenCalled();

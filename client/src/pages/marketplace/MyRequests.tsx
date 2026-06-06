@@ -9,7 +9,6 @@ import {
     XCircle,
     AlertCircle,
     Loader2,
-    RefreshCw,
     Inbox,
     User,
     Brain,
@@ -73,19 +72,9 @@ export default function MyRequests() {
         <DashboardLayout role="student">
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Find a Tutor</h1>
-                        <p className="text-gray-500 mt-1">Connect with expert IELTS instructors for personalized guidance.</p>
-                    </div>
-                    <button
-                        onClick={fetchRequests}
-                        disabled={loading}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-                    >
-                        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                        Refresh
-                    </button>
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Find a Tutor</h1>
+                    <p className="text-gray-500 mt-1">Connect with expert IELTS instructors for personalized guidance.</p>
                 </div>
 
                 {/* Tabs */}

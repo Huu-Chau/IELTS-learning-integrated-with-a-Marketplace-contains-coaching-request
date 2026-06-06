@@ -37,7 +37,7 @@ export default function TeacherList() {
     const { getIdToken } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
-    
+
     const [listings, setListings] = useState<MarketplaceListing[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -93,11 +93,11 @@ export default function TeacherList() {
     const handleReserve = (listingId: number) => {
         console.log('[TeacherList] handleReserve called', { listingId });
         const listing = listings.find((l) => l.id === listingId);
-        
-        const hasExpired = listing?.reservationExpiresAt 
-            ? new Date(listing.reservationExpiresAt).getTime() <= Date.now() 
+
+        const hasExpired = listing?.reservationExpiresAt
+            ? new Date(listing.reservationExpiresAt).getTime() <= Date.now()
             : false;
-        
+
         if (listing?.isOwnReservation && !hasExpired) {
             // Bypass calendar, go straight to checkout for existing reservation
             setCheckoutListingId(listingId);
@@ -130,12 +130,12 @@ export default function TeacherList() {
     // Client-side search on top of loaded listings (for instant feedback)
     const filteredListings = searchTerm.trim()
         ? listings.filter(
-              (l) =>
-                  l.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  l.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  l.teacher?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  l.skills.some((s) => s.toLowerCase().includes(searchTerm.toLowerCase()))
-          )
+            (l) =>
+                l.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                l.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                l.teacher?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                l.skills.some((s) => s.toLowerCase().includes(searchTerm.toLowerCase()))
+        )
         : listings;
 
     return (
@@ -154,21 +154,19 @@ export default function TeacherList() {
                 <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
                     <button
                         onClick={() => navigate('/marketplace')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                            location.pathname === '/marketplace'
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${location.pathname === '/marketplace'
                                 ? 'bg-white text-indigo-700 shadow-sm'
                                 : 'text-gray-500 hover:text-gray-700'
-                        }`}
+                            }`}
                     >
                         All Tutors
                     </button>
                     <button
                         onClick={() => navigate('/my-requests')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                            location.pathname === '/my-requests'
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${location.pathname === '/my-requests'
                                 ? 'bg-white text-indigo-700 shadow-sm'
                                 : 'text-gray-500 hover:text-gray-700'
-                        }`}
+                            }`}
                     >
                         My Requests
                     </button>
@@ -180,11 +178,10 @@ export default function TeacherList() {
                         <button
                             key={filter}
                             onClick={() => setActiveFilter(filter)}
-                            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                                activeFilter === filter
+                            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${activeFilter === filter
                                     ? 'bg-indigo-600 text-white'
                                     : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-                            }`}
+                                }`}
                         >
                             {filter}
                         </button>

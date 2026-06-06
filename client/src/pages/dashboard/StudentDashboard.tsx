@@ -69,29 +69,27 @@ export default function StudentDashboard() {
                 const activities: any[] = [];
                 
                 attemptsData.forEach((a: any) => {
-                    const testType = a.type === 'speaking' ? 'Speaking' : a.type === 'writing' ? 'Writing' : 'Practice';
+                    const typeMap: Record<string, { title: string, char: string, color: string, bg: string }> = {
+                        reading: { title: 'Reading Test', char: 'R', color: 'text-blue-700', bg: 'bg-blue-100' },
+                        listening: { title: 'Listening Test', char: 'L', color: 'text-teal-700', bg: 'bg-teal-100' },
+                        speaking: { title: 'Speaking Test', char: 'S', color: 'text-violet-700', bg: 'bg-violet-100' },
+                        writing: { title: 'Writing Test', char: 'W', color: 'text-amber-700', bg: 'bg-amber-100' },
+                        manual: { title: 'Manual Test', char: 'M', color: 'text-purple-700', bg: 'bg-purple-100' }
+                    };
+                    const typeInfo = typeMap[a.type as string] || { title: 'Practice Test', char: 'P', color: 'text-gray-700', bg: 'bg-gray-100' };
+
                     activities.push({
-                        title: `${testType} Test`,
+                        title: typeInfo.title,
                         score: a.score !== null ? Number(a.score).toFixed(1) : 'Pending',
                         date: new Date(a.createdAt),
                         type: 'Test',
-                        iconChar: testType[0],
-                        color: 'text-indigo-600',
-                        bg: 'bg-indigo-50',
+                        iconChar: typeInfo.char,
+                        color: typeInfo.color,
+                        bg: typeInfo.bg,
                     });
                 });
 
-                paymentsData.forEach((p: any) => {
-                    activities.push({
-                        title: p.service,
-                        score: p.status,
-                        date: new Date(p.createdAt),
-                        type: `Tutor: ${p.teacherName}`,
-                        iconChar: 'C',
-                        color: 'text-amber-600',
-                        bg: 'bg-amber-50',
-                    });
-                });
+                // Removed payments from recent activities per request
 
                 activities.sort((a, b) => b.date.getTime() - a.date.getTime());
                 

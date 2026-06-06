@@ -86,13 +86,12 @@ function TestCard({
                     {skill} — Test {entry.testNumber}
                 </p>
 
-                {done ? (
+                {done && (
                     <p className="text-xs text-gray-400 mb-3">
                         Last attempt: {new Date(entry.completedAt!).toLocaleDateString('en-GB')}
                     </p>
-                ) : (
-                    <p className="text-xs text-gray-400 mb-3">Not attempted yet</p>
                 )}
+                {!done && <div className="mb-3" />}
 
                 {/* Status + actions row */}
                 <div className="flex items-center justify-end gap-2">
@@ -155,18 +154,6 @@ function TestSetGroup({
                 <div className="flex items-center gap-2">
                     {collapsed ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronUp className="h-4 w-4 text-gray-400" />}
                     <h2 className="text-base font-bold text-gray-800">{set.name}</h2>
-                </div>
-
-                <div className="flex items-center gap-3">
-                    <span className="text-xs text-gray-500 font-medium">
-                        Completed: {completed}/{total}
-                    </span>
-                    <div className="w-28 h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                            className={cn('h-full rounded-full transition-all', c.progress)}
-                            style={{ width: `${pct}%` }}
-                        />
-                    </div>
                 </div>
             </div>
 
@@ -264,13 +251,12 @@ export default function MockTestSkillList({
                                             {skill} — Test {entry.testNumber}
                                         </p>
 
-                                        {done ? (
+                                        {done && (
                                             <p className="text-xs text-gray-400 mb-3">
                                                 Last attempt: {new Date(entry.completedAt!).toLocaleDateString('en-GB')}
                                             </p>
-                                        ) : (
-                                            <p className="text-xs text-gray-400 mb-3">Not attempted yet</p>
                                         )}
+                                        {!done && <div className="mb-3" />}
 
                                         <div className="flex items-center justify-end gap-2">
                                             <div className="flex gap-2">

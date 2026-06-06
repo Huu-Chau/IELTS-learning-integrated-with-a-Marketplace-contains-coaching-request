@@ -95,10 +95,14 @@ export class WritingEvaluationService implements IWritingEvaluationService {
             await this.storageProvider.uploadFile(essayFilename, Buffer.from(essay, 'utf-8'), 'text/plain');
             await this.storageProvider.uploadFile(feedbackFilename, Buffer.from(fullResponse, 'utf-8'), 'text/markdown');
 
+            // Helper: round to nearest IELTS 0.5 increment (e.g. 6.8 → 7.0, 6.2 → 6.0)
+            const roundToIELTS = (score: number): number => Math.round(score * 2) / 2;
+
             let bandScore = null;
             const match = fullResponse.match(/Overall\s*(?:Estimated\s*)?Band\s*(?:Score)?\s*[:=\-–—]\s*\*?\*?(\d+(?:\.\d+)?)\*?\*?/i);
             if (match && match[1]) {
-                bandScore = parseFloat(match[1]);
+                // Round each task's band to the nearest IELTS 0.5
+                bandScore = roundToIELTS(parseFloat(match[1]));
             }
 
             const sessionRec = await WritingSession.findByPk(sessionId);

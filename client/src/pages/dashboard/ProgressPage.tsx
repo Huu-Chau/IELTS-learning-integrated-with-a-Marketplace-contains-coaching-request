@@ -71,8 +71,8 @@ export default function ProgressPage() {
         <DashboardLayout role="student">
             <div className="space-y-8">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Your Progress</h1>
-                    <p className="text-gray-500 mt-1">Track your Mock Tests and Official Exam scores over time.</p>
+                    <h1 className="text-2xl font-bold text-gray-900">Attempt History</h1>
+                    <p className="text-gray-500 mt-1">Track your mock test attempts and scores over time.</p>
                 </div>
 
                 {loading ? (

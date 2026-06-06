@@ -469,7 +469,7 @@ export default function AttemptDetailDrawer({ attempt, onClose, onDelete, getTok
 
             {/* Drawer panel */}
             <div
-                className={`fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                className={`fixed top-0 right-0 h-full w-full max-w-[600px] bg-white shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
             >
                 {attempt && (
                     <>
@@ -490,7 +490,7 @@ export default function AttemptDetailDrawer({ attempt, onClose, onDelete, getTok
                                 {/* Delete button — two-step confirm */}
                                 {confirmDelete ? (
                                     <>
-                                        <span className="text-xs text-red-500 font-medium">Delete this attempt?</span>
+                                        <span className="text-sm text-red-500 font-medium mr-2 whitespace-nowrap">Delete this attempt?</span>
                                         <button
                                             onClick={async () => {
                                                 console.log('[AttemptDetailDrawer] delete confirmed', { id: attempt.id });
@@ -518,13 +518,13 @@ export default function AttemptDetailDrawer({ attempt, onClose, onDelete, getTok
                                                 }
                                             }}
                                             disabled={deleting}
-                                            className="px-2.5 py-1 text-xs font-bold rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+                                            className="px-3 py-1.5 text-sm font-bold rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
                                         >
                                             {deleting ? '...' : 'Yes, delete'}
                                         </button>
                                         <button
                                             onClick={() => setConfirmDelete(false)}
-                                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                                            className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
                                         >
                                             Cancel
                                         </button>
@@ -555,17 +555,12 @@ export default function AttemptDetailDrawer({ attempt, onClose, onDelete, getTok
                             </div>
                         </div>
 
-                        {/* Date / Test ID sub-header */}
+                        {/* Date sub-header */}
                         <div className="px-5 py-2.5 border-b border-gray-50 bg-gray-50/50 shrink-0">
                             <p className="text-xs text-gray-400">
                                 {new Date(attempt.createdAt).toLocaleDateString('en-GB', {
                                     day: 'numeric', month: 'long', year: 'numeric'
                                 })}
-                                {attempt.testId && (
-                                    <span className="ml-2 font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">
-                                        {attempt.testId}
-                                    </span>
-                                )}
                             </p>
                         </div>
 

@@ -20,11 +20,11 @@ interface Reservation {
 export default function BookingCheckoutModal({ listing, onClose, availabilityId, scheduledAt }: BookingCheckoutModalProps) {
     const { getIdToken } = useAuth();
     const lockPromiseRef = useRef<Promise<any> | null>(null);
-    
+
     const [reservation, setReservation] = useState<Reservation | null>(null);
     const [walletBalance, setWalletBalance] = useState<number | null>(null);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
-    
+
     const [isAcquiringLock, setIsAcquiringLock] = useState(true);
     const [isProcessingPay, setIsProcessingPay] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -33,13 +33,13 @@ export default function BookingCheckoutModal({ listing, onClose, availabilityId,
     // 1. Acquire Lease & Fetch Wallet on Mount
     useEffect(() => {
         let isMounted = true;
-        
+
         const initCheckout = async () => {
             try {
                 setIsAcquiringLock(true);
                 setError(null);
                 const token = await getIdToken();
-                
+
                 // Fetch wallet balance
                 const userProfile = await apiClient.get('/users/me', token);
                 if (isMounted) setWalletBalance(Number(userProfile.wallet_balance || 0));
@@ -65,7 +65,7 @@ export default function BookingCheckoutModal({ listing, onClose, availabilityId,
 
                     // Acquire 5-minute lease
                     const resData = await lockPromiseRef.current;
-                    
+
                     if (isMounted) {
                         setReservation(resData);
                     }
@@ -78,27 +78,27 @@ export default function BookingCheckoutModal({ listing, onClose, availabilityId,
                 if (isMounted) setIsAcquiringLock(false);
             }
         };
-        
+
         initCheckout();
-        
+
         return () => { isMounted = false; };
     }, [listing.id, availabilityId, getIdToken]);
 
     // 2. Countdown Timer
     useEffect(() => {
         if (!reservation || successData) return;
-        
+
         const updateTimer = () => {
             const expires = new Date(reservation.expiresAt).getTime();
             const now = new Date().getTime();
             const diff = Math.max(0, Math.floor((expires - now) / 1000));
             setTimeLeft(diff);
-            
+
             if (diff === 0) {
                 setError('Your reservation lease has expired. The slot is now available to others.');
             }
         };
-        
+
         updateTimer();
         const intervalId = setInterval(updateTimer, 1000);
         return () => clearInterval(intervalId);
@@ -106,7 +106,7 @@ export default function BookingCheckoutModal({ listing, onClose, availabilityId,
 
     const handlePayment = async () => {
         if (!reservation) return;
-        
+
         setIsProcessingPay(true);
         setError(null);
 
@@ -117,7 +117,7 @@ export default function BookingCheckoutModal({ listing, onClose, availabilityId,
                 { version: reservation.version, scheduledAt: scheduledAt ?? null },
                 token
             );
-            
+
             setSuccessData(result);
         } catch (err: any) {
             setError(err.message || 'Payment failed. Please try again.');
@@ -137,11 +137,11 @@ export default function BookingCheckoutModal({ listing, onClose, availabilityId,
     const isExpired = timeLeft === 0;
 
     return (
-        <div 
+        <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
             onClick={() => !isProcessingPay && onClose(!!successData)}
         >
-            <div 
+            <div
                 className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all border border-gray-100"
                 onClick={(e) => e.stopPropagation()}
             >
@@ -154,12 +154,12 @@ export default function BookingCheckoutModal({ listing, onClose, availabilityId,
                         </h3>
                         <p className="text-sm text-gray-500 text-center">
                             {listing.isOwnReservation && !availabilityId
-                                ? 'Retrieving your active reservation details.' 
+                                ? 'Retrieving your active reservation details.'
                                 : 'Checking availability and placing a 5-minute hold on this coaching session.'}
                         </p>
                     </div>
                 ) : successData ? (
-                /* ── SUCCESS RECEIPT STATE ────────────────────────────── */
+                    /* ── SUCCESS RECEIPT STATE ────────────────────────────── */
                     <div className="p-8 relative">
                         <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-emerald-50 to-white -z-10" />
                         <div className="flex justify-center mb-6 pt-4">
@@ -178,7 +178,7 @@ export default function BookingCheckoutModal({ listing, onClose, availabilityId,
                             {/* Receipt decorative edge */}
                             <div className="absolute -top-2 -left-2 w-4 h-4 rounded-full bg-emerald-50" />
                             <div className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-emerald-50" />
-                            
+
                             <div className="flex items-center gap-2 pb-3 border-b border-gray-100 border-dashed">
                                 <Receipt className="h-4 w-4 text-gray-400" />
                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Receipt details</span>
@@ -218,7 +218,7 @@ export default function BookingCheckoutModal({ listing, onClose, availabilityId,
                         </button>
                     </div>
                 ) : (
-                /* ── CHECKOUT FORM / ERROR STATE ────────────────────────────── */
+                    /* ── CHECKOUT FORM / ERROR STATE ────────────────────────────── */
                     <div className="flex flex-col h-full">
                         {/* Header */}
                         <div className="p-6 pb-4 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
@@ -318,7 +318,7 @@ export default function BookingCheckoutModal({ listing, onClose, availabilityId,
                                         Close
                                     </button>
                                 )}
-                                
+
                                 {reservation && !isExpired && (
                                     <p className="text-center text-xs font-medium text-gray-400 mt-4 flex items-center justify-center gap-1">
                                         <Lock className="h-3 w-3" /> Secure Wallet Transaction

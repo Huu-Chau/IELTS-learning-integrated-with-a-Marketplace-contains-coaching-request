@@ -21,7 +21,6 @@ import {
     Pen,
     Mic,
     ClipboardList,
-    Timer,
     CheckCheck,
 } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -206,12 +205,12 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
                 )}
             >
                 {/* Logo */}
-                <div className="h-16 shrink-0 flex items-center px-6 border-b border-gray-100">
+                <Link to={`/dashboard/${safeRole}`} className="h-16 shrink-0 flex items-center px-6 border-b border-gray-100 hover:bg-gray-50 transition-colors block cursor-pointer">
                     <GraduationCap className="h-8 w-8 text-indigo-600 mr-2" />
                     <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
                         IELTS Hybrid
                     </span>
-                </div>
+                </Link>
 
                 <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
                     <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 px-2">
@@ -302,7 +301,6 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
                                             >
                                                 <SubIcon className={cn("h-4 w-4 mr-2.5", isActive ? "text-violet-500" : "text-gray-400")} />
                                                 {sub.label}
-                                                <Timer className="ml-auto h-3.5 w-3.5 text-violet-400" />
                                             </Link>
                                         );
                                     })}

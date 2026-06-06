@@ -23,12 +23,19 @@ interface TeacherStats {
     unreadNotifications: number;
 }
 
-interface Order {
+interface Transaction {
     id: number;
     studentId: string;
-    status: string;
-    fee: number;
-    createdAt: string;
+    studentName: string;
+    date: string;
+    service: string;
+    amount: number;
+    status: 'Pending' | 'Cleared' | 'Withdrawn';
+}
+
+interface TransactionsResponse {
+    walletBalance: number;
+    transactions: Transaction[];
 }
 
 // Skeleton loader card
@@ -49,9 +56,9 @@ export default function TeacherDashboardPage() {
     console.log('[TeacherDashboardPage] render called');
 
     const { data: stats, loading: statsLoading } = useTeacherApi<TeacherStats>('/teacher/stats');
-    const { data: orders, loading: ordersLoading } = useTeacherApi<Order[]>('/teacher/orders');
+    const { data: transactionData, loading: transactionsLoading } = useTeacherApi<TransactionsResponse>('/teacher/transactions');
 
-    const pendingOrders = orders?.filter((o) => o.status === 'pending') ?? [];
+    const recentTransactions = transactionData?.transactions?.slice(0, 4) ?? [];
 
     const kpiCards = stats
         ? [
@@ -82,15 +89,6 @@ export default function TeacherDashboardPage() {
                   text: 'text-blue-600',
                   sub: 'Sessions in progress',
               },
-              {
-                  label: 'Avg. Rating',
-                  value: `${stats.avgRating}/5`,
-                  icon: Star,
-                  gradient: 'from-violet-500 to-purple-500',
-                  bg: 'bg-violet-50',
-                  text: 'text-violet-600',
-                  sub: 'Overall satisfaction',
-              },
           ]
         : [];
 
@@ -115,9 +113,9 @@ export default function TeacherDashboardPage() {
                 </div>
 
                 {/* ── KPI Cards ────────────────────────────────────────────── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-3 gap-5">
                     {statsLoading
-                        ? [1, 2, 3, 4].map((i) => <SkeletonCard key={i} />)
+                        ? [1, 2, 3].map((i) => <SkeletonCard key={i} />)
                         : kpiCards.map((card) => (
                               <div
                                   key={card.label}
@@ -137,67 +135,74 @@ export default function TeacherDashboardPage() {
 
                 {/* ── Action Inbox + Quick Stats row ───────────────────────── */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Pending orders action list */}
-                    <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                    {/* Recent Activity list */}
+                    <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col">
                         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
-                            <div className="flex items-center gap-2">
-                                <AlertCircle className="h-4 w-4 text-orange-500" />
-                                <h2 className="font-semibold text-gray-800 text-sm">Action Required</h2>
-                                {pendingOrders.length > 0 && (
-                                    <span className="text-xs bg-orange-100 text-orange-700 font-semibold px-2 py-0.5 rounded-full">
-                                        {pendingOrders.length}
-                                    </span>
-                                )}
-                            </div>
+                            <h2 className="font-semibold text-gray-800 text-sm">Recent Activity</h2>
                             <Link
-                                to="/teacher/marketplace"
+                                to="/teacher/payments"
                                 className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
                             >
                                 View all <ArrowRight className="h-3 w-3" />
                             </Link>
                         </div>
 
-                        {ordersLoading ? (
+                        {transactionsLoading ? (
                             <div className="p-6 space-y-3">
-                                {[1, 2].map((i) => (
+                                {[1, 2, 3, 4].map((i) => (
                                     <div key={i} className="h-14 bg-gray-100 rounded-xl animate-pulse" />
                                 ))}
                             </div>
-                        ) : pendingOrders.length === 0 ? (
+                        ) : recentTransactions.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
                                 <CheckCircle className="h-10 w-10 text-emerald-400 mb-3" />
-                                <p className="font-medium text-gray-700">All caught up!</p>
-                                <p className="text-sm text-gray-400 mt-0.5">No pending student requests.</p>
+                                <p className="font-medium text-gray-700">No recent activity.</p>
+                                <p className="text-sm text-gray-400 mt-0.5">Your completed and pending sessions will appear here.</p>
                             </div>
                         ) : (
-                            <div className="divide-y divide-gray-50">
-                                {pendingOrders.slice(0, 4).map((order) => (
-                                    <div key={order.id} className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-9 w-9 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-semibold text-indigo-700">
-                                                S
+                            <div className="divide-y divide-gray-50 flex-1">
+                                {recentTransactions.map((tx) => {
+                                    const serviceName = (tx.service || '').toLowerCase();
+                                    let char = 'T';
+                                    let colorClass = 'text-gray-700 bg-gray-100';
+
+                                    if (serviceName.includes('reading')) {
+                                        char = 'R';
+                                        colorClass = 'text-blue-700 bg-blue-100';
+                                    } else if (serviceName.includes('listening')) {
+                                        char = 'L';
+                                        colorClass = 'text-teal-700 bg-teal-100';
+                                    } else if (serviceName.includes('speaking')) {
+                                        char = 'S';
+                                        colorClass = 'text-violet-700 bg-violet-100';
+                                    } else if (serviceName.includes('writing')) {
+                                        char = 'W';
+                                        colorClass = 'text-amber-700 bg-amber-100';
+                                    }
+
+                                    return (
+                                        <div key={tx.id} className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-bold ${colorClass}`}>
+                                                    {char}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-medium text-gray-900">{tx.service || 'Tutor Session'}</p>
+                                                    <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                                                        Student: {tx.studentName ?? tx.studentId.slice(0, 8)} • {new Date(tx.date).toLocaleDateString()}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-sm font-medium text-gray-800">Student Request #{order.id}</p>
-                                                <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                                                    <Clock className="h-3 w-3" />
-                                                    {new Date(order.createdAt).toLocaleDateString()}
-                                                    {order.fee > 0 && (
-                                                        <span className="flex items-center gap-1 ml-1">
-                                                            · {(order.fee).toLocaleString('vi-VN')} <Brain className="h-3 w-3" />
-                                                        </span>
-                                                    )}
-                                                </p>
-                                            </div>
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                tx.status === 'Pending' ? 'bg-amber-100 text-amber-800' :
+                                                tx.status === 'Cleared' ? 'bg-emerald-100 text-emerald-800' :
+                                                'bg-gray-100 text-gray-800'
+                                            }`}>
+                                                {tx.status}
+                                            </span>
                                         </div>
-                                        <Link
-                                            to="/teacher/marketplace"
-                                            className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium px-3 py-1.5 rounded-lg transition-colors"
-                                        >
-                                            Respond
-                                        </Link>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>

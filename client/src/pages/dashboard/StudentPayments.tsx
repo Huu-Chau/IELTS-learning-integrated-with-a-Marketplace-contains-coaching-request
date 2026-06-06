@@ -61,7 +61,7 @@ function timeAgo(dateStr: string): string {
 
 const PAGE_SIZE = 8;
 
-type FilterStatus = 'All' | 'Pending' | 'Processing' | 'Paid' | 'Refunded';
+type FilterStatus = 'All' | 'Pending' | 'Processing' | 'Paid';
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
@@ -201,7 +201,7 @@ export default function StudentPayments() {
                     <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-gray-50">
                         <h2 className="font-semibold text-gray-800 text-sm">Transaction History</h2>
                         <div className="flex items-center gap-2">
-                            {(['All', 'Pending', 'Processing', 'Paid', 'Refunded'] as FilterStatus[]).map((s) => (
+                            {(['All', 'Pending', 'Processing', 'Paid'] as FilterStatus[]).map((s) => (
                                 <button
                                     key={s}
                                     id={`filter-${s.toLowerCase()}`}

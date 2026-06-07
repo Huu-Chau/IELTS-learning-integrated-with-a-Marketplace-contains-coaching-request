@@ -6,6 +6,7 @@ import Reservation from '../models/Reservation';
 import { MarketplaceRequestStatus } from '../types/marketplace-request';
 import { ReservationStatus } from '../types/reservation';
 import { BrowseListingsQuery, CreateBookingPayload } from '../types/marketplace';
+import TeacherAvailability from '../models/TeacherAvailability';
 
 export interface IMarketplaceService {
     getListings(query: BrowseListingsQuery, currentUserId?: string): Promise<any[]>;
@@ -58,18 +59,18 @@ export class MarketplaceService implements IMarketplaceService {
                     attributes: ['studentId', 'expiresAt'],
                 });
 
-                const completedBooking = await Reservation.findOne({
+                const hasAvailableSlot = await TeacherAvailability.findOne({
                     where: {
-                        'listing.id': listing.id,
-                        status: ReservationStatus.COMPLETED,
-                    },
+                        teacherId: listing.teacherId,
+                        isAvailable: true,
+                    }
                 });
 
                 let reservationStatus: 'available' | 'pending' | 'booked' = 'available';
                 let isOwnReservation = false;
                 let reservationExpiresAt: Date | null = null;
 
-                if (completedBooking) {
+                if (!hasAvailableSlot) {
                     reservationStatus = 'booked';
                 } else if (activeReservation) {
                     reservationStatus = 'pending';

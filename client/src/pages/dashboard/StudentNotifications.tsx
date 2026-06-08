@@ -157,7 +157,12 @@ export default function StudentNotifications() {
                     ) : (
                         <div className="divide-y divide-gray-50">
                             {notifications.map((notif) => {
-                                const cfg = TYPE_CFG[notif.type] ?? TYPE_CFG.system;
+                                let cfg = TYPE_CFG[notif.type] ?? TYPE_CFG.system;
+                                // Writing evaluation notifications come as 'system' type but should
+                                // visually match other test result notifications (Trophy + "Test Result")
+                                if (notif.type === 'system' && notif.title.toLowerCase().includes('writing')) {
+                                    cfg = TYPE_CFG.attempt;
+                                }
                                 const Icon = cfg.icon;
 
                                 return (

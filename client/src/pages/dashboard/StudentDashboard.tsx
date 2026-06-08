@@ -46,12 +46,27 @@ export default function StudentDashboard() {
                 const profileData = await apiClient.get('/users/me', token);
                 setProfile(profileData);
 
-                // 2. Fetch Attempts
-                const attemptsData = await apiClient.get(`/attempts/user/${user.uid}`, token);
-                
+                // 2. Fetch Attempts and Writing Sessions
+                const [attemptsDataRaw, writingDataRaw] = await Promise.all([
+                    apiClient.get(`/attempts/user/${user.uid}`, token),
+                    apiClient.get(`/evaluate/writing/user/${user.uid}`, token).catch(() => [])
+                ]);
+
                 // 3. Fetch Payments / Bookings
                 const paymentsRes = await apiClient.get('/marketplace/payments', token);
                 const paymentsData = paymentsRes.payments || [];
+
+                // Format WritingSessions to match attempts format
+                const mappedWriting = (writingDataRaw || []).map((ws: any) => ({
+                    id: ws.id,
+                    createdAt: ws.createdAt,
+                    updatedAt: ws.updatedAt || ws.createdAt,
+                    type: 'writing',
+                    score: ws.overallBand || 'Partial',
+                    status: ws.status
+                }));
+
+                const attemptsData = [...attemptsDataRaw, ...mappedWriting];
 
                 // Compute Stats
                 const numTests = attemptsData.length;
@@ -67,7 +82,7 @@ export default function StudentDashboard() {
 
                 // Merge and sort recent activity
                 const activities: any[] = [];
-                
+
                 attemptsData.forEach((a: any) => {
                     const typeMap: Record<string, { title: string, char: string, color: string, bg: string }> = {
                         reading: { title: 'Reading Test', char: 'R', color: 'text-blue-700', bg: 'bg-blue-100' },
@@ -92,7 +107,7 @@ export default function StudentDashboard() {
                 // Removed payments from recent activities per request
 
                 activities.sort((a, b) => b.date.getTime() - a.date.getTime());
-                
+
                 // Format dates
                 const formattedActivities = activities.slice(0, 4).map(act => {
                     const diffDays = Math.floor((new Date().getTime() - act.date.getTime()) / (1000 * 3600 * 24));
@@ -180,11 +195,10 @@ export default function StudentDashboard() {
                                                     <p className="text-xs text-gray-500">{item.type} • {item.dateStr}</p>
                                                 </div>
                                             </div>
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                item.score === 'Pending' || item.score === 'Processing'
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.score === 'Pending' || item.score === 'Processing'
                                                     ? 'bg-amber-100 text-amber-800'
                                                     : 'bg-green-100 text-green-800'
-                                            }`}>
+                                                }`}>
                                                 {item.score}
                                             </span>
                                         </div>

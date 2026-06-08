@@ -174,7 +174,7 @@ export default function MockTestWritingSession() {
             console.log('[MockTestWritingSession] Timer expired — auto-submitting active task');
             handleSubmit();
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [timerExpired]);
 
     const activeTaskData = testData?.tasks?.find(t => t.task_number === activeTask);

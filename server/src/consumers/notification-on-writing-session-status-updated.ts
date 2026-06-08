@@ -15,9 +15,9 @@ export class NotificationOnWritingSessionStatusUpdatedConsumer implements IConsu
     private async createNotificationForCompletedSession(session: IWritingSessionAttributes): Promise<void> {
         const payload = new CreateNotificationPayload(
             session.userId,
-            NotificationType.SYSTEM,
-            'Writing Evaluation Complete 🎉',
-            `Your IELTS Writing mock test for ${session.book} Test ${session.testNumber} has been fully evaluated. Click here to view your band score and detailed feedback!`,
+            NotificationType.ATTEMPT,
+            `Writing Test Completed · Band ${typeof session.overallBand === 'number' ? session.overallBand.toFixed(1) : 'Partial'}`,
+            `Your writing mock test result has been saved to your progress.`,
             '/progress',  // Could link directly to details if UI supports opening modal via URL
         )
         return this.notificationService.createNotification(payload);

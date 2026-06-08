@@ -126,13 +126,9 @@ export default function ProgressPage() {
                                                         {attempt.type === 'writing' ? (
                                                             <button
                                                                 onClick={() => setSelectedWritingSessionId(attempt.id)}
-                                                                disabled={attempt.status !== 'completed'}
-                                                                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${attempt.status === 'completed'
-                                                                    ? 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                                                                    : 'bg-gray-50 text-gray-400 cursor-not-allowed'
-                                                                    }`}
+                                                                className="px-3 py-1 text-sm font-medium rounded-md transition-colors bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                                                             >
-                                                                {attempt.status === 'completed' ? 'View Result' : 'In Progress'}
+                                                                View Result
                                                             </button>
                                                         ) : (
                                                             <button

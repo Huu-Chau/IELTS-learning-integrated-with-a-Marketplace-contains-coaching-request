@@ -170,7 +170,11 @@ export default function WritingResultModal({ sessionId, isOpen, onClose }: Writi
                         {session && (
                             <div className="text-center">
                                 <p className="text-xs text-gray-400 mb-1">Overall Band</p>
-                                <BandBadge band={session.overallBand} size="lg" />
+                                {session.overallBand ? (
+                                    <BandBadge band={session.overallBand} size="lg" />
+                                ) : (
+                                    <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">Partial Test</span>
+                                )}
                             </div>
                         )}
                         <button
@@ -255,7 +259,7 @@ export default function WritingResultModal({ sessionId, isOpen, onClose }: Writi
                                     ) : (
                                         <div className="flex flex-col items-center py-12 text-gray-400">
                                             <FileText className="w-10 h-10 mb-2 opacity-40" />
-                                            <p className="text-sm">No essay saved for Task {activeTask}.</p>
+                                            <p className="text-sm">Did not attempt Task {activeTask}.</p>
                                         </div>
                                     )}
                                 </div>
@@ -281,7 +285,7 @@ export default function WritingResultModal({ sessionId, isOpen, onClose }: Writi
                                     ) : (
                                         <div className="flex flex-col items-center py-12 text-gray-400">
                                             <MessageSquare className="w-10 h-10 mb-2 opacity-40" />
-                                            <p className="text-sm">No feedback available for Task {activeTask} yet.</p>
+                                            <p className="text-sm">Did not attempt Task {activeTask}.</p>
                                         </div>
                                     )}
                                 </div>

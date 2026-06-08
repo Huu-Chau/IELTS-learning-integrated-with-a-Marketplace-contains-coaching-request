@@ -99,7 +99,7 @@ export class WritingEvaluationService implements IWritingEvaluationService {
             const roundToIELTS = (score: number): number => Math.round(score * 2) / 2;
 
             let bandScore = null;
-            const match = fullResponse.match(/Overall\s*(?:Estimated\s*)?Band\s*(?:Score)?\s*[:=\-–—]\s*\*?\*?(\d+(?:\.\d+)?)\*?\*?/i);
+            const match = fullResponse.match(/Overall\s*(?:Estimated\s*)?Band\s*(?:Score)?\s*[^0-9]*(\d+(?:\.\d+)?)/i);
             if (match && match[1]) {
                 // Round each task's band to the nearest IELTS 0.5
                 bandScore = roundToIELTS(parseFloat(match[1]));
@@ -132,8 +132,15 @@ export class WritingEvaluationService implements IWritingEvaluationService {
     }
 
     async getSessionsByUser(userId: string): Promise<WritingSession[]> {
+        const { Op } = require('sequelize');
         return await WritingSession.findAll({
-            where: { userId, status: WritingSessionStatus.COMPLETED },
+            where: {
+                userId,
+                [Op.or]: [
+                    { task1Band: { [Op.not]: null } },
+                    { task2Band: { [Op.not]: null } }
+                ]
+            },
             order: [['createdAt', 'DESC']],
         });
     }
@@ -255,12 +262,11 @@ How varied are the sentence structures? Are there frequent or rare grammatical e
 ---
 
 For EACH criterion, provide:
-1. **Band Score** (1–9, can use .5 increments like 6.5)
-2. **Strength**: One specific strength with a DIRECT QUOTE from the essay
+1. **Band Score**: [A single number. MUST be a valid IELTS band: 1, 2, 3, 4, 5, 6, 7, 8, or 9. Do NOT write 7.0 or 6.8 — only whole numbers]
 3. **Improvement**: One specific weakness with a DIRECT QUOTE and how to fix it
 
 After all 4 criteria, provide:
-- **Overall Band Score**: The average of the 4 criteria (rounded to nearest 0.5)
+- **Overall Band Score**: [Calculate average of 4 criteria, then ROUND DOWN to nearest 0.5 increment. MUST be an exact IELTS band like 6.0, 6.5, 7.0, 7.5. Do NOT output invalid scores like 6.8 or 7.25]
 - **Examiner's Summary**: 2-3 sentences of overall feedback and the most impactful thing the student should work on.
 
 Format your response clearly with headers and bullet points.`;

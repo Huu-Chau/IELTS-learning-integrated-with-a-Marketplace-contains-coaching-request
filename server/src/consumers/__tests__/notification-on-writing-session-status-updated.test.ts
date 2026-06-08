@@ -50,7 +50,8 @@ describe('NotificationOnWritingSessionStatusUpdatedConsumer', () => {
                 userId: 'user-456',
                 status: WritingSessionStatus.COMPLETED,
                 book: 'Cambridge 18',
-                testNumber: 1
+                testNumber: 1,
+                overallBand: 7.5
             };
 
             await messageHandler({ data: mockSession });
@@ -58,10 +59,10 @@ describe('NotificationOnWritingSessionStatusUpdatedConsumer', () => {
             expect(mockNotificationService.createNotification).toHaveBeenCalledWith(
                 expect.objectContaining({
                     userId: 'user-456',
-                    type: NotificationType.SYSTEM,
-                    title: 'Writing Evaluation Complete 🎉',
-                    body: expect.stringContaining('Cambridge 18 Test 1'),
-                    linkPath: '/progress'
+                    type: NotificationType.ATTEMPT,
+                    title: 'Writing Test Completed · Band 7.5',
+                    body: 'Your writing mock test result has been saved to your progress.',
+                    linkPath: '/progress',
                 })
             );
         });
